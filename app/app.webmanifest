@@ -1,7 +1,7 @@
 {
-  "name": "Les Zurbamateurs",
-  "short_name": "Zurbamateurs",
-  "start_url": "/",
+  "name": "Batucada Sequencer",
+  "short_name": "Batucada",
+  "start_url": "/batucada/",
   "display": "standalone",
   "background_color": "#cbd2dc",
   "icons": [
@@ -11,7 +11,7 @@
     }
   ],
   "share_target": {
-    "action": "/app/share.html",
+    "action": "/batucada/app/share.html",
     "enctype": "application/x-www-form-urlencoded",
     "method": "GET",
     "params": {
