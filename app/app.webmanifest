@@ -6,7 +6,7 @@
   "background_color": "#cbd2dc",
   "icons": [
     {
-      "src": "icon.svg",
+      "src": "/batucada/app/icon.svg",
       "sizes": "any"
     }
   ],
