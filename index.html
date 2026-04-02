@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Batucada Sequencer</title>
+<link rel="manifest" href="app/app.webmanifest"/>
+<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+{
+	const urlParams = new URLSearchParams(window.location.search);
+	const placeholders = {
+		title:   [urlParams.get('title')?.trim() ? 1 : 0, '--has-title'],
+		presets: [urlParams.get('set')?.split('-').filter(Boolean).length ?? 0, '--tracks-count'],
+	};
+	for (const key in placeholders) {
+		const [value, property] = placeholders[key];
+		if (value) {
+			document.documentElement.style.setProperty(property, value);
+			(window.placeholders ??= {})[key] = property;
+		}
+	}
+}
+</script>
+<style>
+:root {
+	color-scheme: light;
+	--has-title : 0;
+	--tracks-count : 0;
+
+	--color-primary:   hsl(215 20% 50%);
+	--color-secondary: hsl(130 100% 50%);
+
+	--color-background-body: light-dark(
+		hsl(from var(--color-primary) h s 83%), 
+		hsl(from var(--color-primary) h s 0%)
+	);
+	--color-background-base: light-dark(
+		hsl(from var(--color-primary) h s 100%), 
+		hsl(from var(--color-primary) h s 15%)
+	);
+	--color-background-light: light-dark(
+		hsl(from var(--color-primary) h s 92%), 
+		hsl(from var(--color-primary) h s 23%)
+	);
+	--color-background-strong: light-dark(
+		hsl(from var(--color-primary) h s 83%), 
+		hsl(from var(--color-primary) h s 18%)
+	);
+	--color-background-popover: light-dark(
+		hsl(from var(--color-primary) h s 20% / .8), 
+		hsl(from var(--color-primary) h s 90% / .8)
+	);
+	--color-text-main: light-dark(
+		hsl(from var(--color-primary) h s 0%), 
+		hsl(from var(--color-primary) h s 90%)
+	);
+	--color-text-faded: light-dark(
+		hsl(from var(--color-primary) h s 30%), 
+		hsl(from var(--color-primary) h s 60%)
+	);
+	--color-text-muted: light-dark(
+		hsl(from var(--color-primary) h s 70%), 
+		hsl(from var(--color-primary) h s 65%)
+	);
+	--color-text-popover: light-dark(
+		hsl(from var(--color-primary) h s 100%), 
+		hsl(from var(--color-primary) h s 0%)
+	);
+	--color-stroke-set: light-dark(
+		hsl(from var(--color-primary) h 100% 43%), 
+		hsl(from var(--color-primary) h 100% 60%)
+	);
+	--color-stroke-played: hsl(from var(--color-primary) h s 100% / .4);
+	--color-stroke-current: light-dark(
+		hsl(from var(--color-secondary) h 100% 25%), 
+		hsl(from var(--color-secondary) h 100% 40%)
+	);
+	--color-step-current: light-dark(
+		hsl(from var(--color-secondary) h 30% 70%), 
+		hsl(from var(--color-secondary) h 30% 40%)
+	);
+	--color-border-light: light-dark(
+		hsl(from var(--color-primary) h s 50%), 
+		hsl(from var(--color-primary) h s 70%)
+	);
+	--color-border-strong: light-dark(
+		hsl(from var(--color-primary) h s 20%), 
+		hsl(from var(--color-primary) h s 100%)
+	);
+
+	--color-shadow-light: light-dark(
+		hsl(from var(--color-primary) h 50% 10% / .1), 
+		hsl(from var(--color-primary) h 50% 10% / .4)
+	);
+	--color-shadow-medium: light-dark(
+		hsl(from var(--color-primary) h 50% 10% / .2), 
+		hsl(from var(--color-primary) h 50% 10% / .6)
+	);
+	--color-shadow-strong: hsl(from var(--color-primary) h 50% 10% / .4);
+
+	--icon-stop:      url('data:image/svg+xml,<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"><path d="m14 12l9 6-9 6z" stroke-width="1" stroke="black" stroke-linejoin="round"/></svg>');
+	--icon-start:     url('data:image/svg+xml,<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"><path d="m13.3 11v14h2v-14zm7 0v14h2v-14z" stroke-width="1" stroke="black" stroke-linejoin="round"/></svg>');
+	--icon-close:     url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m14 16l10 10m0 -10l-10 10" stroke-width="2" stroke="black" stroke-linecap="round"/></svg>');
+	--icon-saved:     url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 34v-19q0-3 3-3h10q3 0 3 3v19l-8-7z" stroke-width="1.7" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+	--icon-unsaved:   url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 34v-19q0-3 3-3h5m4 0h8m-4 -4v8m0 4.5v13.5l-8-7l-8 7" stroke-width="1.7" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+	--icon-trash:     url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m12 12l1.5 16a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2l1.5-16m1.5-.5h-21m8 0v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2m1.7 6l-.6 9m-3.6 0v-9m-4.2 0l.6 9" stroke-width="1.3" stroke="black" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>');
+	--icon-share:     url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="29" cy="12" r="4"/><circle cx="14" cy="20" r="4"/><circle cx="29" cy="28" r="4"/><path d="m27 13l-13 7l13 7" stroke-width="2" stroke="black" fill="none"/></svg>');
+	--icon-handle:    url('data:image/svg+xml,<svg viewBox="0 0 02 10" xmlns="http://www.w3.org/2000/svg"><path d="m1 .5v9" stroke-width="1" stroke="black" stroke-linecap="round"/></svg>');
+	--icon-stroke-1:  url('data:image/svg+xml,<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6" fill="white"/></svg>');
+	--icon-stroke-2:  url('data:image/svg+xml,<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6" fill="white" fill-opacity=".1" stroke="white" stroke-width="1.5"/><circle cx="10" cy="10" r="3.2" fill="white"/></svg>');
+	--icon-stroke-3:  url('data:image/svg+xml,<svg viewBox="0 0 20 30" xmlns="http://www.w3.org/2000/svg"><line x1="14" y1="10" x2="6" y2="20" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>');
+	--icon-phrase-1:  url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m22.5 7v23h-5v-16l-6 2v-4z" fill="white"/></svg>');
+	--icon-phrase-2:  url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m12.5 14c0-3 3-5 7-5 3 0 6 2 6 5 0 2-3 5-7 8l-7 6 16 0" fill="none" stroke="white" stroke-width="4.5" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
+	--icon-settings:  url('data:image/svg+xml,<svg viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg"><path d="m10 10v6a4 4 0 1 0 .01 0m0 8v12M23 10v12a4 4 0 1 0 .01 0m0 8v6M36 10v8a4 4 0 1 0 .01 0m0 8v10" stroke-width="2" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+	--icon-arrow:     url('data:image/svg+xml,<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><path d="m20 14l3 4 3 -4" fill="none" stroke-width="1" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+	--icon-darkmode:  url('data:image/svg+xml,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m12 4a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" stroke="black" stroke-width="2" fill="none"/></svg>');
+	--icon-lightmode: url('data:image/svg+xml,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="black" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.3 11.3 1.4 1.4M2 12h2m16 0h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4" stroke-linecap="round"/></svg>');
+}
+
+:root.dark {
+	color-scheme: dark;
+	--icon-arrow: url('data:image/svg+xml,<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><path d="m20 14l3 4 3 -4" fill="none" stroke-width="1" stroke="white" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+}
+
+html {
+	user-select: none;
+	scrollbar-gutter: stable;
+	overscroll-behavior:contain;
+}
+
+body {
+	--grid-lines: 2;
+	--body-margin: 0px;
+	--main-margin: .7em;
+	--track-col-1-width: 5.2em;
+	--track-col-2-width: 2.5em;
+	--track-col-3-width: 11.9em;
+	--track-col-4-width: 0px;
+	gap: .2em;
+	display: grid;
+	margin: 0 0 2.8em;
+	padding: var(--body-margin);
+	padding-bottom: 0;
+	justify-content: center;
+	color: var(--color-text-main);
+	font: 400 4.92svw/1.4 sans-serif;
+	grid-template-columns: minmax(0, 780px);
+	background: var(--color-background-body);
+
+	&[inert]::after {
+		inset: 0;
+		z-index: 3;
+		padding-top: 2em;
+		position: absolute;
+		text-align: center;
+		content: 'Chargement de l\'application…';
+		background: var(--color-background-body);
+	}
+
+	h1, h2 {
+		margin: 0;
+		text-align: center;
+		font-weight: normal;
+	}
+
+	h1 {
+		font-size: 1.2em;
+		min-height: calc(1lh * var(--has-title));
+	}
+
+	h2 {
+		font-size: 1.1em;
+	}
+
+	@media (min-width: 520px) {
+		--body-margin: .5em;
+		--main-margin: 1em;
+		--grid-lines: 1;
+		--track-col-1-width: 8.1em;
+		--track-col-2-width: 2.5em;
+		--track-col-3-width: 24em;
+		--track-col-4-width: 5em;
+		font-size: clamp(.6em, 2.4svw, 1.2em);
+		h1 {
+			font-size: 1.4em;
+		}
+		h2 {
+			font-size: 1.2em;
+		}
+	}
+}
+
+#skip {
+	height: 2em;
+	z-index: 2;
+	display: flex;
+	position: absolute;
+	background: inherit;
+	align-items: center;
+	justify-content: center;
+	inset: -4em .5em auto .5em;
+
+	&:focus {
+		top: .5em;
+	}
+}
+
+main {
+	padding: .6em 0 0;
+	position: relative;
+	anchor-name: --sequencer;
+	border-radius: 0 0 .5em .5em;
+	background: var(--color-background-base);
+	box-shadow: 0 0 0 1px var(--color-shadow-medium), 0 0 .5em var(--color-shadow-medium);
+
+	&.swap .dropzone::after {
+		border-top: 1.5px dashed var(--color-border-light);
+	}
+
+	@media (min-width: 520px) {
+		border-radius: .5em;
+		padding-bottom: .3em;
+	}
+}
+
+table {
+	border-spacing: 0;
+	margin: 0 0 1.8em;
+	width: 100%;
+}
+
+thead {
+	position: absolute;
+	transform: scale(0);
+}
+
+tbody {
+	display: flex;
+	flex-direction: column;
+	min-height: calc((1em + 1.65em * var(--grid-lines) + .3em * (var(--grid-lines) - 1)) * (var(--tracks-count) + 1));
+}
+
+#title:empty,
+#title:not(:empty) + span {
+	display: none;
+}
+
+#title:empty + span {
+	position: absolute;
+	transform: scale(0);
+}
+
+.track {
+	display: grid;
+	position: relative;
+	contain: layout style;
+	view-transition-name: match-element;
+	grid-template-rows: 1em 1.65em .3em 1.65em 1fr;
+	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
+
+	&.reseted {
+		animation: reseted 250ms ease-out forwards;
+	}
+
+	&[data-instrument="0"] ~ .track,
+		&[data-bars="1"] .bar:nth-child(n+2),
+		&[data-bars="2"] .bar:nth-child(n+3),
+		&[data-bars="3"] .bar:nth-child(n+4),
+		&[data-bars="4"] .bar:nth-child(n+5),
+		&[data-bars="6"] .bar:nth-child(n+7),
+		&[data-bars="8"] .bar:nth-child(n+9),
+		&[data-beats="4"] .beat:nth-child(n+5),
+		&[data-beats="6"] .beat:nth-child(n+7),
+		&[data-steps="3"] .grid [name="step"]:nth-child(n+3),
+		&[data-steps="4"] .grid [name="step"]:nth-child(n+4),
+		&[data-steps="6"] .grid [name="step"]:nth-child(n+6) {
+			display: none;
+		}
+
+	.dropzone {
+		z-index: 1;
+		grid-column: 1 / -1;
+
+		&::after {
+			content: '';
+			display: block;
+			margin: .4em 0 0 var(--main-margin);
+		}
+	}
+
+	&.over .dropzone::after {
+		height: .3em;
+		border-radius: 3px;
+		margin-top: calc(.3em - 1px);
+		background: var(--color-background-base);
+		border: 1px solid var(--color-border-strong);
+	}
+
+	.instrument {
+		padding: 0;
+		grid-row: 2;
+		display: grid;
+		position: relative;
+		grid-column: 1 / span 2;
+		grid-template-columns: var(--main-margin) 1fr;
+
+		span, select {
+			grid-area: 1 / 2;
+			padding-left: .3em;
+		}
+
+		span {
+			text-align: left;
+			margin-left: 1px;
+			line-height: 1.65em;
+			font-weight: normal;
+		}
+
+		select {
+			font-size: 1em;
+		}
+
+		&::after {
+			content: '';
+			width: .8em;
+			height: .8em;
+			display: none;
+			border-radius: 50%;
+			position: absolute;
+			inset: -.4em -.4em auto auto;
+			background: var(--color-stroke-set);
+			border: 2px solid var(--color-background-base);
+		}
+	}
+
+	&[data-phrase="1"], &[data-phrase="2"] {
+		.instrument::after { display: block; }
+	}
+
+	&[data-phrase="1"] .instrument::after { background-image: var(--icon-phrase-1); }
+	&[data-phrase="2"] .instrument::after { background-image: var(--icon-phrase-2); }
+
+	&[data-steps="6"], &[data-steps="8"] {
+		.beat .grid { width: 9.5em; }
+	}
+
+	.volume {
+		grid-row: 4;
+		display: flex;
+		grid-column: 1;
+		padding: 0 0 0 .7em;
+		align-items: center;
+
+		input {
+			padding: 0;
+			width: 100%;
+			margin: 0 0 .2em 0;
+		}
+	}
+
+	.settings {
+		grid-row: 4;
+		grid-column: 2;
+		padding: 0 0 0 .5em;
+
+		button {
+			width: 100%;
+			height: 100%;
+			font-size: 1em;
+
+			&::before {
+				mask-image: var(--icon-settings);
+			}
+		}
+	}
+
+	.sheet {
+		gap: .3em;
+		padding: 0;
+		display: flex;
+		grid-column: 3;
+		flex-wrap: wrap;
+		grid-row: 2 / -1;
+		margin: 0 0 0 .9em;
+		contain: layout style;
+
+		:is(
+			.bar:has(~ .bar .current) *,
+			.beat:has(~ .beat .current) *,
+			:has(~ .current, ~ * .current)
+		),
+		.track.finished & * {
+			&[name="step"]:not([value="0"]) {
+				background-image: linear-gradient(var(--color-stroke-played), var(--color-stroke-played)), var(--current-icon);
+			}
+		}
+	}
+
+	.bar {
+		display: contents;
+	}
+
+	.beat {
+		gap: .3em;
+		display: flex;
+		position: relative;
+		counter-increment: beat;
+
+		&:first-child {
+			counter-reset: beat;
+		}
+
+		&::before {
+			content: '';
+			width: .21em;
+			height: 2.86em;
+			position: absolute;
+			border-radius: .2em;
+			inset: -.6em auto auto .45em;
+			background: var(--color-border-light);
+		}
+
+		.grid {
+			gap: .3em;
+			width: 3.9em;
+			display: flex;
+			justify-content: space-evenly;
+		}
+
+		> [name="step"].current {
+			outline-color: var(--color-stroke-current);
+		}
+	}
+
+	[name="step"] {
+		padding: 0;
+		z-index: 1;
+		border: none;
+		width: 1.1em;
+		height: 1.65em;
+		font-size: 1em;
+		border-radius: .2em;
+		--step-background: var(--color-background-light);
+		background: var(--step-background) no-repeat center;
+
+		&[value="1"] { --current-icon: var(--icon-stroke-1); }
+		&[value="2"] { --current-icon: var(--icon-stroke-2); }
+		&[value="3"] { --current-icon: var(--icon-stroke-3); }
+
+
+		&[value="1"], &[value="2"], &[value="3"] {
+			background-image: var(--current-icon);
+			--step-background: var(--color-stroke-set);
+		}
+
+		.beat > &[value="0"] {
+			border: 1px solid var(--color-border-light);
+			--step-background: var(--color-background-strong);
+
+			&::before {
+				display: block;
+				text-align: center;
+				line-height: 1.65em;
+				content: counter(beat);
+			}
+		}
+		
+		&.current {
+			outline-offset: -.05em;
+			outline: .2em solid var(--color-step-current);
+
+			&:not([value="0"]) {
+				height: 1.5em;
+				align-self: end;
+				background-size: 120%;
+				background-position: center 70%;
+				outline-color: var(--color-stroke-current);
+				--step-background: var(--color-stroke-current);
+			}
+		}
+	}
+
+	@media (min-width: 520px) {
+		grid-template-rows: 1em 1.65em 1fr;
+
+		.instrument, .settings, .volume {
+			grid-row: 2;
+			grid-column: auto;
+		}
+
+		.volume {
+			padding: 0;
+		}
+	}
+}
+
+@keyframes reseted {
+	from {
+		opacity: 0;
+		transform: translateY(1em);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+hr {
+	height: 0;
+	z-index: 2;
+	border: none;
+	padding: .7em;
+	position: sticky;
+	margin: 0 0 -2.5em;
+	view-transition-name: hr;
+	background: var(--color-background-base);
+	box-shadow: 0 -.9px 0 var(--color-border-light), 0 -4px 8px var(--color-shadow-light);
+	bottom: calc(2.5rem * var(--grid-lines) - .2em + 1px + .7em * (var(--grid-lines) - 1));
+}
+
+[role="toolbar"] {
+	z-index: 2;
+	display: flex;
+	bottom: -.2em;
+	flex-wrap: wrap;
+	position: sticky;
+	gap: var(--main-margin);
+	border-radius: 0 0 .5em .5em;
+	view-transition-name: controls;
+	padding: .7em var(--main-margin);
+	background: var(--color-background-base);
+
+	button,
+	select {
+		height: 2.5rem;
+		font-size: 1em;
+	}
+
+	#start {
+		order: 2;
+		width: 2.5rem;
+
+		&[aria-checked="true"]::before {
+			mask-image: var(--icon-start);
+		}
+
+		&[aria-checked="false"]::before {
+			mask-image: var(--icon-stop);
+		}
+	}
+
+	#reset {
+		order: 4;
+	}
+
+	#combo_tempo {
+		flex: 1;
+		order: 3;
+		display: flex;
+		height: 2.5rem;
+	}
+
+	#combo_presets {
+		flex: 1.4;
+		display: grid;
+		grid-template-columns: 2.5rem minmax(9em, 1fr);
+
+		#presets_label {
+			grid-row: 1;
+			grid-column: 2;
+			overflow: hidden;
+			line-height: 2.5rem;
+			white-space: nowrap;
+			padding: 0 1em 0 .5em;
+			text-overflow: ellipsis;
+		}
+
+		select,
+		.presets {
+			width: 100%;
+			grid-row: 1;
+			grid-column: 2;
+			text-align: left;
+			margin-left: -1px;
+			text-overflow: ellipsis;
+			border-radius: 0 4px 4px 0;
+		}
+
+		select:empty,
+		button.presets:has(+ select:not(:empty)) {
+			display: none;
+		}
+
+		[commandfor="presets-settings"] {
+			width: 2.5rem;
+			border-radius: 4px 0 0 4px;
+
+			&::before {
+				mask-image: var(--icon-unsaved);
+			}
+
+			#combo_presets:has(:checked) &::before {
+				mask-image: var(--icon-saved);
+				background-color: var(--color-stroke-set);
+			}
+		}
+
+		button:focus,
+		select:focus {
+			z-index: 1;
+		}
+	}
+
+	#combo_tempo {
+		input {
+			flex: 1;
+			width: 3em;
+		}
+		output {
+			width: 4em;
+			margin-left: .5em;
+			line-height: 2.5rem;
+		}
+	}
+
+	@media (min-width: 520px) {
+		#start {
+			order: 4;
+		}
+		#reset {
+			order: 3;
+		}
+	}
+}
+
+::view-transition-group(hr),
+::view-transition-group(controls) {
+	z-index: 2;
+}
+
+#trash {
+	inset: 0;
+	z-index: 1;
+	display: none;
+	border-radius: 4px;
+	position: absolute;
+	background: inherit;
+	margin: .7em var(--main-margin);
+	border: 1.5px dashed var(--color-border-light);
+
+	&::after {
+		content: '';
+		width: 2rem;
+		height: 2rem;
+		mask-image: var(--icon-trash);
+		background-color: currentColor;
+	}
+
+	&.over {
+		border: 1px solid var(--color-border-strong);
+	}
+}
+
+.trash #trash {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#combo_tempo,
+select,
+input:not([type]),
+button {
+	margin: 0;
+	color: inherit;
+	padding: 0 .5em;
+	user-select: none;
+	appearance: none;
+	border-radius: 4px;
+	box-sizing: border-box;
+	font-family: sans-serif;
+	background: transparent no-repeat;
+	border: 1px solid var(--color-border-light);
+}
+
+input {
+	accent-color: var(--color-stroke-set);
+}
+
+select,
+.presets {
+	padding-right: .9em;
+	background-position: right center;
+	background-image: var(--icon-arrow);
+}
+
+select:has(:checked) {
+	background-color: var(--color-background-base);
+}
+
+option {
+	background-color: var(--color-background-base);
+}
+
+a {
+	color: var(--color-stroke-set);
+}
+
+.with-icon {
+	display: flex;
+	align-items: center;
+
+	&::before {
+		content: '';
+		height: 100%;
+		mask-repeat: no-repeat;
+		background-color: currentColor;
+	}
+}
+
+.icon-only {
+	overflow: hidden;
+	position: relative;
+	text-indent: -1000px;
+
+	&::before {
+		inset: 0;
+		content: '';
+		position: absolute;
+		mask-position: center;
+		mask-repeat: no-repeat;
+		background-color: currentColor;
+	}
+}
+
+dialog {
+	inset: 0;
+	padding: 0;
+	color: inherit;
+	max-width: 24em;
+	margin: 1em auto;
+	user-select: none;
+	border-radius: .5em;
+	box-sizing: border-box;
+	width: calc(100% - 2em);
+	overscroll-behavior: contain;
+	max-height: calc(100dvh - 2em);
+	background: var(--color-background-base);
+	border: 1px solid var(--color-border-strong);
+	box-shadow: 0 0 .5em var(--color-shadow-medium);
+
+	&[open] {
+		display: flex;
+		flex-direction: column;
+	}
+
+	&::backdrop {
+		overflow: hidden;
+		backdrop-filter: blur(2px);
+		overscroll-behavior: contain;
+		background: var(--color-shadow-strong);
+	}
+
+	&::after {
+		content: '';
+		opacity: 0.7;
+		width: 2.5em;
+		height: 2.5em;
+		position: absolute;
+		inset: 0 0 auto auto;
+		mask-position: center;
+		mask-repeat: no-repeat;
+		mask-image: var(--icon-close);
+		background-color: currentColor;
+	}
+
+	&:hover::after {
+		opacity: 1;
+	}
+
+	&:has(:hover)::after {
+		opacity: 0.7;
+	}
+
+	& > :first-child {
+		gap: 1em;
+		padding: 1em;
+		display: flex;
+		flex-direction: column;
+	}
+
+	h2 {
+		margin: 0 1em;
+	}
+
+	button {
+		min-width: 6em;
+		font-size: .9em;
+		background-color: var(--color-background-light);
+	}
+
+	footer {
+		gap: 1em;
+		height: 1.8em;
+		display: flex;
+		flex-shrink: 0;
+		padding-top: .5em;
+		justify-content: space-around;
+	}
+}
+
+#track-settings {
+	section {
+		margin: auto;
+		gap: .5em 1em;
+		display: grid;
+		grid-template-columns: 1.8fr 1fr;
+	}
+
+	select {
+		height: 1.8em;
+		font-size: .9em;
+	}
+}
+
+#presets-settings {
+	h2 {
+		margin-bottom: -.5em;
+	}
+
+	fieldset {
+		gap: 1em;
+		margin: 0;
+		display: flex;
+		border: 1px solid var(--color-border-strong);
+	}
+
+	legend {
+		font-size: .9em;
+	}
+
+	input,
+	select {
+		flex: 1;
+		width: 100%;
+		height: 2em;
+		font-size: .9em;
+		text-overflow: ellipsis;
+	}
+
+	input:read-only {
+		border: none;
+		pointer-events: none;
+	}
+
+	#share::before {
+		width: 2em;
+		margin-left: -.5em;
+		mask-image: var(--icon-share);
+	}
+
+	@media (min-width: 520px) {
+		legend {
+			font-size: 1em;
+		}
+	}
+}
+
+#app {
+	section {
+		gap: .5em;
+		display: flex;
+		flex-direction: column;
+	}
+
+	details {
+		interpolate-size: allow-keywords;
+
+		&:not(:last-of-type) div {
+			padding-bottom: 1em;
+		}
+
+		&::details-content {
+			height: 0;
+			opacity: 0;
+			display: block;
+			overflow: hidden;
+			transition: 
+				opacity 0s,
+				height 0.15s ease,
+				content-visibility 0.15s allow-discrete;
+		}
+
+		&[open]::details-content {
+			opacity: 1;
+			height: auto;
+			transition: 
+				height 0.15s ease,
+				opacity 0.1s ease 0.05s,
+				content-visibility 0.2s allow-discrete;
+		}
+
+		&[open] summary {
+			font-weight: bold;
+		}
+
+		@starting-style {
+			&[open]::details-content {
+				height: 0;
+				opacity: 0;
+			}
+		}
+
+		div {
+			gap: .3em;
+			display: flex;
+			padding: .5em 0 0;
+			flex-direction: column;
+		}
+
+	}
+
+	p {
+		margin: 0;
+		line-height: 1.2;
+		overflow: hidden;
+		text-overflow: ellipsis;
+
+		&:has(button) {
+			gap: .7em 0;
+			display: flex;
+			flex-wrap: wrap;
+			padding-top: .2em;
+			justify-content: space-around;
+		}
+
+		button {
+			width: 11.5em;
+			height: 1.5em;
+			white-space: nowrap;
+		}
+
+		&:has(time:not(:empty)) span {
+			display: none;
+		}
+
+	}
+
+	time {
+		white-space: nowrap;
+	}
+
+	button[command="close"] {
+		flex: 1;
+		max-width: 6em;
+		min-width: auto;
+	}
+}
+
+#toast {
+	border: none;
+	height: 3.3em;
+	padding: 0 1em;
+	font-size: .8em;
+	position: fixed;
+	user-select: none;
+	border-radius: .4em;
+	backdrop-filter: blur(2px);
+	--anchor-size-height: 100svh;
+	color: var(--color-text-popover);
+	background: var(--color-background-popover);
+	box-shadow: 0 0 .5em var(--color-shadow-medium);
+	inset: auto 0 max(0.8em, calc(100svh - var(--anchor-size-height) - 4.2em - var(--body-margin)));
+
+	&:popover-open {
+		gap: 1em;
+		display: flex;
+		align-items: center;
+	}
+
+	p {
+		margin: 0;
+		line-height: 1.2;
+	}
+
+	button {
+		padding: .2em .5em;
+		font-size: inherit;
+		color: var(--color-text-main);
+		background-color: var(--color-background-light);
+	}
+
+	&:popover-open {
+		animation: fade-out 1s forwards 5s;
+	}
+
+	&:has(button[hidden]):popover-open {
+		animation: fade-out 1s forwards 2s;
+	}
+}
+
+@supports (anchor-name: --sequencer) {
+	#toast {
+		position-anchor: --sequencer;
+		--anchor-size-height: anchor-size(height);
+	}
+}
+
+@keyframes fade-out {
+	100% {
+		opacity: 0;
+	}
+}
+
+body > footer {
+	display: flex;
+	justify-content: space-between;
+
+	button {
+		border: none;
+		font-size: .8em;
+		margin-right: .2em;
+		color: var(--color-text-faded);
+
+		&::before {
+			width: 1em;
+			margin-right: .2em;
+			mask-image: var(--icon-darkmode);
+		}
+
+		.state-light { display: none; }
+
+		:root.dark & {
+			&::before { mask-image: var(--icon-lightmode); }
+			.state-dark { display: none; }
+			.state-light { display: block; }
+		}
+	}
+
+	.state-dark,
+	.state-light {
+		pointer-events: none;
+	}
+}
+
+@media (pointer: fine) and (hover: hover) {
+	select:hover,
+	#combo_tempo:hover,
+	input:not([type]):hover,
+	button:not([name="step"]):hover {
+		border-color: var(--color-border-strong);
+	}
+
+	[name="step"]:hover {
+		background-color: color-mix(in lab, var(--step-background), currentColor 10%);
+	}
+
+	th:hover .handle {
+		cursor: grab;
+		mask-position: center;
+		mask-repeat: no-repeat;
+		mask-image: var(--icon-handle);
+		background: var(--color-text-muted);
+	}
+
+	th:active .handle {
+		cursor: grabbing;
+	}
+
+	th .handle:hover {
+		background: currentColor;
+	}
+
+	body > footer button:hover {
+		color: inherit;
+	}
+
+}
+</style>
+</head>
+<body>
+	<main>
+		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
+		<table>
+			<caption>
+				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Morceau sans titre</span></h1>
+			</caption>
+			<thead>
+				<tr>
+					<th aria-hidden="true"></th>
+					<th scope="col">Instruments</th>
+					<th scope="col">Réglages</th>
+					<th scope="col">Partitions</th>
+					<th scope="col">Volumes</th>
+				</tr>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<hr>
+		<div id="controls" role="toolbar" aria-label="Boutons de contrôle" tabindex="-1">
+			<div id="combo_presets" role="group">
+				<button class="icon-only" title="Gérer le morceau" command="show-modal" commandfor="presets-settings">Gérer le morceau</button>
+				<span id="presets_label" aria-hidden="true">Morceaux enregistrés</span>
+				<button class="presets" aria-labelledby="presets_label" data-message="Aucun morceau n'est enregistré."></button>
+				<select aria-labelledby="presets_label"></select>
+			</div>
+			<div id="combo_tempo">
+				<input aria-label="Tempo" aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
+				<output for="tempo" aria-hidden="true"><span>80</span> bpm</output>
+			</div>
+			<button id="reset" title="Effacer le morceau">Effacer</button>
+			<button id="start" class="icon-only" role="switch" aria-checked="false" title="Jouer">Jouer</button>
+			<div id="trash">Déposer ici pour supprimer</div>
+		</div>
+	</main>
+	<footer>
+		<button id="theme" class="with-icon" role="switch" aria-checked="false" aria-label="Mode sombre">
+			<span class="state-light" aria-hidden="true">Mode clair</span>
+			<span class="state-dark" aria-hidden="true">Mode sombre</span>
+		</button>
+		<button commandfor="app" command="show-modal">Application</button>
+	</footer>
+	<datalist id="volume">
+		<option value="30"></option>
+	</datalist>
+	<template>
+		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
+			<td class="dropzone" aria-hidden="true"></td>
+			<th class="instrument" scope="row" draggable="true" aria-label="Piste sans instrument" data-template data-template-aria-label="Piste {{instrument}}" data-template-default-instrument="sans instrument">
+				<div class="handle" title="Déplacer" aria-hidden="true"></div>
+				<span aria-hidden="true">+ Instrument</span>
+				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label="Ajouter un instrument|Modifier l'instrument" autocomplete="off"></select>
+			</th>
+			<td class="settings">
+				<button class="icon-only" title="Modifier la piste" commandfor="track-settings" command="show-modal">Réglages</button>
+			</td>
+			<td class="sheet">
+				<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
+					<span class="beat" role="group" aria-label="Temps 1" data-index="0">
+						<button name="step" data-index="0" value="0" aria-label="Division 1, vide" data-template data-template-aria-label="Division 1, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+						<span class="grid">
+							<button name="step" data-index="1" value="0" aria-label="Division 2, vide" data-template data-template-aria-label="Division 2, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+							<button name="step" data-index="2" value="0" aria-label="Division 3, vide" data-template data-template-aria-label="Division 3, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+							<button name="step" data-index="3" value="0" aria-label="Division 4, vide" data-template data-template-aria-label="Division 4, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+							<button name="step" data-index="4" value="0" aria-label="Division 5, vide" data-template data-template-aria-label="Division 5, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+							<button name="step" data-index="5" value="0" aria-label="Division 6, vide" data-template data-template-aria-label="Division 6, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+							<button name="step" data-index="6" value="0" aria-label="Division 7, vide" data-template data-template-aria-label="Division 7, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+							<button name="step" data-index="7" value="0" aria-label="Division 8, vide" data-template data-template-aria-label="Division 8, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>
+						</span>
+					</span>
+				</span>
+			</td>
+			<td class="volume">
+				<input name="volume" aria-label="Volume de la piste sans instrument" data-template data-template-aria-label="Volume de la piste {{instrument}}" data-template-default-instrument="sans instrument" aria-valuetext="50%" data-template-aria-valuetext="{{volume}}%" list="volume" title="Volume" type="range" value="30" min="0" max="60" autocomplete="off">
+			</td>
+		</tr>
+	</template>
+	<dialog id="track-settings" aria-label="Réglage de la piste">
+		<form method="dialog" autocomplete="off">
+			<h2 autofocus tabindex="-1">Instrument</h2>
+			<section>
+				<label for="bars">Nombre de mesures</label>
+				<select id="bars" name="bars">
+					<option value="1" selected>1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="6">6</option>
+					<option value="8">8</option>
+				</select>
+				<label for="beats">Temps par mesure</label>
+				<select id="beats" name="beats">
+					<option value="4" selected>4</option>
+					<option value="6">6</option>
+				</select>
+				<label for="steps">Division du temps</label>
+				<select id="steps" name="steps">
+					<option value="3">3</option>
+					<option value="4" selected>4</option>
+					<option value="6">6</option>
+					<option value="8">8</option>
+				</select>
+				<label for="phrase">Type de phrase</label>
+				<select id="phrase" name="phrase">
+					<option value="1">Appel</option>
+					<option value="2">Réponse</option>
+					<option value="0" selected>Tourne</option>
+				</select>
+			</section>
+			<footer>
+				<button name="apply">Appliquer</button><button formnovalidate>Annuler</button>
+			</footer>
+		</form>
+	</dialog>
+	<dialog id="presets-settings" aria-label="Gestions des morceaux">
+		<div>
+			<h2 autofocus tabindex="-1">Morceau sans titre</h2>
+			<form id="modify" method="dialog" autocomplete="off" hidden>
+				<fieldset>
+					<legend>Enregistrer le morceau</legend>
+					<input name="name" aria-label="Nom du morceau" readonly tabindex="-1">
+					<button name="save"
+						data-success="Le morceau a été enregistré."
+						data-failure="⚠️ La modification a échoué."
+						data-cancel-success="La modification a été annulée."
+						data-cancel-failure="⚠️ La modification ne peut être annulée.">Enregistrer</button>
+				</fieldset>
+			</form>
+			<form id="newOne" method="dialog" autocomplete="off">
+				<fieldset>
+					<legend>Enregistrer sous</legend>
+					<input name="name" aria-label="Nom du morceau" placeholder="Nom du morceau" required
+						data-invalid-empty="Doit contenir au moins un caractère."
+						data-invalid-duplicated="Ce nom existe déjà.">
+					<button name="save"
+						data-success="Le morceau a été enregistré."
+						data-failure="⚠️ La modification a échoué."
+						data-cancel-success="La modification a été annulée."
+						data-cancel-failure="⚠️ La modification ne peut être annulée.">Enregistrer</button>
+				</fieldset>
+			</form>
+			<form id="rename" method="dialog" autocomplete="off" hidden>
+				<fieldset>
+					<legend>Renommer le morceau</legend>
+					<input name="name" aria-label="Nom du morceau" placeholder="Nom du morceau" required
+						data-invalid-empty="Doit contenir au moins un caractère."
+						data-invalid-duplicated="Ce nom existe déjà.">
+					<button name="save"
+						data-success="Le morceau a été renommé."
+						data-failure="⚠️ La modification a échoué."
+						data-cancel-success="La modification a été annulée."
+						data-cancel-failure="⚠️ La modification ne peut être annulée.">Renommer</button>
+				</fieldset>
+			</form>
+			<form id="delete" method="dialog" autocomplete="off" hidden>
+				<fieldset>
+					<legend>Supprimer le morceau</legend>
+					<input name="name" aria-label="Nom du morceau" readonly tabindex="-1">
+					<button name="save"
+						data-success="Le morceau a été supprimé."
+						data-failure="⚠️ La modification a échoué."
+						data-cancel-success="La modification a été annulée."
+						data-cancel-failure="⚠️ La modification ne peut être annulée.">Supprimer</button>
+				</fieldset>
+			</form>
+			<footer>
+				<button id="share" class="with-icon" data-failure="🔗 Lien de partage copié dans le presse-papier.">Partager</button>
+				<button commandfor="presets-settings" command="close">Annuler</button>
+			</footer>
+		</div>
+	</dialog>
+	<dialog id="app" aria-labelledby="appTitle">
+		<div>
+			<h2 id="appTitle" autofocus tabindex="-1">Batucada Sequencer</h2>
+			<section>
+				<details name="app">
+					<summary>Données</summary>
+					<div>
+						<p>Dernière modification : <time></time><span>Aucune</span></p>
+						<p>
+							<button id="export">Exporter les morceaux</button>
+							<button id="import"
+								data-success-zero="Aucun nouveau morceau n'a été importé."
+								data-success-one="1 nouveau morceau a été importé."
+								data-success-other="{{number}} nouveaux morceaux ont été importés."
+								data-failure="⚠️ Impossible d'importer le fichier."
+								data-cancel-success="L'import a été annulé."
+								data-cancel-failure="⚠️ Impossible d'annuler l'import.">Importer des morceaux</button>
+						</p>
+					</div>
+				</details>
+				<details name="app">
+					<summary>À propos…</summary>
+					<div>
+						<p>Version de l'application : <span id="applicationVersion">-</span></p>
+						<p>Version des instruments : <span id="instrumentsVersion">-</span></p>
+						<p>Contact : <a id="contact"></a></p>
+					</div>
+				</details>
+			</section>
+			<footer>
+				<button id="update" hidden>Mettre à jour l'application</button>
+				<button commandfor="app" command="close" autofocus>Fermer</button>
+			</footer>
+		</div>
+	</dialog>
+	<div id="toast" popover="auto" role="status">
+		<p></p>
+		<button aria-label="Annuler cette action">Annuler</button>
+	</div>
+	<script type="module">
+		import {Audio}      from './modules/audio.js';
+		import {Presets}    from './modules/presets.js';
+		import {Navigation} from './modules/navigation.js';
+		import {Interface}  from './modules/interface.js';
+		import {SwClient}   from './modules/sw-client.js';
+		import app_config   from './config/app.js';
+		import core_config  from './config/core.js';
+		import instruments  from './data/instruments.json' with { type: 'json' };
+
+		const bus    = new EventTarget();
+		const ui     = new Interface({ bus, app_config, core_config, instruments });
+		const config = ui.config;
+
+		new Audio(     { bus, config, instruments });
+		new Navigation({ bus, config, instruments });
+		new Presets(   { bus, config, instruments });
+		new SwClient(  { bus, config, instruments });
+	</script>
+</body>
+</html>

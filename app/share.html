@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<script>
+const current = new URL(location.href);
+const sharelink = current.searchParams.get('url');
+const sharetext = current.searchParams.get('text');
+const target = new URL('../', current);
+for (const url of [sharelink, sharetext]) {
+	if (!url) continue;
+	try {
+		target.search = new URL(url).search;
+		break;
+	} catch {}
+}
+window.location.replace(target);
+</script>
+</html>

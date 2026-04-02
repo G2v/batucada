@@ -1,0 +1,15 @@
+export default {
+	apiURL:              './api/presets.php',
+	apiKey:              'Y2VzdGxlc3p1cmJhbWF0ZXVycw==',
+	appCache:            'app',
+	dataCache:           'data',
+	presetsFile:         'presets.json',
+	defaultSetValue:     '0',
+	defaultTitleValue:   '',
+	setSearchParam:      'set',
+	tempoSearchParam:    'bpm',
+	titleSearchParam:    'title',
+	volumeSearchParam:   'vol',
+	updateSearchParam:   'update',
+	mediaPausedDuration: 20,
+}

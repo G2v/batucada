@@ -1,0 +1,57 @@
+[
+	{
+		"id": 0,
+		"name": "Instrument",
+		"files": ["default.ogg"]
+	},
+	{
+		"id": 9,
+		"name": "Répénique",
+		"files": ["repenique.ogg", "repenique2.ogg"]
+	},
+	{
+		"id": 4,
+		"name": "Tamborim",
+		"files": ["tamborim.ogg", "tamborim2.ogg"]
+	},
+	{
+		"id": 1,
+		"name": "Agogo",
+		"files": ["agogo.ogg", "agogo2.ogg"]
+	},
+	{
+		"id": 2,
+		"name": "Campana",
+		"files": ["campana.ogg", "campana2.ogg"]
+	},
+	{
+		"id": 3,
+		"name": "Chocalho",
+		"files": ["chocalho.ogg", "chocalho2.ogg"]
+	},
+	{
+		"id": 8,
+		"name": "Caisse claire",
+		"files": ["caixa.ogg", "caixa2.ogg", "caixa3.ogg"]
+	},
+	{
+		"id": 5,
+		"name": "Couper", 
+		"files": ["couper.ogg", "couper2.ogg"]
+	},
+	{
+		"id": 6,
+		"name": "Contra",
+		"files": ["contra.ogg", "contra2.ogg"]
+	},
+	{
+		"id": 7,
+		"name": "Surdo",
+		"files": ["surdo.ogg", "surdo2.ogg"]
+	},
+	{
+		"id": 10,
+		"name": "Unisson",
+		"files": ["unisson.ogg"]
+	}
+]
