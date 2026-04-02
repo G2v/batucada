@@ -1,6 +1,6 @@
 export default {
-	local:              false,
-	email:              'contact@leszurbamateurs.com',
+	local:              true,
+	email:              'gdevivies@gmail.com',
 	tracksLength:       16,
 	hiddenPlayDuration: 600,
 }
