@@ -939,7 +939,7 @@ dialog {
 
 		button {
 			height: 2em;
-			width: 11.5em;
+			width: 11.3em;
 			white-space: nowrap;
 		}
 
@@ -947,10 +947,6 @@ dialog {
 			display: none;
 		}
 
-	}
-
-	time {
-		white-space: nowrap;
 	}
 
 	button[command="close"] {
@@ -966,14 +962,16 @@ dialog {
 	padding: 0 1em;
 	font-size: .8em;
 	position: fixed;
+	margin:.8em auto;
+	align-self: start; 
 	user-select: none;
 	border-radius: .4em;
 	backdrop-filter: blur(2px);
-	--anchor-size-height: 100svh;
+	position-anchor: --sequencer;
 	color: var(--color-text-popover);
+	inset: calc(anchor(bottom)) 1em 0;
 	background: var(--color-background-popover);
 	box-shadow: 0 0 .5em var(--color-shadow-medium);
-	inset: auto 1em max(0.8em, calc(100svh - var(--anchor-size-height) - 4.2em - var(--body-margin)));
 
 	&:popover-open {
 		gap: 1em;
@@ -999,13 +997,6 @@ dialog {
 
 	&:has(button[hidden]):popover-open {
 		animation: fade-out 1s forwards 2s;
-	}
-}
-
-@supports (anchor-name: --sequencer) {
-	#toast {
-		position-anchor: --sequencer;
-		--anchor-size-height: anchor-size(height);
 	}
 }
 
