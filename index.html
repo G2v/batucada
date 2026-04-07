@@ -935,24 +935,23 @@ dialog {
 
 #toast {
 	border: none;
+	height: 3.3em;
+	padding: 0 1em;
 	font-size: .8em;
-	background: none;
-	padding: .8em 1em;
+	align-self: start; 
 	user-select: none;
-	position-area: bottom center;
+	border-radius: .4em;
+	backdrop-filter: blur(2px);
 	position-anchor: --sequencer;
+	color: var(--color-text-popover);
+	background: var(--color-background-popover);
+	box-shadow: 0 0 .5em var(--color-shadow-medium);
+	inset: auto 1em max(.8em, calc(100svh - anchor-size(height) - 4.2em - var(--body-margin)));
 
-	div {
+	&:popover-open {
 		gap: 1em;
-		height: 3.3em;
 		display: flex;
-		padding: 0 1em;
 		align-items: center;
-		border-radius: .4em;
-		backdrop-filter: blur(2px);
-		color: var(--color-text-popover);
-		background: var(--color-background-popover);
-		box-shadow: 0 0 .5em var(--color-shadow-medium);
 	}
 
 	p {
@@ -968,11 +967,11 @@ dialog {
 	}
 
 	&:popover-open {
-		animation: xfade-out 1s forwards 5s;
+		animation: fade-out 1s forwards 5s;
 	}
 
 	&:has(button[hidden]):popover-open {
-		animation: xfade-out 1s forwards 2s;
+		animation: fade-out 1s forwards 2s;
 	}
 }
 
@@ -1241,10 +1240,8 @@ body > footer {
 		</div>
 	</dialog>
 	<div id="toast" popover="auto" role="status">
-		<div>
-			<p></p>
-			<button aria-label="Annuler cette action">Annuler</button>
-		</div>
+		<p></p>
+		<button aria-label="Annuler cette action">Annuler</button>
 	</div>
 	<script type="module">
 		import {Audio}      from './modules/audio.js';
