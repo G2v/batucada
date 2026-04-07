@@ -519,7 +519,7 @@ hr {
 	bottom: calc(2.5rem * var(--grid-lines) - .2em + 1px + .7em * (var(--grid-lines) - 1));
 }
 
-[role="toolbar"] {
+#controls {
 	z-index: 2;
 	display: flex;
 	bottom: -.2em;
@@ -1081,8 +1081,8 @@ body > footer {
 			</tbody>
 		</table>
 		<hr>
-		<div id="controls" role="toolbar" aria-label="Boutons de contrôle" tabindex="-1">
-			<div id="combo_presets" role="group">
+		<div id="controls" role="group" aria-label="Boutons de contrôle" tabindex="-1">
+			<div id="combo_presets">
 				<button class="icon-only" title="Gérer le morceau" command="show-modal" commandfor="presets-settings">Gérer le morceau</button>
 				<span id="presets_label" aria-hidden="true">Morceaux enregistrés</span>
 				<button class="presets" aria-labelledby="presets_label" data-message="Aucun morceau n'est enregistré."></button>
