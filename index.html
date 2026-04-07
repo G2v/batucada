@@ -911,13 +911,15 @@ dialog {
 			display: flex;
 			flex-wrap: wrap;
 			padding-top: .2em;
-			justify-content: space-between;
+			justify-content: center;
+			@media (min-width: 520px) {
+				justify-content: space-between;
+			}
 		}
 
 		button {
 			height: 2em;
 			width: 11.6em;
-			white-space: nowrap;
 		}
 
 		&:has(time:not(:empty)) span {
