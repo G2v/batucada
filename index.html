@@ -1139,7 +1139,7 @@ body > footer {
 	</template>
 	<dialog id="track-settings" aria-label="Réglage de la piste">
 		<form method="dialog" autocomplete="off">
-			<h2 autofocus tabindex="-1">Instrument</h2>
+			<h2>Instrument</h2>
 			<section>
 				<label for="bars">Nombre de mesures</label>
 				<select id="bars" name="bars">
@@ -1174,14 +1174,14 @@ body > footer {
 			</footer>
 		</form>
 	</dialog>
-	<dialog id="presets-settings" aria-label="Gestions des morceaux">
+	<dialog id="presets-settings" aria-label="Gestion du morceau">
 		<div>
-			<h2 autofocus tabindex="-1">Morceau sans titre</h2>
+			<h2>Morceau sans titre</h2>
 			<form method="dialog" autocomplete="off">
-				<label>Titre : <input name="name" aria-label="Titre du morceau" placeholder="Titre du morceau" required
+				<label>Titre : <input name="name" placeholder="Titre du morceau" required
 					data-invalid-empty="Doit contenir au moins un caractère."
 					data-invalid-duplicated="Ce nom existe déjà."></label>
-				<button name="save"
+				<button name="save" autofocus
 					data-success="Le morceau a été enregistré."
 					data-failure="⚠️ La modification a échoué."
 					data-cancel-success="La modification a été annulée."
@@ -1206,7 +1206,7 @@ body > footer {
 	</dialog>
 	<dialog id="app" aria-labelledby="appTitle">
 		<div>
-			<h2 id="appTitle" autofocus tabindex="-1">Batucada Sequencer</h2>
+			<h2 id="appTitle">Batucada Sequencer</h2>
 			<section>
 				<details name="app">
 					<summary>Morceaux</summary>
