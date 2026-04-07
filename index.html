@@ -106,7 +106,6 @@ if (localStorage.getItem('theme') === 'dark') document.documentElement.classList
 	--icon-saved:     url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 34v-19q0-3 3-3h10q3 0 3 3v19l-8-7z" stroke-width="1.7" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-unsaved:   url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 34v-19q0-3 3-3h5m4 0h8m-4 -4v8m0 4.5v13.5l-8-7l-8 7" stroke-width="1.7" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-trash:     url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m12 12l1.5 16a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2l1.5-16m1.5-.5h-21m8 0v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2m1.7 6l-.6 9m-3.6 0v-9m-4.2 0l.6 9" stroke-width="1.3" stroke="black" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>');
-	--icon-share:     url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="29" cy="12" r="4"/><circle cx="14" cy="20" r="4"/><circle cx="29" cy="28" r="4"/><path d="m27 13l-13 7l13 7" stroke-width="2" stroke="black" fill="none"/></svg>');
 	--icon-handle:    url('data:image/svg+xml,<svg viewBox="0 0 02 10" xmlns="http://www.w3.org/2000/svg"><path d="m1 .5v9" stroke-width="1" stroke="black" stroke-linecap="round"/></svg>');
 	--icon-stroke-1:  url('data:image/svg+xml,<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6" fill="white"/></svg>');
 	--icon-stroke-2:  url('data:image/svg+xml,<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6" fill="white" fill-opacity=".1" stroke="white" stroke-width="1.5"/><circle cx="10" cy="10" r="3.2" fill="white"/></svg>');
@@ -690,6 +689,10 @@ input {
 	accent-color: var(--color-stroke-set);
 }
 
+button:disabled {
+	opacity: .6;
+}
+
 select,
 .presets {
 	padding-right: .9em;
@@ -707,18 +710,6 @@ option {
 
 a {
 	color: var(--color-stroke-set);
-}
-
-.with-icon {
-	display: flex;
-	align-items: center;
-
-	&::before {
-		content: '';
-		height: 100%;
-		mask-repeat: no-repeat;
-		background-color: currentColor;
-	}
 }
 
 .icon-only {
@@ -827,44 +818,30 @@ dialog {
 }
 
 #presets-settings {
-	h2 {
-		margin-bottom: -.5em;
-	}
-
-	fieldset {
+	form {
 		gap: 1em;
-		margin: 0;
-		display: flex;
-		border: 1px solid var(--color-border-strong);
-	}
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(10em, 1fr));
 
-	legend {
-		font-size: .9em;
-	}
+		label {
+			gap: 0 .5em;
+			display: flex;
+			flex-wrap: wrap;
+			grid-column: 1 / -1;
+			align-items: center;
+		}
 
-	input,
-	select {
-		flex: 1;
-		width: 100%;
-		height: 2em;
-		font-size: .9em;
-		text-overflow: ellipsis;
-	}
+		input {
+			flex: 1;
+			height: 2em;
+			min-width: 15em;
+			font-size: .9em;
+			text-overflow: ellipsis;
+		}
 
-	input:read-only {
-		border: none;
-		pointer-events: none;
-	}
-
-	#share::before {
-		width: 2em;
-		margin-left: -.5em;
-		mask-image: var(--icon-share);
-	}
-
-	@media (min-width: 520px) {
-		legend {
-			font-size: 1em;
+		button {
+			height: 2em;
+			white-space: nowrap;
 		}
 	}
 }
@@ -934,12 +911,12 @@ dialog {
 			display: flex;
 			flex-wrap: wrap;
 			padding-top: .2em;
-			justify-content: space-around;
+			justify-content: space-between;
 		}
 
 		button {
 			height: 2em;
-			width: 11.3em;
+			width: 11.6em;
 			white-space: nowrap;
 		}
 
@@ -958,25 +935,24 @@ dialog {
 
 #toast {
 	border: none;
-	height: 3.3em;
-	padding: 0 1em;
 	font-size: .8em;
-	position: fixed;
-	margin:.8em auto;
-	align-self: start; 
+	background: none;
+	padding: .8em 1em;
 	user-select: none;
-	border-radius: .4em;
-	backdrop-filter: blur(2px);
+	position-area: bottom center;
 	position-anchor: --sequencer;
-	color: var(--color-text-popover);
-	inset: calc(anchor(bottom)) 1em 0;
-	background: var(--color-background-popover);
-	box-shadow: 0 0 .5em var(--color-shadow-medium);
 
-	&:popover-open {
+	div {
 		gap: 1em;
+		height: 3.3em;
 		display: flex;
+		padding: 0 1em;
 		align-items: center;
+		border-radius: .4em;
+		backdrop-filter: blur(2px);
+		color: var(--color-text-popover);
+		background: var(--color-background-popover);
+		box-shadow: 0 0 .5em var(--color-shadow-medium);
 	}
 
 	p {
@@ -992,11 +968,11 @@ dialog {
 	}
 
 	&:popover-open {
-		animation: fade-out 1s forwards 5s;
+		animation: xfade-out 1s forwards 5s;
 	}
 
 	&:has(button[hidden]):popover-open {
-		animation: fade-out 1s forwards 2s;
+		animation: xfade-out 1s forwards 2s;
 	}
 }
 
@@ -1015,20 +991,32 @@ body > footer {
 		font-size: .8em;
 		margin-right: .2em;
 		color: var(--color-text-faded);
+	}
+}
 
-		&::before {
-			width: 1em;
-			margin-right: .2em;
-			mask-image: var(--icon-darkmode);
-		}
+#theme {
+	gap: .2em;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 
-		.state-light { display: none; }
+	&::before {
+		width: 1em;
+		content: '';
+		height: 100%;
+		mask-repeat: no-repeat;
+		background-color: currentColor;
+		mask-image: var(--icon-darkmode);
+	}
 
-		:root.dark & {
-			&::before { mask-image: var(--icon-lightmode); }
-			.state-dark { display: none; }
-			.state-light { display: block; }
-		}
+	:root.dark & {
+		&::before { mask-image: var(--icon-lightmode); }
+		.state-dark { display: none; }
+		.state-light { display: block; }
+	}
+
+	.state-light {
+		display: none;
 	}
 
 	.state-dark,
@@ -1041,7 +1029,7 @@ body > footer {
 	select:hover,
 	#combo_tempo:hover,
 	input:not([type]):hover,
-	button:not([name="step"]):hover {
+	button:not([name="step"]):not(:disabled):hover {
 		border-color: var(--color-border-strong);
 	}
 
@@ -1109,7 +1097,7 @@ body > footer {
 		</div>
 	</main>
 	<footer>
-		<button id="theme" class="with-icon" role="switch" aria-checked="false" aria-label="Mode sombre">
+		<button id="theme" role="switch" aria-checked="false" aria-label="Mode sombre">
 			<span class="state-light" aria-hidden="true">Mode clair</span>
 			<span class="state-dark" aria-hidden="true">Mode sombre</span>
 		</button>
@@ -1190,56 +1178,29 @@ body > footer {
 	<dialog id="presets-settings" aria-label="Gestions des morceaux">
 		<div>
 			<h2 autofocus tabindex="-1">Morceau sans titre</h2>
-			<form id="modify" method="dialog" autocomplete="off" hidden>
-				<fieldset>
-					<legend>Enregistrer le morceau</legend>
-					<input name="name" aria-label="Nom du morceau" readonly tabindex="-1">
-					<button name="save"
-						data-success="Le morceau a été enregistré."
-						data-failure="⚠️ La modification a échoué."
-						data-cancel-success="La modification a été annulée."
-						data-cancel-failure="⚠️ La modification ne peut être annulée.">Enregistrer</button>
-				</fieldset>
-			</form>
-			<form id="newOne" method="dialog" autocomplete="off">
-				<fieldset>
-					<legend>Enregistrer sous</legend>
-					<input name="name" aria-label="Nom du morceau" placeholder="Nom du morceau" required
-						data-invalid-empty="Doit contenir au moins un caractère."
-						data-invalid-duplicated="Ce nom existe déjà.">
-					<button name="save"
-						data-success="Le morceau a été enregistré."
-						data-failure="⚠️ La modification a échoué."
-						data-cancel-success="La modification a été annulée."
-						data-cancel-failure="⚠️ La modification ne peut être annulée.">Enregistrer</button>
-				</fieldset>
-			</form>
-			<form id="rename" method="dialog" autocomplete="off" hidden>
-				<fieldset>
-					<legend>Renommer le morceau</legend>
-					<input name="name" aria-label="Nom du morceau" placeholder="Nom du morceau" required
-						data-invalid-empty="Doit contenir au moins un caractère."
-						data-invalid-duplicated="Ce nom existe déjà.">
-					<button name="save"
-						data-success="Le morceau a été renommé."
-						data-failure="⚠️ La modification a échoué."
-						data-cancel-success="La modification a été annulée."
-						data-cancel-failure="⚠️ La modification ne peut être annulée.">Renommer</button>
-				</fieldset>
-			</form>
-			<form id="delete" method="dialog" autocomplete="off" hidden>
-				<fieldset>
-					<legend>Supprimer le morceau</legend>
-					<input name="name" aria-label="Nom du morceau" readonly tabindex="-1">
-					<button name="save"
-						data-success="Le morceau a été supprimé."
-						data-failure="⚠️ La modification a échoué."
-						data-cancel-success="La modification a été annulée."
-						data-cancel-failure="⚠️ La modification ne peut être annulée.">Supprimer</button>
-				</fieldset>
+			<form method="dialog" autocomplete="off">
+				<label>Titre : <input name="name" aria-label="Titre du morceau" placeholder="Titre du morceau" required
+					data-invalid-empty="Doit contenir au moins un caractère."
+					data-invalid-duplicated="Ce nom existe déjà."></label>
+				<button name="save"
+					data-success="Le morceau a été enregistré."
+					data-failure="⚠️ La modification a échoué."
+					data-cancel-success="La modification a été annulée."
+					data-cancel-failure="⚠️ La modification ne peut être annulée.">Enregistrer le morceau</button>
+				<button name="share" formnovalidate 
+					data-failure="🔗 Lien de partage copié dans le presse-papier.">Partager le morceau</button>
+				<button name="rename" disabled
+					data-success="Le morceau a été renommé."
+					data-failure="⚠️ La modification a échoué."
+					data-cancel-success="La modification a été annulée."
+					data-cancel-failure="⚠️ La modification ne peut être annulée.">Renommer le morceau</button>
+				<button name="delete" disabled formnovalidate
+					data-success="Le morceau a été supprimé."
+					data-failure="⚠️ La modification a échoué."
+					data-cancel-success="La modification a été annulée."
+					data-cancel-failure="⚠️ La modification ne peut être annulée.">Supprimer le morceau</button>
 			</form>
 			<footer>
-				<button id="share" class="with-icon" data-failure="🔗 Lien de partage copié dans le presse-papier.">Partager</button>
 				<button commandfor="presets-settings" command="close">Annuler</button>
 			</footer>
 		</div>
@@ -1275,13 +1236,15 @@ body > footer {
 			</section>
 			<footer>
 				<button id="update" hidden>Mettre à jour l'application</button>
-				<button commandfor="app" command="close" autofocus>Fermer</button>
+				<button commandfor="app" command="close">Fermer</button>
 			</footer>
 		</div>
 	</dialog>
 	<div id="toast" popover="auto" role="status">
-		<p></p>
-		<button aria-label="Annuler cette action">Annuler</button>
+		<div>
+			<p></p>
+			<button aria-label="Annuler cette action">Annuler</button>
+		</div>
 	</div>
 	<script type="module">
 		import {Audio}      from './modules/audio.js';

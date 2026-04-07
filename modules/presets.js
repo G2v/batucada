@@ -211,13 +211,11 @@ export class Presets {
 	async #settingsSave({ action, name, promise }) {
 		try {
 			const data = await this.#fetchData(true);
-			const isNewName = ['newOne', 'rename'].includes(action);
+			const isNewName = ['save', 'rename'].includes(action);
 			const status = this.#validateNewName(data, name);
 
 			if (isNewName && status !== 'valid') {
-				this.#bus.dispatchEvent(new CustomEvent('presets:invalidName', { 
-					detail: { action, status } 
-				}));
+				this.#bus.dispatchEvent(new CustomEvent('presets:invalidName', { detail: status }));
 				promise.resolve(false);
 				return;
 			}
@@ -233,16 +231,24 @@ export class Presets {
 	}
 
 	async #applyModification(data, action, name) {
-		const isNewName = ['newOne', 'rename'].includes(action);
+		const isNewName = ['save', 'rename'].includes(action);
 		const value = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
 		const indexName = action === 'rename' ? this.#params.get(this.#titleSearchParam) : name;
 		const index = data.findIndex(preset => preset.name === indexName);
 
 		switch (action) {
-			case 'newOne': data.push({ name, value }); break;
-			case 'modify': if (index !== -1) data[index].value = value; break;
-			case 'rename': if (index !== -1) data[index].name = name; break;
-			case 'delete': if (index !== -1) data.splice(index, 1); break;
+			case 'save':
+				if (index !== -1) data[index].value = value;
+				else data.push({ name, value });
+				break;
+
+			case 'rename':
+				if (index !== -1) data[index].name = name;
+				break;
+
+			case 'delete':
+				if (index !== -1) data.splice(index, 1);
+				break;
 		}
 
 		if (isNewName) data.sort((a, b) => a.name.localeCompare(b.name));
