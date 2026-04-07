@@ -4,7 +4,6 @@ export default class InterfacePresets {
 	#cancelAction  =   false;
 	#toast         = document.querySelector('#toast');
 	#settings      = document.querySelector('#presets-settings');
-	#presetName    = this.#settings.querySelector('h2');
 	#formElements  = this.#settings.querySelector('form').elements;
 	#toastMessage  = this.#toast.querySelector('p');
 	#cancelButton  = this.#toast.querySelector('button');
@@ -47,7 +46,6 @@ export default class InterfacePresets {
 		this.#formElements.name.setCustomValidity('');
 		this.#formElements.rename.disabled = !exists;
 		this.#formElements.delete.disabled = !exists;
-		this.#presetName.textContent = title || this.#ui.untitled;
 	}
 
 	async #cancelSettings() {

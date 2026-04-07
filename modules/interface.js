@@ -24,7 +24,7 @@ export class Interface {
 		title:         '#title',
 		tempo:         '#combo_tempo input',
 		presets:       '#combo_presets select',
-		appTitle:      '#appTitle',
+		appTitle:      '#app-title',
 		untitled:      '#untitled',
 		container:     'main',
 		startButton:   '#start',

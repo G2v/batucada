@@ -1116,7 +1116,7 @@ body > footer {
 				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label="Ajouter un instrument|Modifier l'instrument" autocomplete="off"></select>
 			</th>
 			<td class="settings">
-				<button class="icon-only" title="Modifier la piste" commandfor="track-settings" command="show-modal">Réglages</button>
+				<button class="icon-only" title="Réglages de la piste" commandfor="track-settings" command="show-modal">Réglages de la piste</button>
 			</td>
 			<td class="sheet">
 				<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
@@ -1139,9 +1139,9 @@ body > footer {
 			</td>
 		</tr>
 	</template>
-	<dialog id="track-settings" aria-label="Réglage de la piste">
+	<dialog id="track-settings" aria-label="track-settings-title">
 		<form method="dialog" autocomplete="off">
-			<h2>Instrument</h2>
+			<h2 id="track-settings-title">Réglages de la piste</h2>
 			<section>
 				<label for="bars">Nombre de mesures</label>
 				<select id="bars" name="bars">
@@ -1176,9 +1176,9 @@ body > footer {
 			</footer>
 		</form>
 	</dialog>
-	<dialog id="presets-settings" aria-label="Gestion du morceau">
+	<dialog id="presets-settings" aria-labelledby="presets-settings-title">
 		<div>
-			<h2>Morceau sans titre</h2>
+			<h2 id="presets-settings-title">Gestion du morceau</h2>
 			<form method="dialog" autocomplete="off">
 				<label>Titre : <input name="name" placeholder="Titre du morceau" required
 					data-invalid-empty="Doit contenir au moins un caractère."
@@ -1206,9 +1206,9 @@ body > footer {
 			</footer>
 		</div>
 	</dialog>
-	<dialog id="app" aria-labelledby="appTitle">
+	<dialog id="app" aria-labelledby="app-title">
 		<div>
-			<h2 id="appTitle">Batucada Sequencer</h2>
+			<h2 id="app-title">Batucada Sequencer</h2>
 			<section>
 				<details name="app">
 					<summary>Morceaux</summary>

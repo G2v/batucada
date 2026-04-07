@@ -10,7 +10,6 @@ export default class InterfaceControls {
 
 	#resetButton        = document.querySelector('#reset');
 	#trackSettings      = document.querySelector('#track-settings');
-	#trackSettingsTitle = document.querySelector('#track-settings h2');
 
 	constructor({ bus, parent }) {
 		this.#bus = bus;
@@ -116,7 +115,6 @@ export default class InterfaceControls {
 		this.#ui.setBeats.value  = beats;
 		this.#ui.setSteps.value  = steps;
 		this.#ui.setPhrase.value = phrase;
-		this.#trackSettingsTitle.textContent = this.#ui.instrumentsNames[instrument];
 	}
 
 	#inputInstrument(target) {
