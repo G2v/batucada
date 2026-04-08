@@ -26,7 +26,9 @@ export default class InterfaceAria {
 		this.#ui = parent;
 		this.#bus = bus;
 		this.#init();
-		bus.addEventListener('audio:stop', () => this.#playing = false);
+		bus.addEventListener('audio:stop',           () => this.#playing = false);
+		bus.addEventListener('interface:reset',      () => this.#resetAll());
+		bus.addEventListener('interface:moveTrack',  ({ detail }) => this.#resetTrashed(detail));
 		bus.addEventListener('interface:updateData', ({ detail }) => this.update(detail));
 		this.#ui.trackParent.addEventListener('keydown', (event) => this.#navigate(event));
 		this.#ui.trackParent.addEventListener('focusin', (event) => this.#syncTabIndex(event));
@@ -88,7 +90,7 @@ export default class InterfaceAria {
 			direction
 		);
 
-		this.#updateTabIndex(active, nextTarget, offset, resolution.track);
+		this.#updateTabIndex(active, nextTarget, offset, resolution.track, true);
 	}
 
 	#getAdjacentStep(localIndex, offset, resolution, steps, beats, bars, direction) {
@@ -111,7 +113,24 @@ export default class InterfaceAria {
 		this.#updateTabIndex(null, active, offset, this.#ui.config.resolution.track);
 	}
 
-	#updateTabIndex(oldTarget, newTarget, offset, trackSize) {
+	#resetTrashed({ trashed }) {
+		this.#resetTrack(trashed);
+	}
+
+	#resetAll() {
+		this.#ui.tracks.forEach((_, index) => this.#resetTrack(index));
+	}
+
+	#resetTrack(index) {
+		const trackSize = this.#ui.config.resolution.track;
+		const offset = index * trackSize;
+		const firstStep = this.#ui.steps[offset];
+		if (firstStep && firstStep.tabIndex !== 0) {
+			this.#updateTabIndex(null, firstStep, offset, trackSize);
+		}
+	}
+
+	#updateTabIndex(oldTarget, newTarget, offset, trackSize, shouldFocus = false) {
 		if (!oldTarget) {
 			for (let i = 0; i < trackSize; i++) {
 				const step = this.#ui.steps[offset + i];
@@ -121,10 +140,11 @@ export default class InterfaceAria {
 				}
 			}
 		}
-
 		oldTarget.tabIndex = -1;
 		newTarget.tabIndex = 0;
-		newTarget.focus();
+		if (shouldFocus) {
+			newTarget.focus();
+		}
 	}
 
 	update({ tempo, sheet, tracks, volumes, playing, theme }) {
@@ -162,6 +182,7 @@ export default class InterfaceAria {
 	}
 
 	set #tracks(values) {
+		console.log(values);
 		for (const { id, changes } of values) {
 			if ('instrument' in changes) {
 				const { instrument } = changes;
