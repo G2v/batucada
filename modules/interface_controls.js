@@ -2,11 +2,6 @@ export default class InterfaceControls {
 	#ui;
 	#bus;
 	#track;
-	#names = Object.freeze({
-		step:       'step',
-		volume:     'volume',
-		instrument: 'instrument',
-	});
 
 	#resetButton        = document.querySelector('#reset');
 	#trackSettings      = document.querySelector('#track-settings');
@@ -66,7 +61,7 @@ export default class InterfaceControls {
 		if (target instanceof HTMLDialogElement) {
 			target.close();
 		}
-		else if (target.name === this.#names.step) {
+		else if (target.name === this.#ui.names.step) {
 			this.#changeNote(target);
 		}
 		else if (target === this.#resetButton) {
@@ -84,7 +79,7 @@ export default class InterfaceControls {
 	#handleChange({ target }) {
 		if (target === this.#ui.tempo) {
 			this.#bus.dispatchEvent(new CustomEvent('interface:change', { detail: 'tempo' }));
-		} else if (target.name === this.#names.volume) {
+		} else if (target.name === this.#ui.names.volume) {
 			this.#bus.dispatchEvent(new CustomEvent('interface:change', { detail: 'volumes' }));
 		}
 	}
@@ -95,10 +90,10 @@ export default class InterfaceControls {
 	}
 
 	#handleInput({ target }) {
-		if (target.name === this.#names.instrument) {
+		if (target.name === this.#ui.names.instrument) {
 			this.#inputInstrument(target);
 		}
-		else if (target.name === this.#names.volume) {
+		else if (target.name === this.#ui.names.volume) {
 			this.#inputVolume(target);
 		}
 		else if (target === this.#ui.tempo) {

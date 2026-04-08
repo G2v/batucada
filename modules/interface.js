@@ -1,4 +1,10 @@
 export class Interface {
+	#names = Object.freeze({
+		step:       'step',
+		volume:     'volume',
+		instrument: 'instrument',
+	});
+
 	#trackKeys = Object.freeze({
 		bars:       'bars',
 		beats:      'beats',
@@ -34,12 +40,12 @@ export class Interface {
 	});
 
 	#modules = Object.freeze([
+		{ name: 'controls',  path: './interface_controls.js' },
+		{ name: 'animation', path: './interface_animation.js' },
 		{ name: 'presets',   path: './interface_presets.js' },
 		{ name: 'aria',      path: './interface_aria.js' },
 		{ name: 'swap',      path: './interface_swap.js' },
 		{ name: 'app',       path: './interface_app.js' },
-		{ name: 'controls',  path: './interface_controls.js' },
-		{ name: 'animation', path: './interface_animation.js' },
 	]);
 
 	#bus;
@@ -170,7 +176,9 @@ export class Interface {
 			this.#nodes.tracks.push(trackClone);
 			this.#nodes.instruments.push(instrumentSelect);
 			this.#nodes.volumes.push(trackClone.querySelector(this.#selectors.volume));
-			this.#nodes.steps.push(...trackClone.querySelectorAll(this.#selectors.step));
+			const steps = trackClone.querySelectorAll(this.#selectors.step);
+			steps[0].tabIndex = 0;
+			this.#nodes.steps.push(...steps);
 			fragment.appendChild(trackClone);
 		}
 
@@ -373,6 +381,7 @@ export class Interface {
 	get trackParent()   { return this.#nodes.trackParent   ??= document.querySelector(this.#selectors.trackParent); }
 	get trackTemplate() { return this.#nodes.trackTemplate ??= document.querySelector(this.#selectors.trackTemplate).content.querySelector(this.#selectors.track); }
 
+	get names()            { return this.#names; }
 	get config()           { return this.#config; }
 	get playing()          { return this.#playing; }
 	get selectors()        { return this.#selectors; }
