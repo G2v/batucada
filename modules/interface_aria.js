@@ -7,7 +7,7 @@ export default class InterfaceAria {
 	static #toolbarSelector  = '[role="toolbar"]';
 
 	static #strokes = [
-		null,
+		'',
 		'note 1',
 		'note 2',
 		'note 3',
@@ -18,7 +18,6 @@ export default class InterfaceAria {
 	#rowNodes = [];
 	#sheetNodes = [];
 	#templates = {};
-	#emptyStrokeValue;
 	#volumeRatioPerCent;
 	#emptyInstrumentName;
 
@@ -37,14 +36,14 @@ export default class InterfaceAria {
 	#init() {
 		const track      = this.#ui.trackTemplate;
 		const row        = track.querySelector(InterfaceAria.#scopeRowSelector);
-		const step       = track.querySelector(this.#ui.selectors.step);
+		const steps      = Array.from(track.querySelectorAll(this.#ui.selectors.step));
 		const sheet      = track.querySelector(InterfaceAria.#toolbarSelector);
 		const volume     = track.querySelector(this.#ui.selectors.volume);
 		const instrument = track.querySelector(this.#ui.selectors.instrument);
 
 		this.#templates = {
 			rowLabel:        row.dataset.templateAriaLabel,
-			stepLabel:       step.dataset.templateAriaLabel,
+			stepLabels:      steps.map(step => step.dataset.templateAriaLabel),
 			sheetLabel:      sheet.dataset.templateAriaLabel,
 			tempoValuetext:  this.#ui.tempo.dataset.templateAriaValuetext,
 			instrumentLabel: instrument.dataset.templateAriaLabel,
@@ -55,9 +54,8 @@ export default class InterfaceAria {
 		this.#ui.tempo.removeAttribute('data-template');
 		this.#ui.tempo.removeAttribute('data-template-aria-valuetext');
 
-		InterfaceAria.#strokes[0] = step.dataset.templateDefaultStroke;
+		InterfaceAria.#strokes[0] = steps[0].dataset.templateDefaultStroke;
 		this.#emptyInstrumentName = row.dataset.templateDefaultInstrument;
-		this.#emptyStrokeValue = this.#ui.config.emptyStroke;
 		this.#volumeRatioPerCent = 100 / ((volume.max | 0) - (volume.min | 0));
 
 		this.#ui.tracks.forEach((container, id) => {
@@ -171,10 +169,11 @@ export default class InterfaceAria {
 	}
 
 	set #sheet(values) {
-		const template = this.#templates.stepLabel;
+		const maxSteps = this.#ui.config.resolution.beat;
 		for (const { stepIndex, value } of values) {
 			const step = this.#ui.steps[stepIndex];
-			step.ariaPressed = value !== this.#emptyStrokeValue;
+			const template = this.#templates.stepLabels[stepIndex % maxSteps];
+			step.ariaPressed = value !== this.#ui.config.emptyStroke;
 			step.ariaLabel = InterfaceAria.#format(template, {
 				[InterfaceAria.#strokeToken]: InterfaceAria.#strokes[value]
 			});
@@ -182,7 +181,6 @@ export default class InterfaceAria {
 	}
 
 	set #tracks(values) {
-		console.log(values);
 		for (const { id, changes } of values) {
 			if ('instrument' in changes) {
 				const { instrument } = changes;
