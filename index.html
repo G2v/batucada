@@ -123,6 +123,10 @@ if (localStorage.getItem('theme') === 'dark') document.documentElement.classList
 	--icon-arrow: url('data:image/svg+xml,<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><path d="m20 14l3 4 3 -4" fill="none" stroke-width="1" stroke="white" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 }
 
+*:focus-visible {
+	outline: 2px solid CanvasText;
+}
+
 html {
 	user-select: none;
 	scrollbar-gutter: stable;
@@ -142,7 +146,6 @@ body {
 	margin: 0 0 2.8em;
 	padding: var(--body-margin);
 	padding-bottom: 0;
-	outline-color: red;
 	justify-content: center;
 	color: var(--color-text-main);
 	font: 400 4.92svw/1.4 sans-serif;
@@ -523,8 +526,8 @@ hr {
 	bottom: -.2em;
 	flex-wrap: wrap;
 	position: sticky;
+	border-radius: .2em;
 	gap: var(--main-margin);
-	border-radius: 0 0 .5em .5em;
 	view-transition-name: controls;
 	padding: .7em var(--main-margin);
 	background: var(--color-background-base);
