@@ -124,6 +124,7 @@ if (localStorage.getItem('theme') === 'dark') document.documentElement.classList
 }
 
 *:focus-visible {
+	outline-offset: -1px;
 	outline: 2px solid CanvasText;
 }
 
@@ -355,6 +356,7 @@ tbody {
 			padding: 0;
 			width: 100%;
 			margin: 0 0 .2em 0;
+			outline-offset: 4px;
 		}
 	}
 
@@ -617,11 +619,18 @@ hr {
 		input {
 			flex: 1;
 			width: 3em;
+			outline: none;
 		}
+
 		output {
 			width: 4em;
 			margin-left: .5em;
 			line-height: 2.5rem;
+		}
+
+		&:has(:focus-visible) {
+			outline-offset: -1px;
+			outline: 2px solid CanvasText;
 		}
 	}
 
@@ -684,10 +693,6 @@ button {
 	font-family: sans-serif;
 	background: transparent no-repeat;
 	border: 1px solid var(--color-border-light);
-}
-
-input {
-	accent-color: var(--color-stroke-set);
 }
 
 button:disabled {
