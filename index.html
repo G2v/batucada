@@ -135,13 +135,14 @@ body {
 	--main-margin: .7em;
 	--track-col-1-width: 5.2em;
 	--track-col-2-width: 2.5em;
-	--track-col-3-width: 11.9em;
+	--track-col-3-width: calc(11.9em + 1px);
 	--track-col-4-width: 0px;
 	gap: .2em;
 	display: grid;
 	margin: 0 0 2.8em;
 	padding: var(--body-margin);
 	padding-bottom: 0;
+	outline-color: red;
 	justify-content: center;
 	color: var(--color-text-main);
 	font: 400 4.92svw/1.4 sans-serif;
@@ -179,8 +180,8 @@ body {
 		--grid-lines: 1;
 		--track-col-1-width: 8.1em;
 		--track-col-2-width: 2.5em;
-		--track-col-3-width: 24em;
-		--track-col-4-width: 5em;
+		--track-col-3-width: calc(23em + 1px);
+		--track-col-4-width: 6em;
 		font-size: clamp(.6em, 2.4svw, 1.2em);
 		h1 {
 			font-size: 1.4em;
@@ -349,8 +350,8 @@ tbody {
 		grid-row: 4;
 		display: flex;
 		grid-column: 1;
-		padding: 0 0 0 .7em;
 		align-items: center;
+		padding: 0 0 0 var(--main-margin);
 
 		input {
 			padding: 0;
@@ -383,7 +384,13 @@ tbody {
 		flex-wrap: wrap;
 		grid-row: 2 / -1;
 		margin: 0 0 0 .9em;
+		border-radius: .1em;
 		contain: layout style;
+
+		&:has([name="step"]:focus-visible) {
+			outline-offset: .2em;
+			outline: .1em dashed currentColor;
+		}
 
 		:is(
 			.bar:has(~ .bar .current) *,
@@ -487,10 +494,6 @@ tbody {
 		.instrument, .settings, .volume {
 			grid-row: 2;
 			grid-column: auto;
-		}
-
-		.volume {
-			padding: 0;
 		}
 	}
 }
@@ -1105,7 +1108,7 @@ body > footer {
 			<td class="settings">
 				<button class="icon-only" title="Réglages de la piste" commandfor="track-settings" command="show-modal">Réglages de la piste</button>
 			</td>
-			<td class="sheet" role="toolbar" aria-label="Partition de la piste sans instrument" data-template data-template-aria-label="Partition de la piste {{instrument}}" data-template-default-instrument="sans instrument" >
+			<td class="sheet" role="toolbar" aria-label="Partition de la piste sans instrument" data-template data-template-aria-label="Partition de la piste {{instrument}}" data-template-default-instrument="sans instrument">
 				<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
 					<span class="beat" role="group" aria-label="Temps 1" data-index="0">
 						<button name="step" data-index="0" value="0" tabindex="-1" aria-label="Division 1, vide" data-template data-template-aria-label="Division 1, {{stroke}}" data-template-default-stroke="vide" aria-pressed="false"></button>

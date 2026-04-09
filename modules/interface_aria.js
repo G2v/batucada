@@ -65,19 +65,34 @@ export default class InterfaceAria {
 	}
 
 	#navigate(event) {
-		const { key } = event
+		const { key } = event;
 		const active = document.activeElement;
-		if (!active || active.name !== this.#ui.names.step || key !== 'ArrowRight' && key !== 'ArrowLeft') return;
+		
+		if (!active || active.name !== this.#ui.names.step) return;
+
+		const isHorizontal = key === 'ArrowRight' || key === 'ArrowLeft';
+		const isVertical   = key === 'ArrowUp'    || key === 'ArrowDown';
+
+		if (!isHorizontal && !isVertical) return;
 
 		event.preventDefault();
 
-		const resolution = this.#ui.config.resolution;
 		const track      = this.#ui.getTrack(active);
 		const trackIndex = this.#ui.getTrackIndex(track);
+
+		if (isVertical) {
+			const isDown = key === 'ArrowDown';
+			const track = this.#ui.getTrack(active);
+			const targetTrack = isDown ? track.nextElementSibling : track.previousElementSibling;
+			if (!targetTrack || (isDown && track.dataset.instrument === "0")) return;
+			targetTrack.querySelector('[tabindex="0"]').focus();
+			return;
+		}
+
+		const resolution = this.#ui.config.resolution;
 		const offset     = trackIndex * resolution.track;
 		const index      = this.#ui.getStepIndex(active) - offset;
 		const direction  = key === 'ArrowRight' ? 1 : -1;
-
 		const nextTarget = this.#getAdjacentStep(
 			index, 
 			offset, 
@@ -87,8 +102,7 @@ export default class InterfaceAria {
 			track.dataset.bars  | 0, 
 			direction
 		);
-
-		this.#updateTabIndex(active, nextTarget, offset, resolution.track, true);
+		this.#updateTabIndex(active, nextTarget, trackIndex, true);
 	}
 
 	#getAdjacentStep(localIndex, offset, resolution, steps, beats, bars, direction) {
@@ -107,8 +121,8 @@ export default class InterfaceAria {
 	#syncTabIndex(event) {
 		const active = event.target;
 		if (!active || active.name !== this.#ui.names.step || active.tabIndex === 0) return;
-		const offset = this.#ui.getTrackIndex(this.#ui.getTrack(active)) * this.#ui.config.resolution.track;
-		this.#updateTabIndex(null, active, offset, this.#ui.config.resolution.track);
+		const trackIndex = this.#ui.getTrackIndex(this.#ui.getTrack(active));
+		this.#updateTabIndex(null, active, trackIndex);
 	}
 
 	#resetTrashed({ trashed }) {
@@ -120,28 +134,20 @@ export default class InterfaceAria {
 	}
 
 	#resetTrack(index) {
-		const trackSize = this.#ui.config.resolution.track;
-		const offset = index * trackSize;
+		const offset = index * this.#ui.config.resolution.track;
 		const firstStep = this.#ui.steps[offset];
 		if (firstStep && firstStep.tabIndex !== 0) {
-			this.#updateTabIndex(null, firstStep, offset, trackSize);
+			this.#updateTabIndex(null, firstStep, index);
 		}
 	}
 
-	#updateTabIndex(oldTarget, newTarget, offset, trackSize, shouldFocus = false) {
-		if (!oldTarget) {
-			for (let i = 0; i < trackSize; i++) {
-				const step = this.#ui.steps[offset + i];
-				if (step?.tabIndex === 0) {
-					oldTarget = step;
-					break;
-				}
-			}
-		}
+
+	#updateTabIndex(oldTarget, newTarget, trackIndex, shouldFocus = false) {
+		oldTarget ??= this.#sheetNodes[trackIndex].querySelector('[tabindex="0"]');
 		oldTarget.tabIndex = -1;
-		newTarget.tabIndex = 0;
-		if (shouldFocus) {
-			newTarget.focus();
+		if (newTarget) {
+			newTarget.tabIndex = 0;
+			if (shouldFocus) newTarget.focus();
 		}
 	}
 
