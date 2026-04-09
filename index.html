@@ -123,11 +123,6 @@ if (localStorage.getItem('theme') === 'dark') document.documentElement.classList
 	--icon-arrow: url('data:image/svg+xml,<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><path d="m20 14l3 4 3 -4" fill="none" stroke-width="1" stroke="white" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 }
 
-*:focus-visible {
-	outline-offset: -1px;
-	outline: 2px solid CanvasText;
-}
-
 html {
 	user-select: none;
 	scrollbar-gutter: stable;
@@ -350,7 +345,7 @@ tbody {
 		display: flex;
 		grid-column: 1;
 		align-items: center;
-		padding: 0 0 0 var(--main-margin);
+		margin: 0 0 0 var(--main-margin);
 
 		input {
 			padding: 0;
@@ -695,6 +690,10 @@ button {
 	border: 1px solid var(--color-border-light);
 }
 
+input {
+	accent-color: var(--color-stroke-set);
+}
+
 button:disabled {
 	opacity: .6;
 }
@@ -716,6 +715,11 @@ option {
 
 a {
 	color: var(--color-stroke-set);
+}
+
+*:focus-visible {
+	outline-offset: -1px;
+	outline: 2px solid CanvasText;
 }
 
 .icon-only {
