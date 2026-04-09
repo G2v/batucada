@@ -231,11 +231,6 @@ table {
 	width: 100%;
 }
 
-thead {
-	position: absolute;
-	transform: scale(0);
-}
-
 tbody {
 	display: flex;
 	flex-direction: column;
@@ -1058,20 +1053,11 @@ body > footer {
 			<caption>
 				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Morceau sans titre</span></h1>
 			</caption>
-			<thead>
-				<tr>
-					<th aria-hidden="true"></th>
-					<th scope="col">Instruments</th>
-					<th scope="col">Réglages</th>
-					<th scope="col">Partitions</th>
-					<th scope="col">Volumes</th>
-				</tr>
-			</thead>
 			<tbody>
 			</tbody>
 		</table>
 		<hr>
-		<div id="controls" role="group" aria-label="Boutons de contrôle" tabindex="-1">
+		<section id="controls" aria-label="Boutons de contrôle" tabindex="-1">
 			<div id="combo_presets">
 				<button class="icon-only" title="Gérer le morceau" command="show-modal" commandfor="presets-settings">Gérer le morceau</button>
 				<span id="presets_label" aria-hidden="true">Morceaux enregistrés</span>
@@ -1084,8 +1070,8 @@ body > footer {
 			</div>
 			<button id="reset" title="Effacer le morceau">Effacer</button>
 			<button id="start" class="icon-only" role="switch" aria-checked="false" title="Jouer">Jouer</button>
-			<div id="trash">Déposer ici pour supprimer</div>
-		</div>
+			<div id="trash" aria-hidden="true">Déposer ici pour supprimer</div>
+		</section>
 	</main>
 	<footer>
 		<button id="theme" role="switch" aria-checked="false" aria-label="Mode sombre">
@@ -1129,7 +1115,7 @@ body > footer {
 			</td>
 		</tr>
 	</template>
-	<dialog id="track-settings" aria-label="track-settings-title">
+	<dialog id="track-settings" aria-labelledby="track-settings-title">
 		<form method="dialog" autocomplete="off">
 			<h2 id="track-settings-title">Réglages de la piste</h2>
 			<section>

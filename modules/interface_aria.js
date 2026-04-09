@@ -102,7 +102,8 @@ export default class InterfaceAria {
 			track.dataset.bars  | 0, 
 			direction
 		);
-		this.#updateTabIndex(active, nextTarget, trackIndex, true);
+		this.#updateTabIndex(active, nextTarget, trackIndex)
+		nextTarget.focus();
 	}
 
 	#getAdjacentStep(localIndex, offset, resolution, steps, beats, bars, direction) {
@@ -126,29 +127,25 @@ export default class InterfaceAria {
 	}
 
 	#resetTrashed({ trashed }) {
-		this.#resetTrack(trashed);
+		if (trashed !== null) this.#resetTabIndex(trashed);
 	}
 
 	#resetAll() {
-		this.#ui.tracks.forEach((_, index) => this.#resetTrack(index));
+		this.#ui.tracks.forEach((_, index) => this.#resetTabIndex(index));
 	}
 
-	#resetTrack(index) {
-		const offset = index * this.#ui.config.resolution.track;
+	#resetTabIndex(trackIndex) {
+		const offset = trackIndex * this.#ui.config.resolution.track;
 		const firstStep = this.#ui.steps[offset];
 		if (firstStep && firstStep.tabIndex !== 0) {
-			this.#updateTabIndex(null, firstStep, index);
+			this.#updateTabIndex(null, firstStep, trackIndex);
 		}
 	}
 
-
-	#updateTabIndex(oldTarget, newTarget, trackIndex, shouldFocus = false) {
+	#updateTabIndex(oldTarget, newTarget, trackIndex) {
 		oldTarget ??= this.#sheetNodes[trackIndex].querySelector('[tabindex="0"]');
 		oldTarget.tabIndex = -1;
-		if (newTarget) {
-			newTarget.tabIndex = 0;
-			if (shouldFocus) newTarget.focus();
-		}
+		newTarget.tabIndex = 0;
 	}
 
 	update({ tempo, sheet, tracks, volumes, playing, theme }) {
@@ -187,15 +184,20 @@ export default class InterfaceAria {
 	}
 
 	set #tracks(values) {
+		const { defaultInstrument } = this.#ui.config;
 		for (const { id, changes } of values) {
 			if ('instrument' in changes) {
 				const { instrument } = changes;
-				const hasInstrument = instrument !== this.#ui.config.defaultInstrument;
+				const hasInstrument = instrument !== defaultInstrument;
 				const name = hasInstrument ? this.#ui.instrumentsNames[instrument].toLowerCase() : this.#emptyInstrumentName;
-				this.#rowNodes[id].ariaLabel       = InterfaceAria.#format(this.#templates.rowLabel, { [InterfaceAria.#instrumentToken]: name });
-				this.#sheetNodes[id].ariaLabel     = InterfaceAria.#format(this.#templates.sheetLabel, { [InterfaceAria.#instrumentToken]: name });
-				this.#ui.volumes[id].ariaLabel     = InterfaceAria.#format(this.#templates.volumeLabel, { [InterfaceAria.#instrumentToken]: name });
+				const token = { [InterfaceAria.#instrumentToken]: name };
+				this.#rowNodes[id].ariaLabel       = InterfaceAria.#format(this.#templates.rowLabel, token);
+				this.#sheetNodes[id].ariaLabel     = InterfaceAria.#format(this.#templates.sheetLabel, token);
+				this.#ui.volumes[id].ariaLabel     = InterfaceAria.#format(this.#templates.volumeLabel, token);
 				this.#ui.instruments[id].ariaLabel = this.#templates.instrumentLabel.split('|')[+hasInstrument];
+			}
+			if (['bars', 'beats', 'steps'].some(key => key in changes)) {
+				this.#resetTabIndex(id);
 			}
 		}
 	}
