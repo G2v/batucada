@@ -51,7 +51,6 @@ export default class InterfacePresets {
 		let message;
 		const { success, failure } = this.#cancelAction;
 		this.#toast.hidePopover();
-		this.#toast.hidePopover();
 		try {
 			await new Promise((resolve, reject) => {
 				this.#bus.dispatchEvent(new CustomEvent('interface:settingsCancel', {
