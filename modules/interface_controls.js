@@ -16,14 +16,6 @@ export default class InterfaceControls {
 		this.#trackSettings.addEventListener('submit',  (event) => this.#setTrack(event));
 		this.#trackSettings.addEventListener('command', (event) => this.#showTrackSettings(event));
 
-		document.addEventListener('pointerdown', ({ target }) => {
-			if (target.tagName === 'SELECT') target.style.outline = 'none';
-		}, { passive: true });
-
-		document.addEventListener('focusout', ({ target }) => {
-			if (target.tagName === 'SELECT') target.style.outline = '';
-		});
-
 		if (!document.startViewTransition) {
 			document.startViewTransition = (callback) => {
 				callback();

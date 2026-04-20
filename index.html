@@ -46,7 +46,7 @@ if (localStorage.getItem('theme') === 'dark') document.documentElement.classList
 	);
 	--color-background-strong: light-dark(
 		hsl(from var(--color-primary) h s 83%), 
-		hsl(from var(--color-primary) h s 18%)
+		hsl(from var(--color-primary) h s 30%)
 	);
 	--color-background-popover: light-dark(
 		hsl(from var(--color-primary) h s 20% / .8), 
@@ -698,6 +698,38 @@ button:disabled {
 	opacity: .6;
 }
 
+select {
+	align-items: center;
+	font-weight: normal;
+	appearance: base-select;
+
+	&::picker-icon {
+		display: none;
+	}
+}
+
+option {
+	margin: .2em;
+	border-radius: 4px;
+	color: var(--color-text-main);
+
+	&::checkmark {
+		display: none;
+	}
+
+	&:checked {
+		background: var(--color-background-light);
+	}
+}
+
+::picker(select) {
+	margin: -1px 0;
+	border-radius: 4px;
+	scrollbar-width: thin;
+	appearance: base-select;
+	background-color: var(--color-background-base);
+}
+
 select,
 .presets {
 	padding-right: .9em;
@@ -706,10 +738,6 @@ select,
 }
 
 select:has(:checked) {
-	background-color: var(--color-background-base);
-}
-
-option {
 	background-color: var(--color-background-base);
 }
 
@@ -1029,6 +1057,10 @@ body > footer {
 	input:not([type]):hover,
 	button:not([name="step"]):not(:disabled):hover {
 		border-color: var(--color-border-strong);
+	}
+
+	option:hover {
+		background: var(--color-background-strong);
 	}
 
 	[name="step"]:hover {
