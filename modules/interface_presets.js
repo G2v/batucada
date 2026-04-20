@@ -8,7 +8,6 @@ export default class InterfacePresets {
 	#toastMessage  = this.#toast.querySelector('p');
 	#cancelButton  = this.#toast.querySelector('button');
 	#presetsButton = document.querySelector('button.presets');
-	#actionButtons = this.#settings.querySelectorAll('button[name]');
 
 	constructor({ bus, parent }) {
 		this.#bus = bus
@@ -49,27 +48,27 @@ export default class InterfacePresets {
 	}
 
 	async #cancelSettings() {
-		this.#toast.hidePopover();
 		let message;
-
+		const { success, failure } = this.#cancelAction;
+		this.#toast.hidePopover();
+		this.#toast.hidePopover();
 		try {
 			await new Promise((resolve, reject) => {
 				this.#bus.dispatchEvent(new CustomEvent('interface:settingsCancel', {
 					detail: { resolve, reject }
 				}));
 			});
-			message = this.#cancelAction.success;
+			message = success;
 		}
 		catch {
-			message = this.#cancelAction.failure;
+			message = failure;
 		}
-
-		this.#cancelAction = false;
 		if (message) this.#showToast(message);
 	}
 
 	async #saveSettings(event) {
 		const { dataset: messages, name: action } = event.submitter;
+		const actionButtons = document.querySelectorAll('button:not(:disabled)');
 		try {
 			if (action === 'share') {
 				this.#settings.close();
@@ -81,7 +80,7 @@ export default class InterfacePresets {
 			}
 			else {
 				event.preventDefault();
-				this.#actionButtons.forEach(button => button.disabled = true);
+				actionButtons.forEach(button => button.disabled = true);
 				const name = this.#formElements.name.value.trim() || '';
 				const request = await new Promise((resolve, reject) => {
 					this.#bus.dispatchEvent(new CustomEvent('interface:settingsSave', { 
@@ -100,7 +99,7 @@ export default class InterfacePresets {
 			this.#showToast(messages.failure);
 		}
 		finally {
-			this.#actionButtons.forEach(button => button.disabled = false);
+			actionButtons.forEach(button => button.disabled = false);
 		}
 	}
 
@@ -110,7 +109,8 @@ export default class InterfacePresets {
 		const validityMessage = input.dataset[datasetNames[status]];
 		input.setCustomValidity(validityMessage);
 		input.reportValidity();
-		input.addEventListener('input', () => input.setCustomValidity(''), { once: true });
+		input.addEventListener('input',    () => input.setCustomValidity(''), { once: true });
+		input.addEventListener('focusout', () => input.setCustomValidity(''), { once: true });
 	}
 
 	presetsExport() {
