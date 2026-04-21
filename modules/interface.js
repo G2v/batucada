@@ -202,6 +202,7 @@ export class Interface {
 			title: this.untitled,
 			artist: this.appTitle,
 		});
+		navigator.mediaSession.setPositionState({ duration: 0 });
 		navigator.mediaSession.setActionHandler('play',  () => this.#instances.controls?.start(true));
 		navigator.mediaSession.setActionHandler('pause', () => this.#instances.controls?.start(false));
 	}
@@ -246,7 +247,6 @@ export class Interface {
 
 	set #volumes(values) {
 		for (const { id, value } of values) {
-			console.log(this.#nodes.volumes[id], value)
 			this.#nodes.volumes[id].value = value;
 		}
 	}

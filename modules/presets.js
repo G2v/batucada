@@ -266,10 +266,7 @@ export class Presets {
 	#validateNewName(data, name) {
 		const existingNames = new Set(data.map(item => item.name));
 		existingNames.delete(this.#params.get(this.#titleSearchParam));
-		if (!/\S/.test(name)) {
-			return 'empty';
-		}
-		else if (existingNames.has(name)) {
+		if (existingNames.has(name)) {
 			return 'duplicated';
 		}
 		return 'valid';

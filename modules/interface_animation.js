@@ -1,7 +1,6 @@
 export default class InterfaceAnimation {
 	#ui;
 	#queueLimit;
-	#stopTime       = null;
 	#currentClass   = 'current';
 	#finishedClass  = 'finished';
 	#animationQueue = new Map();
@@ -43,7 +42,11 @@ export default class InterfaceAnimation {
 	}
 
 	stop() {
-		this.start({ animations: new Map() });
+		this.#ui.playing = false;
+		for (const steps of this.#animationQueue.values()) {
+			steps[0]?.step?.classList.remove(this.#currentClass);
+		}
+		this.#animationQueue.clear();
 		for (const track of this.#ui.tracks) {
 			track.classList.remove(this.#finishedClass);
 		}
@@ -57,10 +60,7 @@ export default class InterfaceAnimation {
 	}
 
 	#loop = () => {
-		if (this.#animationQueue.size === 0) {
-			this.#ui.playing = false;
-			return;
-		}
+		if (!this.#ui.playing) return;
 		const now = performance.now();
 		for (const steps of this.#animationQueue.values()) {
 			if (steps.length < 2) continue;

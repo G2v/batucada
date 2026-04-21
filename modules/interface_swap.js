@@ -88,7 +88,10 @@ export default class InterfaceSwap {
 			const target = draggedTrack.nextElementSibling || draggedTrack;
 			moveTrack();
 			target.classList.remove(this.#resetedClass);
-			requestAnimationFrame(() => target.classList.add(this.#resetedClass));
+			requestAnimationFrame(() => {
+				target.classList.add(this.#resetedClass);
+				target.addEventListener('animationend', () => target.classList.remove(this.#resetedClass), { once: true });
+			});
 		}
 		else {
 			document.startViewTransition(moveTrack);

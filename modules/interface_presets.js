@@ -4,7 +4,7 @@ export default class InterfacePresets {
 	#cancelAction  =   false;
 	#toast         = document.querySelector('#toast');
 	#settings      = document.querySelector('#presets-settings');
-	#formElements  = this.#settings.querySelector('form').elements;
+	#settingsForm  = this.#settings.querySelector('form');
 	#toastMessage  = this.#toast.querySelector('p');
 	#cancelButton  = this.#toast.querySelector('button');
 	#presetsButton = document.querySelector('button.presets');
@@ -23,7 +23,6 @@ export default class InterfacePresets {
 		this.#toastPositioning();
 	}
 
-	// Chargement conditionnel du polyfill toast_positioning
 	async #toastPositioning() {
 		if (!CSS.supports('position-area', 'bottom')) {
 			const { applyPolyfill } = await import('./polyfills/anchor-positioning.js');
@@ -41,33 +40,31 @@ export default class InterfacePresets {
 		if (command !=='show-modal' ) return;
 		const title = this.#ui.title.textContent.trim();
 		const exists = Array.from(this.#ui.presets.options).some(option => option.text === title);
-		this.#formElements.name.value = title;
-		this.#formElements.name.setCustomValidity('');
-		this.#formElements.rename.disabled = !exists;
-		this.#formElements.delete.disabled = !exists;
+		this.#settingsForm.elements.name.value = title;
+		this.#settingsForm.elements.name.setCustomValidity('');
+		this.#settingsForm.elements.rename.disabled = !exists;
+		this.#settingsForm.elements.delete.disabled = !exists;
 	}
 
 	async #cancelSettings() {
-		let message;
 		const { success, failure } = this.#cancelAction;
-		this.#toast.hidePopover();
 		try {
+			this.#toast.hidePopover();
 			await new Promise((resolve, reject) => {
 				this.#bus.dispatchEvent(new CustomEvent('interface:settingsCancel', {
 					detail: { resolve, reject }
 				}));
 			});
-			message = success;
+			this.#showToast(success);
 		}
 		catch {
-			message = failure;
+			this.#showToast(failure);
 		}
-		if (message) this.#showToast(message);
 	}
 
 	async #saveSettings(event) {
 		const { dataset: messages, name: action } = event.submitter;
-		const actionButtons = document.querySelectorAll('button:not(:disabled)');
+		const actionButtons = this.#settingsForm.querySelectorAll('button:not(:disabled)');
 		try {
 			if (action === 'share') {
 				this.#settings.close();
@@ -79,8 +76,11 @@ export default class InterfacePresets {
 			}
 			else {
 				event.preventDefault();
+				const isNewName = ['save', 'rename'].includes(action);
+				const rawName = this.#settingsForm.elements.name.value;
+				const name = rawName.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
+				if (isNewName && !name) return this.reportNameValidity('empty');
 				actionButtons.forEach(button => button.disabled = true);
-				const name = this.#formElements.name.value.trim() || '';
 				const request = await new Promise((resolve, reject) => {
 					this.#bus.dispatchEvent(new CustomEvent('interface:settingsSave', { 
 						detail: { action, name, promise: { resolve, reject } }
@@ -103,7 +103,7 @@ export default class InterfacePresets {
 	}
 
 	reportNameValidity(status) {
-		const input = this.#formElements.name;
+		const input = this.#settingsForm.elements.name;
 		const datasetNames = { empty: 'invalidEmpty', duplicated: 'invalidDuplicated' };
 		const validityMessage = input.dataset[datasetNames[status]];
 		input.setCustomValidity(validityMessage);
