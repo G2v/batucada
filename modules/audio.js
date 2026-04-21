@@ -13,9 +13,12 @@ export class Audio {
 	#isReady          = false;
 	#wakeLock         = null;
 	#playTimer        = null;
+	#idleDelay        = 2;
+	#lastNoteTime     = 0;
 	#activeSources    = new Set();
 	#pendingMessages  = [];
 	#mediaPausedTimer = null;
+
 
 	constructor({ bus, config, instruments }) {
 		this.#bus                 = bus;
@@ -212,6 +215,7 @@ export class Audio {
 	}
 
 	#playTicks(ticks) {
+		let hasStroke = false;
 		const animations = new Map();
 		const timeDelta = performance.now() - (this.#audioContext.currentTime * 1000);
 
@@ -222,6 +226,7 @@ export class Audio {
 			const trackIndex = ticks[i + 3];
 			const stepIndex  = ticks[i + 4];
 			if (stroke > 0) {
+				hasStroke = true;
 				this.#playNote(instrument, trackIndex, stroke, time);
 			}
 			if (!animations.has(trackIndex)) {
@@ -231,6 +236,9 @@ export class Audio {
 				time: (time * 1000) + timeDelta,
 				stepIndex
 			});
+		}
+		if (hasStroke) {
+			this.#lastNoteTime = this.#audioContext.currentTime;
 		}
 		this.#bus.dispatchEvent(new CustomEvent('audio:pushAnimations', { detail: { animations } }));
 	}
@@ -282,7 +290,7 @@ export class Audio {
 	}
 
 	#handleAudioStateChange() {
-		if (this.#audioContext.state !== 'running') {
+		if (this.#audioContext.state !== 'running' && this.#playTimer !== null) {
 			this.#stop();
 		}
 	}
@@ -313,17 +321,27 @@ export class Audio {
 	}
 
 	async #wakeLockRequest() {
+		clearTimeout(this.#playTimer);
+		this.#playTimer = null;
 		try {
 			this.#wakeLock = await navigator.wakeLock.request();
-			this.#wakeLock.onrelease = () => {
-				if (this.#audioContext.state !== 'running') return;
-				clearTimeout(this.#playTimer);
-				this.#playTimer = setTimeout(() => {
-					this.#audioContext.suspend();
-					this.#playTimer = null;
-				}, this.#hiddenPlayDuration * 1000);
-			};
-		} catch {}
+			this.#wakeLock.onrelease = () => this.#setPlayTimer();
+		} catch {
+			this.#setPlayTimer();
+		}
+	}
+
+	#setPlayTimer() {
+		if (this.#audioContext.state !== 'running') return;
+		this.#playTimer = setTimeout(() => {
+			const isIdle = this.#audioContext.currentTime - this.#lastNoteTime > this.#idleDelay;
+			const delay = isIdle ? 0 : Math.max(0, this.#hiddenPlayDuration - this.#idleDelay) * 1000;
+			this.#playTimer = setTimeout(() => {
+				this.#stop();
+				this.#playTimer = null;
+				this.#audioContext.suspend();
+			}, delay);
+		}, this.#idleDelay * 1000);
 	}
 
 	#wakeLockRelease() {
