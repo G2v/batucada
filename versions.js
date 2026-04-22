@@ -1,4 +1,4 @@
 export default {
 	static: '1.04',
-	app: '1.09.03',
+	app: '1.09.04',
 }

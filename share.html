@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html>
 <script>
-const params = new URLSearchParams(location.search);
-const url    = params.get('url') || params.get('text');
-const href   = (url && URL.canParse(url)) ? new URL(url).href : './'; 
-location.replace(href);
+const url     = new URL('./', location.href)
+const params  = new URLSearchParams(location.search);
+const shared  = params.get('url') || params.get('text');
+if (shared && URL.canParse(shared)) {
+	url.search = new URL(shared).search;
+}
+location.replace(url.href);
 </script>
 </html>
