@@ -1,6 +1,6 @@
 {
-	"name": "Batucada",
-	"short_name": "Batucada Sequencer",
+	"name": "Batucada Sequencer",
+	"short_name": "Batucada",
 	"start_url": "./",
 	"display": "standalone",
 	"background_color": "#cbd2dc",
