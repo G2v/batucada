@@ -1,19 +1,18 @@
 export default class InterfacePresets {
 	#ui;
 	#bus;
-	#cancelAction  =   false;
-	#toast         = document.querySelector('#toast');
-	#settings      = document.querySelector('#presets-settings');
-	#settingsForm  = this.#settings.querySelector('form');
-	#toastMessage  = this.#toast.querySelector('p');
-	#cancelButton  = this.#toast.querySelector('button');
-	#presetsButton = document.querySelector('button.presets');
+	#toast          = document.querySelector('#toast');
+	#settings       = document.querySelector('#presets-settings');
+	#settingsForm   = this.#settings.querySelector('form');
+	#toastMessage   = this.#toast.querySelector('p');
+	#cancelButton   = this.#toast.querySelector('button');
+	#presetsButton  = document.querySelector('button.presets');
+	#cancelMessages = false;
 
 	constructor({ bus, parent }) {
 		this.#bus = bus
 		this.#ui = parent;
 
-		this.#toast.        addEventListener('toggle',       (event) => this.#hideToast(event));
 		this.#toast.        addEventListener('animationend', (event) => this.#toast.hidePopover());
 		this.#settings.     addEventListener('submit',       (event) => this.#saveSettings(event));
 		this.#settings.     addEventListener('command',      (event) => this.#openSettings(event));
@@ -47,7 +46,8 @@ export default class InterfacePresets {
 	}
 
 	async #cancelSettings() {
-		const { success, failure } = this.#cancelAction;
+		if (!this.#cancelMessages) return;
+		const { success, failure } = this.#cancelMessages;
 		try {
 			this.#toast.hidePopover();
 			await new Promise((resolve, reject) => {
@@ -89,8 +89,8 @@ export default class InterfacePresets {
 				if (request === false) return;
 				this.#settings.close();
 				await request.result;
-				this.#cancelAction = { success: messages.cancelSuccess, failure: messages.cancelFailure };
-				this.#showToast(messages.success);
+				const cancelMessages = { success: messages.cancelSuccess, failure: messages.cancelFailure };
+				this.#showToast(messages.success, cancelMessages);
 			}
 		} 
 		catch {
@@ -147,8 +147,9 @@ export default class InterfacePresets {
 				1: messages.successOne
 			};
 			const message = templates[number] ?? messages.successOther.replace('{{number}}', number);
-			this.#cancelAction = number ? { success: messages.cancelSuccess, failure: messages.cancelFailure } : false;
-			this.#showToast(message);
+			const cancelMessages = number ? { success: messages.cancelSuccess, failure: messages.cancelFailure } : false;
+			this.#showToast(message, cancelMessages);
+
 		} catch {
 			this.#showToast(messages.failure);
 		}
@@ -172,16 +173,11 @@ export default class InterfacePresets {
 		});
 	}
 
-	#showToast(message) {
+	#showToast(message, cancelMessages = false) {
+		this.#cancelMessages = cancelMessages;
 		this.#toastMessage.textContent = message;
-		this.#cancelButton.hidden = !this.#cancelAction;
+		this.#cancelButton.hidden = !cancelMessages;
 		this.#toast.showPopover();
-	}
-
-	#hideToast({ newState }) {
-		if (newState === 'closed') {
-			this.#cancelAction = false;
-		}
 	}
 
 }
