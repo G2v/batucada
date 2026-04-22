@@ -13,7 +13,7 @@ export class Audio {
 	#isReady          = false;
 	#wakeLock         = null;
 	#playTimer        = null;
-	#idleDelay        = 2;
+	#idleDelay        = 10;
 	#lastNoteTime     = 0;
 	#activeSources    = new Set();
 	#pendingMessages  = [];
