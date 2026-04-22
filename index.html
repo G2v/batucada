@@ -191,14 +191,19 @@ body {
 }
 
 #skip {
-	height: 2em;
 	z-index: 2;
+	height: 3em;
 	display: flex;
+	outline: none;
 	position: absolute;
-	background: inherit;
 	align-items: center;
+	border-radius: .4em;
 	justify-content: center;
 	inset: -4em .5em auto .5em;
+	backdrop-filter: blur(2px);
+	color: var(--color-text-popover);
+	background: var(--color-background-popover);
+	box-shadow: 0 0 .5em var(--color-shadow-strong);
 
 	&:focus {
 		top: .5em;
