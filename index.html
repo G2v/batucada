@@ -437,6 +437,7 @@ tbody {
 		> [name="step"].current {
 			outline-color: var(--color-stroke-current);
 		}
+
 	}
 
 	[name="step"] {
@@ -485,6 +486,12 @@ tbody {
 				--step-background: var(--color-stroke-current);
 			}
 		}
+	}
+
+	select,
+	input,
+	button {
+		scroll-margin-bottom: calc(2.5rem * var(--grid-lines) + .7em * (var(--grid-lines) - 1) + 1.65em);
 	}
 
 	@media (min-width: 520px) {
