@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <title>Batucada Sequencer</title>
-<link rel="manifest" href="app/app.webmanifest"/>
-<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg"/>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
 if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
@@ -937,8 +937,6 @@ dialog {
 	p {
 		margin: 0;
 		line-height: 1.2;
-		overflow: hidden;
-		text-overflow: ellipsis;
 
 		&:has(button) {
 			gap: .7em 0;
@@ -957,6 +955,11 @@ dialog {
 
 		&:has(time:not(:empty)) span {
 			display: none;
+		}
+
+		&:has(#contact) {
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 
 	}
@@ -1018,13 +1021,14 @@ dialog {
 
 body > footer {
 	display: flex;
+	padding: 0 .2em;
 	justify-content: space-between;
 
 	button {
 		border: none;
-		padding: .2em .3em;
+		margin: .1em 0;
 		font-size: .8em;
-		margin: .1em .2em .1em 0;
+		padding: .2em .3em;
 		color: var(--color-text-faded);
 	}
 }

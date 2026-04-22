@@ -143,8 +143,8 @@ export class Interface {
 		const fragment = new DocumentFragment();
 		const masterTrack = this.trackTemplate.cloneNode(true);
 		const masterSelect = masterTrack.querySelector(this.#selectors.instrument);
-		const optionsHTML = this.#instruments.slice(1).map((inst, i) => `<option value="${i + 1}">${inst.name}</option>`).join('');
-		masterSelect.insertAdjacentHTML('beforeend', optionsHTML);
+		const options = this.#instruments.slice(1).map((instrument, index) => new Option(instrument.name, index + 1));
+		masterSelect.append(...options);
 
 		const firstBar = masterTrack.querySelector(this.#selectors.bar);
 		const firstBeat = firstBar.querySelector(this.#selectors.beat);
@@ -201,6 +201,18 @@ export class Interface {
 		navigator.mediaSession.metadata = new MediaMetadata({
 			title: this.untitled,
 			artist: this.appTitle,
+			artwork: [
+				{
+					src: './icons/icon_white-bg.svg',
+					sizes: 'any',
+					type: 'image/svg+xml',
+				},
+				{
+					src: './icons/icon_white-bg_512x512.png',
+					sizes: '512x512',
+					type: 'image/png',
+				},
+			],
 		});
 		navigator.mediaSession.setPositionState({ duration: 0 });
 		navigator.mediaSession.setActionHandler('play',  () => this.#instances.controls?.start(true));

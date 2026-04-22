@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+<script>
+const params = new URLSearchParams(location.search);
+const url    = params.get('url') || params.get('text');
+const href   = (url && URL.canParse(url)) ? new URL(url).href : './'; 
+location.replace(href);
+</script>
+</html>

@@ -1,0 +1,29 @@
+{
+	"name": "Batucada",
+	"short_name": "Batucada Sequencer",
+	"start_url": "./",
+	"display": "standalone",
+	"background_color": "#cbd2dc",
+	"icons": [
+		{
+			"src": "./icons/icon.svg",
+			"sizes": "any",
+			"type": "image/svg+xml"
+		},
+		{
+			"src": "./icons/icon_512x512.png",
+			"sizes": "512x512",
+			"type": "image/png"
+		}
+	],
+	"share_target": {
+		"action": "./share.html",
+		"enctype": "application/x-www-form-urlencoded",
+		"method": "GET",
+		"params": {
+			"text": "text",
+			"url": "url"
+		}
+	}
+}
+
