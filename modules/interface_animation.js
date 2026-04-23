@@ -17,9 +17,6 @@ export default class InterfaceAnimation {
 				this.#animationQueue.delete(trackIndex);
 				this.#ui.tracks[trackIndex].classList.add(this.#finishedClass);
 				steps[0]?.step?.classList.remove(this.#currentClass);
-				if (animations.size > 0) {
-					this.#ui.tracks[trackIndex].classList.add(this.#finishedClass);
-				}
 			}
 		}
 		//Ajout des animations à la pile animationQueue
@@ -29,6 +26,7 @@ export default class InterfaceAnimation {
 			if (!steps) {
 				steps = [{ step: null, time: 0 }];
 				this.#animationQueue.set(trackIndex, steps);
+				this.#ui.tracks[trackIndex].classList.remove(this.#finishedClass);
 			}
 			for (const { stepIndex, time } of items) {
 				steps.push({ step: this.#ui.steps[stepIndex], time });
