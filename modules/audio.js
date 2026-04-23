@@ -3,9 +3,9 @@ export class Audio {
 	#maxGain;
 	#gainNodes;
 	#masterGain;
+	#audioBlob;
 	#audioStream;
 	#audioContext;
-	#audioStreamBlob;
 	#instrumentsList;
 	#hiddenPlayDuration;
 	#mediaPausedDuration;
@@ -18,7 +18,6 @@ export class Audio {
 	#activeSources    = new Set();
 	#pendingMessages  = [];
 	#mediaPausedTimer = null;
-
 
 	constructor({ bus, config, instruments }) {
 		this.#bus                 = bus;
@@ -45,6 +44,8 @@ export class Audio {
 	}
 
 	#initAudioStream(seconds) {
+		const volume = 1000;
+		const frequency = 20;
 		const sampleRate = 8000;
 		const length = sampleRate * seconds;
 		const buffer = new ArrayBuffer(44 + length * 2);
@@ -56,7 +57,8 @@ export class Audio {
 		};
 		writeString(0, 'RIFF');
 		view.setUint32(4, 36 + length * 2, true);
-		writeString(8, 'WAVEfmt ');
+		writeString(8, 'WAVE');
+		writeString(12, 'fmt ');
 		view.setUint32(16, 16, true);
 		view.setUint16(20, 1, true);
 		view.setUint16(22, 1, true);
@@ -66,9 +68,16 @@ export class Audio {
 		view.setUint16(34, 16, true);
 		writeString(36, 'data');
 		view.setUint32(40, length * 2, true);
-		this.#audioStreamBlob = new Blob([view], { type: 'audio/wav' });
-		this.#audioStream = new window.Audio(URL.createObjectURL(this.#audioStreamBlob));
+		for (let i = 0; i < length; i++) {
+			const t = i / sampleRate;
+			const sample = Math.sin(2 * Math.PI * frequency * t) * volume;
+			view.setInt16(44 + i * 2, sample, true);
+		}
+		this.#audioBlob = new Blob([view], { type: 'audio/wav' });
+		this.#audioStream = new window.Audio(URL.createObjectURL(this.#audioBlob));
+		this.#audioStream.volume = 0.001; 
 		this.#audioStream.loop = true;
+		document.body.append(this.#audioStream);
 	}
 
 	async #initAudio(config) {
@@ -79,6 +88,8 @@ export class Audio {
 		//this.#masterGain.connect(streamDestination);
 		//this.#audioStream = new window.Audio();
 		//this.#audioStream.srcObject = streamDestination.stream;
+		//this.#audioStream.controls = true;
+		//document.body.append(this.#audioStream)
 		this.#audioContext.addEventListener('statechange', () => this.#handleAudioStateChange());
 
 		const loadInstruments    = this.#loadInstrumentSounds();
@@ -200,7 +211,7 @@ export class Audio {
 		this.#mediaPausedTimer = setTimeout(() => {
 			this.#audioStream.removeAttribute('src');
 			this.#audioStream.load();
-			this.#audioStream.src = URL.createObjectURL(this.#audioStreamBlob);
+			this.#audioStream.src = URL.createObjectURL(this.#audioBlob);
 			this.#mediaPausedTimer = null;
 		}, this.#mediaPausedDuration * 1000);
 	}
