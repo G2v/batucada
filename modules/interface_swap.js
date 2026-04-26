@@ -2,9 +2,7 @@ export default class InterfaceSwap {
 	#ui;
 	#bus;
 	#order;
-	#hasInstrument;
 	#over          = new Set();
-	#isActive      = false;
 	#swapClass     = 'swap';
 	#overClass     = 'over';
 	#trashClass    = 'trash';
@@ -27,23 +25,16 @@ export default class InterfaceSwap {
 	#handleDragStart(event) {
 		const track = this.#ui.getTrack(event.target);
 		if (!track) return;
-		//Déplacement du layout sur dragOver nécessaire sur firefox 149 à cause
-		//d'un dragStart fantome sur un select à l'interieur d'un draggable
-		this.#isActive = false;
-		this.#hasInstrument = this.#ui.getTrackInstrument(track) !== this.#ui.config.defaultInstrument
+		if (this.#ui.getTrackInstrument(track) !== this.#ui.config.defaultInstrument) {
+			this.#ui.container.classList.add(this.#swapClass);
+		}
+		this.#ui.container.classList.add(this.#trashClass);
 		event.dataTransfer.setData('text/plain', track.dataset.index);
 		event.dataTransfer.setDragImage(event.target, 0, 15);
 		event.dataTransfer.effectAllowed = 'move';
 	}
 
 	#handleDragOver(event) {
-		if (!this.#isActive) {
-			this.#isActive = true;
-			if (this.#hasInstrument) {
-				this.#ui.container.classList.add(this.#swapClass);
-			}
-			this.#ui.container.classList.add(this.#trashClass);
-		}
 		if (this.#isDropZone(event.target)) {
 			event.preventDefault();
 		}
@@ -67,7 +58,6 @@ export default class InterfaceSwap {
 	}
 
 	#handleDragEnd(event) {
-		this.#isActive = false;
 		this.#ui.container.classList.remove(this.#swapClass, this.#trashClass);
 		this.#removeOver();
 	}
@@ -128,4 +118,3 @@ export default class InterfaceSwap {
 		this.#order.splice(toIndex, 0, item);
 	}
 }
-

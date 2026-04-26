@@ -3,12 +3,11 @@ export class Audio {
 	#maxGain;
 	#gainNodes;
 	#masterGain;
-	#audioBlob;
 	#audioStream;
 	#audioContext;
 	#instrumentsList;
 	#hiddenPlayDuration;
-	#mediaPausedDuration;
+
 	#worker           = null;
 	#isReady          = false;
 	#wakeLock         = null;
@@ -17,13 +16,11 @@ export class Audio {
 	#lastNoteTime     = 0;
 	#activeSources    = new Set();
 	#pendingMessages  = [];
-	#mediaPausedTimer = null;
 
 	constructor({ bus, config, instruments }) {
 		this.#bus                 = bus;
 		this.#instrumentsList     = instruments;
 		this.#hiddenPlayDuration  = config.hiddenPlayDuration;
-		this.#mediaPausedDuration = config.mediaPausedDuration;
 
 		this.#bus.addEventListener('navigation:decoded',       ({ detail }) => this.#updateData(detail, true));
 		this.#bus.addEventListener('interface:reset',          () => this.#reset());
@@ -33,23 +30,23 @@ export class Audio {
 		this.#bus.addEventListener('interface:updateData',     ({ detail }) => this.#updateData(detail));
 		this.#bus.addEventListener('interface:userGesture',    () => this.#startAudio(), { once: true });
 		this.#bus.addEventListener('interface:presetSelected', () => this.#restart());
-		document. addEventListener('visibilitychange',         () => this.#handleVisibilityChange());
+		document.addEventListener('visibilitychange',         () => this.#handleVisibilityChange());
 
 		queueMicrotask(() => {
 			this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 			this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
 			this.#initAudio(config);
-			this.#initAudioStream(10);
+			this.#initAudioStream();
 		});
 	}
 
-	#initAudioStream(seconds) {
+	#initAudioStream() {
 		const volume = 1000;
 		const frequency = 20;
 		const sampleRate = 8000;
-		const length = sampleRate * seconds;
-		const buffer = new ArrayBuffer(44 + length * 2);
-		const view = new DataView(buffer);
+		const length = sampleRate * 10;
+		const header = new ArrayBuffer(44);
+		const view = new DataView(header);
 		const writeString = (offset, string) => {
 			for (let i = 0; i < string.length; i++) {
 				view.setUint8(offset + i, string.charCodeAt(i));
@@ -68,15 +65,20 @@ export class Audio {
 		view.setUint16(34, 16, true);
 		writeString(36, 'data');
 		view.setUint32(40, length * 2, true);
-		for (let i = 0; i < length; i++) {
-			const t = i / sampleRate;
-			const sample = Math.sin(2 * Math.PI * frequency * t) * volume;
-			view.setInt16(44 + i * 2, sample, true);
+		const samplesPerCycle = sampleRate / frequency; 
+		const cycleData = new Int16Array(samplesPerCycle);
+		const step = (2 * Math.PI * frequency) / sampleRate;
+		for (let i = 0; i < samplesPerCycle; i++) {
+			cycleData[i] = Math.sin(i * step) * volume;
 		}
-		this.#audioBlob = new Blob([view], { type: 'audio/wav' });
-		this.#audioStream = new window.Audio(URL.createObjectURL(this.#audioBlob));
-		this.#audioStream.volume = 0.001; 
+		const pcmData = new Int16Array(length);
+		for (let i = 0; i < length; i += samplesPerCycle) {
+			pcmData.set(cycleData, i);
+		}
+		const blob = new Blob([header, pcmData.buffer], { type: 'audio/wav' });
+		this.#audioStream = new window.Audio(URL.createObjectURL(blob));
 		this.#audioStream.loop = true;
+		this.#audioStream.volume = 0.001;
 		document.body.append(this.#audioStream);
 	}
 
@@ -84,12 +86,6 @@ export class Audio {
 		this.#audioContext = new AudioContext();
 		this.#masterGain = new GainNode(this.#audioContext);
 		this.#masterGain.connect(this.#audioContext.destination);
-		//const streamDestination  = this.#audioContext.createMediaStreamDestination();
-		//this.#masterGain.connect(streamDestination);
-		//this.#audioStream = new window.Audio();
-		//this.#audioStream.srcObject = streamDestination.stream;
-		//this.#audioStream.controls = true;
-		//document.body.append(this.#audioStream)
 		this.#audioContext.addEventListener('statechange', () => this.#handleAudioStateChange());
 
 		const loadInstruments    = this.#loadInstrumentSounds();
@@ -178,10 +174,6 @@ export class Audio {
 	}
 
 	async #start() {
-		if (this.#mediaPausedTimer) {
-			clearTimeout(this.#mediaPausedTimer);
-			this.#mediaPausedTimer = null;
-		}
 		if (this.#audioContext.state !== 'running') {
 			await this.#audioContext.resume();
 		}
@@ -208,12 +200,6 @@ export class Audio {
 		this.#audioStream.pause();
 		this.#audioStream.currentTime = 0;
 		this.#bus.dispatchEvent(new CustomEvent('audio:stop'));
-		this.#mediaPausedTimer = setTimeout(() => {
-			this.#audioStream.removeAttribute('src');
-			this.#audioStream.load();
-			this.#audioStream.src = URL.createObjectURL(this.#audioBlob);
-			this.#mediaPausedTimer = null;
-		}, this.#mediaPausedDuration * 1000);
 	}
 
 	#restart() {

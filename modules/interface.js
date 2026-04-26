@@ -202,11 +202,6 @@ export class Interface {
 			title: this.untitled,
 			artist: this.appTitle,
 			artwork: [
-				//{
-				//	src: './icons/icon_white-bg.svg',
-				//	sizes: 'any',
-				//	type: 'image/svg+xml',
-				//},
 				{
 					src: './icons/icon_white-bg_512x512.png',
 					sizes: '512x512',

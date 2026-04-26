@@ -467,6 +467,7 @@ tbody {
 
 			&::before {
 				display: block;
+				color: CanvasText;
 				text-align: center;
 				line-height: 1.65em;
 				content: counter(beat);
@@ -915,10 +916,6 @@ dialog {
 		&[open]::details-content {
 			opacity: 1;
 			height: auto;
-			transition: 
-				height 0.15s ease,
-				opacity 0.1s ease 0.05s,
-				content-visibility 0.2s allow-discrete;
 		}
 
 		&[open] summary {
@@ -1219,7 +1216,7 @@ body > footer {
 	</dialog>
 	<dialog id="presets-settings" aria-labelledby="presets-settings-title">
 		<div>
-			<h2 id="presets-settings-title">Gestion du morceau</h2>
+			<h2 id="presets-settings-title">Gérer le morceau</h2>
 			<form method="dialog" autocomplete="off">
 				<label>Titre : <input name="name" placeholder="Titre du morceau"
 					data-invalid-empty="Le titre doit contenir au moins un caractère."
@@ -1252,7 +1249,7 @@ body > footer {
 			<h2 id="app-title">Batucada Sequencer</h2>
 			<section>
 				<details name="app">
-					<summary>Morceaux</summary>
+					<summary>Gérer les morceaux</summary>
 					<div>
 						<p>Dernière modification : <time></time><span>Aucune</span></p>
 						<p>
