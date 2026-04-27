@@ -3,6 +3,8 @@ export default class InterfaceControls {
 	#bus;
 	#track;
 
+	#controls           = document.querySelector('#controls');
+	#skipButton         = document.querySelector('#skip');
 	#resetButton        = document.querySelector('#reset');
 	#trackSettings      = document.querySelector('#track-settings');
 
@@ -49,7 +51,8 @@ export default class InterfaceControls {
 		this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail }));
 	}
 
-	async #handleClick({ target }) {
+	async #handleClick(event) {
+		const { target } = event;
 		if (target instanceof HTMLDialogElement) {
 			target.close();
 		}
@@ -64,6 +67,9 @@ export default class InterfaceControls {
 		}
 		else if (target === this.#ui.themeButton) {
 			this.#changeTheme();
+		}
+		else if (target === this.#skipButton) {
+			this.#skipContent(event);
 		}
 		this.#bus.dispatchEvent(new CustomEvent('interface:userGesture'));
 	}
@@ -138,6 +144,12 @@ export default class InterfaceControls {
 			localStorage.setItem('theme', isDark ? 'dark' : 'light');
 			this.#ui.updateTheme(isDark);
 		});
+	}
+
+	#skipContent(event) {
+		event.preventDefault();
+		this.#controls.focus();
+		this.#controls.scrollIntoView({ behavior: 'smooth' });
 	}
 
 }

@@ -531,15 +531,30 @@ hr {
 
 #controls {
 	z-index: 2;
+	padding: 0;
+	bottom: .5em;
 	display: flex;
-	bottom: -.2em;
 	flex-wrap: wrap;
 	position: sticky;
-	border-radius: .2em;
+	border-radius: 2px;
 	gap: var(--main-margin);
 	view-transition-name: controls;
-	padding: .7em var(--main-margin);
+	margin: .7em var(--main-margin);
 	background: var(--color-background-base);
+
+	&:before {
+		z-index: -1;
+		content: '';
+		position: absolute;
+		background: inherit;
+		border-radius: 0 0 .5em .5em;
+		inset: -.7em calc(var(--main-margin) * -1);
+	}
+
+	&:focus {
+		outline-offset: 6px;
+		outline: .1em dashed currentColor;
+	}
 
 	button,
 	select {
@@ -1128,7 +1143,7 @@ body > footer {
 			</div>
 			<div id="combo_tempo">
 				<input aria-label="Tempo" aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
-				<output for="tempo" aria-hidden="true"><span>80</span> bpm</output>
+				<output aria-hidden="true"><span>80</span> bpm</output>
 			</div>
 			<button id="reset" title="Effacer le morceau">Effacer</button>
 			<button id="start" class="icon-only" role="switch" aria-checked="false" title="Jouer">Jouer</button>
