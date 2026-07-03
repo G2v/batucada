@@ -46,20 +46,15 @@ export async function downloadFile(filename, content) {
 	}
 }
 
-export async function getFileContent() {
+export function getFileContent() {
 	return new Promise((resolve, reject) => {
 		const input = document.createElement('input');
 		input.type = 'file';
 		input.accept = '.json';
-		input.onchange = async (event) => {
-			const file = event.target.files[0];
-			if (!file) return reject(new Error());
-			try {
-				resolve(await file.text());
-			} catch {
-				reject(new Error());
-			}
-		};
+		input.addEventListener('cancel', () => reject(new Error('cancelled')), { once: true });
+		input.addEventListener('change', () => {
+			input.files[0].text().then(resolve, () => reject(new Error('read failed')));
+		}, { once: true });
 		input.click();
 	});
 }

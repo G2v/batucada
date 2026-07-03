@@ -93,7 +93,9 @@ self.addEventListener('fetch', event => {
 		: url.href;
 	event.respondWith(
 		caches.match(event.request, { ignoreSearch: true, cacheName: appCache }).then(cached => {
-			const fetchAndUpdate = fetch(event.request)
+			const networkFirst = event.request.cache === 'no-cache';
+			if (cached && !networkFirst) return cached;
+			return fetch(event.request)
 				.then(response => {
 					if (response.ok) {
 						const responseClone = response.clone();
@@ -102,7 +104,6 @@ self.addEventListener('fetch', event => {
 					return response;
 				})
 				.catch(() => cached);
-			return event.request.cache === 'no-cache' ? fetchAndUpdate : (cached ?? fetchAndUpdate);
 		})
 	);
 });

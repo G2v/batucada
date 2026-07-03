@@ -10,8 +10,8 @@ const outputDigits = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
 const outputBase   = outputDigits.length;
 const config       = {};
 const stateCache   = {
-	tempo:   config.defaultTempo,
-	title:   config.defaultTitleValue,
+	tempo:   null,
+	title:   null,
 	order:   null,
 	sheet:   null,
 	tracks:  null,
@@ -50,6 +50,8 @@ function setConfig(interfaceConfig) {
 	Object.freeze(config);
 
 	stateCache.order = config.defaultOrder;
+	stateCache.tempo = config.defaultTempo;
+	stateCache.title = config.defaultTitleValue;
 
 	url_map = {
 		tempo:   config.tempoSearchParam,

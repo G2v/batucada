@@ -259,6 +259,7 @@ tbody {
 	display: grid;
 	position: relative;
 	contain: layout style;
+	will-change: transform;
 	view-transition-name: match-element;
 	grid-template-rows: 1em 1.65em .3em 1.65em 1fr;
 	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
@@ -1428,7 +1429,7 @@ body > footer {
 					<h2 id="instruments-title">Gérer les instruments</h2>
 				</header>
 				<section>
-					<p>Biblibothèque : <span></span></p>
+					<p>Bibliothèque : <span></span></p>
 					<button commandfor="instruments" command="--export">Exporter la bibliothèque</button>
 					<button commandfor="instruments" command="--import"
 						data-failure="⚠️ Impossible de charger la bibliothèque.">Charger une autre bibliothèque</button>

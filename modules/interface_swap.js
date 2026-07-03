@@ -100,7 +100,7 @@ export default class InterfaceSwap {
 
 	#isDropZone(target) {
 		return this.#ui.container.classList.contains(this.#swapClass) 
-			&& target.className === this.#dropzoneClass
+			&& target.classList.contains(this.#dropzoneClass)
 			|| target === this.#trash;
 	}
 

@@ -89,7 +89,6 @@ export default class InterfaceAria {
 
 		if (isVertical) {
 			const isDown = key === 'ArrowDown';
-			const track = this.#ui.getTrack(active);
 			const targetTrack = isDown ? track.nextElementSibling : track.previousElementSibling;
 			if (!targetTrack || (isDown && track.dataset.instrument === "0")) return;
 			targetTrack.querySelector('[tabindex="0"]').focus();

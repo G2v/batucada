@@ -30,7 +30,7 @@ export class Navigation {
 
 		this.#init(config);
 
-		const navigationReady = window.navigation ? Promise.resolve() : import('./polyfill/navigation.js');
+		const navigationReady = window.navigation ? Promise.resolve() : import('./polyfills/navigation.js');
 		navigationReady.then(() => navigation.addEventListener('navigate', event => this.#handleNavigation(event)));
 
 		this.#bus.addEventListener('audio:state',            ({ detail }) => this.#cacheState(detail));

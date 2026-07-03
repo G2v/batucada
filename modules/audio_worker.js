@@ -249,37 +249,37 @@ function updateTracks(values, items, collateralItems, messages) {
 	beatSync = getBeatSync();
 }
 
-	function updateSheetWith(track, resetValue, condition) {
-		const changes = [];
-		const { 
-			maxBeats,
-			beat:  stepsPerBeat, 
-			track: stepsPerTrack,
-		} = config.resolution;
+function updateSheetWith(track, resetValue, condition) {
+	const changes = [];
+	const { 
+		maxBeats,
+		beat:  stepsPerBeat, 
+		track: stepsPerTrack,
+	} = config.resolution;
 
-		let bars = 0;
-		let beats = 0;
-		let steps = 0;
-		let stepIndex = track.sheetIndex;
+	let bars = 0;
+	let beats = 0;
+	let steps = 0;
+	let stepIndex = track.sheetIndex;
 
-		for (let i = 0; i < stepsPerTrack; i++) {
-			if (condition(sheet[stepIndex], bars, beats, steps) && sheet[stepIndex] !== resetValue) {
-				sheet[stepIndex] = resetValue;
-				changes.push({ stepIndex, value: resetValue });
-			}
-			stepIndex++;
-			steps++;
-			if (steps === stepsPerBeat) {
-				steps = 0;
-				beats++;
-				if (beats === maxBeats) {
-					beats = 0;
-					bars++;
-				}
+	for (let i = 0; i < stepsPerTrack; i++) {
+		if (condition(sheet[stepIndex], bars, beats, steps) && sheet[stepIndex] !== resetValue) {
+			sheet[stepIndex] = resetValue;
+			changes.push({ stepIndex, value: resetValue });
+		}
+		stepIndex++;
+		steps++;
+		if (steps === stepsPerBeat) {
+			steps = 0;
+			beats++;
+			if (beats === maxBeats) {
+				beats = 0;
+				bars++;
 			}
 		}
-		return changes;
 	}
+	return changes;
+}
 
 function updateSheet(values, items) {
 	for (const { stepIndex, value } of values) {

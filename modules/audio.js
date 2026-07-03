@@ -180,11 +180,8 @@ export class Audio {
 	}
 
 	async #start() {
-		if (this.#audioContext.state !== 'running') {
-			await this.#audioContext.resume();
-		}
 		await this.#startAudio();
-		this.#audioStream.play().catch();
+		this.#audioStream.play().catch(() => {});
 		this.#worker.postMessage({ action: 'start', payload: this.#audioContext.currentTime });
 		this.#wakeLockRequest();
 	}
