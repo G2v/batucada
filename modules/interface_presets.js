@@ -153,10 +153,10 @@ export default class InterfacePresets {
 				: number === 1 ? messages.successOne
 				: messages.successOther.replace('{{number}}', number);
 			this.#ui.dialogs.showToast(message, number ? this.#cancelEdit(messages) : null);
-		} catch {
+		} catch (error) {
+			if (error.name === 'AbortError') return;
 			this.#ui.dialogs.showToast(messages.failure);
 		}
 	}
-
 
 }

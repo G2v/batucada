@@ -67,42 +67,43 @@ export default class InterfaceInstruments {
 
 	async #libraryCheck(messages) {
 		let audioContext;
+
 		try {
 			const content = await getFileContent();
 			const data = JSON.parse(content);
-			if (!data || typeof data !== 'object') throw new Error("Fichier invalide");
-			if (!data.name)                        throw new Error("Propriété 'name' manquante");
-			if (!data.version)                     throw new Error("Propriété 'version' manquante");
+			if (!data || typeof data !== 'object') throw new Error("Invalid file");
+			if (!data.name)                        throw new Error("Missing 'name' property");
+			if (!data.version)                     throw new Error("Missing 'version' property");
 			if (!Array.isArray(data.instruments) || data.instruments.length === 0) {
-				throw new Error("Instruments invalides ou absents");
+				throw new Error("Invalid or missing instruments");
 			}
 			audioContext = new AudioContext();
 			const ids = new Set();
 			const validationPromises = data.instruments.flatMap((item, index) => {
-				if (item.id == null)  throw new Error(`Instrument ${index} : id invalide`);
-				if (item.id < 0)      throw new Error(`Instrument ${index} : id invalide`);
-				if (item.id === 0)    throw new Error(`Instrument ${index} : id 0 réservé`);
-				if (item.id > 60)     throw new Error(`Instrument ${index} : id superieur à 60`);
-				if (ids.has(item.id)) throw new Error(`Instrument ${index} : id dupliqué`);
-				if (!item.name)       throw new Error(`Instrument ${index} : name manquant`);
+				if (item.id == null)  throw new Error(`Instrument ${index}: invalid id`);
+				if (item.id < 0)      throw new Error(`Instrument ${index}: invalid id`);
+				if (item.id === 0)    throw new Error(`Instrument ${index}: id 0 is reserved`);
+				if (item.id > 60)     throw new Error(`Instrument ${index}: id greater than 60`);
+				if (ids.has(item.id)) throw new Error(`Instrument ${index}: duplicated id`);
+				if (!item.name)       throw new Error(`Instrument ${index}: missing name`);
 				ids.add(item.id);
 				if (!Array.isArray(item.strokes) || item.strokes.length === 0) {
-					throw new Error(`Instrument ${index} : strokes invalides`);
+					throw new Error(`Instrument ${index}: invalid strokes`);
 				}
 				if (!Array.isArray(item.sounds) || item.sounds.length === 0) {
-					throw new Error(`Instrument ${index} : sounds invalides`);
+					throw new Error(`Instrument ${index}: invalid sounds`);
 				}
 				if (item.strokes.length !== item.sounds.length) {
-					throw new Error(`Instrument ${index} : mismatch strokes/sounds`);
+					throw new Error(`Instrument ${index}: strokes/sounds mismatch`);
 				}
 				const iconPromises = item.strokes.map((stroke, i) =>
 					this.#validateIcon(stroke).catch(error => {
-						throw new Error(`Instrument ${index} → stroke ${i} : ${error.message}`);
+						throw new Error(`Instrument ${index} → stroke ${i}: ${error.message}`);
 					})
 				);
 				const soundPromises = item.sounds.map((sound, i) =>
 					this.#validateAudio(sound, audioContext).catch(error => {
-						throw new Error(`Instrument ${index} → sound ${i} : ${error.message}`);
+						throw new Error(`Instrument ${index} → sound ${i}: ${error.message}`);
 					})
 				);
 				return [...iconPromises, ...soundPromises];
@@ -119,12 +120,13 @@ export default class InterfaceInstruments {
 			this.#confirmImport.showModal();
 		}
 		catch (error) {
+			if (error.name === 'AbortError') return;
 			console.error(error);
 			this.#instrumentsDialog.close();
 			this.#ui.dialogs.showToast(messages.failure);
 		}
 		finally {
-			if (audioContext?.state !== 'closed') {
+			if (audioContext && audioContext.state !== 'closed') {
 				await audioContext.close();
 			}
 		}
