@@ -7,13 +7,17 @@
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg"/>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
-if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 {
-	const urlParams = new URLSearchParams(window.location.search);
+	const forcedTheme = localStorage.theme;
+	const isDark = forcedTheme === undefined ? matchMedia('(prefers-color-scheme: dark)').matches : forcedTheme === 'dark';
+	document.documentElement.classList.toggle('dark', isDark);
+
+	const urlParams = new URLSearchParams(location.search);
 	const placeholders = {
 		title:   [urlParams.get('title')?.trim() ? 1 : 0, '--has-title'],
 		presets: [urlParams.get('set')?.split('-').filter(Boolean).length ?? 0, '--tracks-count'],
 	};
+
 	for (const key in placeholders) {
 		const [value, property] = placeholders[key];
 		if (value) {

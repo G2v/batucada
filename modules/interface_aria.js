@@ -27,17 +27,15 @@ export default class InterfaceAria {
 	}
 
 	#init() {
-		const track      = this.#ui.trackTemplate;
-		const row        = track.querySelector(InterfaceAria.#scopeRowSelector);
-		const steps      = Array.from(track.querySelectorAll(this.#ui.selectors.step));
-		const sheet      = track.querySelector(InterfaceAria.#toolbarSelector);
-		const volume     = track.querySelector(this.#ui.selectors.volume);
-		const instrument = track.querySelector(this.#ui.selectors.instrument);
-		const theme      = localStorage.getItem('theme') === 'dark' || null;
+		const track       = this.#ui.trackTemplate;
+		const row         = track.querySelector(InterfaceAria.#scopeRowSelector);
+		const steps       = Array.from(track.querySelectorAll(this.#ui.selectors.step));
+		const sheet       = track.querySelector(InterfaceAria.#toolbarSelector);
+		const volume      = track.querySelector(this.#ui.selectors.volume);
+		const instrument  = track.querySelector(this.#ui.selectors.instrument);
+		const forcedTheme = localStorage.theme;
 
-		if (theme !== null) {
-			this.#theme = theme;
-		}
+		this.#theme = forcedTheme === undefined ? matchMedia('(prefers-color-scheme: dark)').matches : forcedTheme === 'dark';
 
 		this.#instrumentsNames = Object.fromEntries(
 			this.#ui.config.instrumentsLibrary.instruments.map(({ id, name }) => [id, name])

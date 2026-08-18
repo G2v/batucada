@@ -2,6 +2,7 @@ export default class InterfaceControls {
 	#ui;
 	#bus;
 	#track;
+	#systemColor;
 
 	#controls       = document.querySelector('#controls');
 	#skipButton     = document.querySelector('#skip');
@@ -12,12 +13,14 @@ export default class InterfaceControls {
 	constructor({ bus, parent }) {
 		this.#bus = bus;
 		this.#ui = parent;
+		this.#systemColor = matchMedia('(prefers-color-scheme: dark)');
 
 		document.addEventListener('click',              (event) => this.#handleClick(event));
 		this.#ui.container.addEventListener('input',    (event) => this.#handleInput(event));
 		this.#ui.container.addEventListener('change',   (event) => this.#handleChange(event));
 		this.#trackSettings.addEventListener('submit',  (event) => this.#setTrack());
 		this.#trackSettings.addEventListener('command', (event) => this.#showTrackSettings(event));
+		this.#systemColor.addEventListener('change',    (event) => this.#setTheme(event));
 		this.#initMediaSession();
 
 		if (!document.startViewTransition) {
@@ -157,9 +160,23 @@ export default class InterfaceControls {
 	}
 
 	#changeTheme() {
+		const theme = !document.documentElement.classList.contains('dark');
+		if (theme === this.#systemColor.matches) {
+			delete localStorage.theme;
+		} else {
+			localStorage.theme = theme ? 'dark' : 'light';
+		}
+		this.#applyTheme(theme);
+	}
+
+	#setTheme({ matches }) {
+		if (localStorage.theme !== undefined) return;
+		this.#applyTheme(matches);
+	}
+
+	#applyTheme(theme) {
 		document.startViewTransition(() => {
-			const theme = document.documentElement.classList.toggle('dark');
-			localStorage.setItem('theme', theme ? 'dark' : 'light');
+			document.documentElement.classList.toggle('dark', theme);
 			this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail: { theme } }));
 		});
 	}
