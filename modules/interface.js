@@ -63,6 +63,8 @@ export class Interface {
 	]);
 
 	#bus;
+	#tracksOrder;
+
 	#config;
 	#untitled;
 	#resolution;
@@ -192,6 +194,7 @@ export class Interface {
 		}
 
 		this.trackParent.appendChild(fragment);
+		this.#tracksOrder = Array.from({ length: app_config.tracksLength }, (_, i) => i);
 		this.#resolvers.dom();
 	}
 
@@ -359,12 +362,13 @@ export class Interface {
 	get trackParent()   { return this.#nodes.trackParent   ??= document.querySelector(this.#selectors.trackParent); }
 	get trackTemplate() { return this.#nodes.trackTemplate ??= document.querySelector(this.#selectors.trackTemplate).content.querySelector(this.#selectors.track); }
 
-	get names()            { return this.#names; }
-	get config()           { return this.#config; }
-	get playing()          { return this.#playing; }
-	get selectors()        { return this.#selectors; }
-	get presetsDate()      { return this.#presetsDate; }
-
-	get dialogs() { return this.#instances.dialogs; }
+	get swap()          { return this.#instances.swap; }
+	get names()         { return this.#names; }
+	get config()        { return this.#config; }
+	get playing()       { return this.#playing; }
+	get dialogs()       { return this.#instances.dialogs; }
+	get selectors()     { return this.#selectors; }
+	get presetsDate()   { return this.#presetsDate; }
+	get tracksOrder()   { return this.#tracksOrder; }
 
 }

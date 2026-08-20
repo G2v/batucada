@@ -4,16 +4,27 @@ export default class InterfaceControls {
 	#track;
 	#systemColor;
 
-	#controls       = document.querySelector('#controls');
-	#skipButton     = document.querySelector('#skip');
-	#resetButton    = document.querySelector('#reset');
-	#presetsButton  = document.querySelector('button.presets');
-	#trackSettings  = document.querySelector('#track-settings');
+	#controls         = document.querySelector('#controls');
+	#skipButton       = document.querySelector('#skip');
+	#resetButton      = document.querySelector('#reset');
+	#presetsButton    = document.querySelector('button.presets');
+	#trackSettings    = document.querySelector('#track-settings');
+	#trackPosition    = document.querySelector('#track-settings-title span');
+	#trackPositions   = document.querySelector('#positions');
+	#positionTemplate = this.#trackPositions.querySelector('[data-template]');
 
 	constructor({ bus, parent }) {
 		this.#bus = bus;
 		this.#ui = parent;
 		this.#systemColor = matchMedia('(prefers-color-scheme: dark)');
+
+		const templateContent = this.#positionTemplate.dataset.templateContent;
+		const positionsOptions = Array.from({ length: this.#ui.config.tracksLength - 1 }, (_, i) => {
+			const option = new Option(templateContent.replace('{{n}}', i + 2), i + 1);
+			option.hidden = true;
+			return option;
+		});
+		this.#positionTemplate.after(...positionsOptions);
 
 		document.addEventListener('click',              (event) => this.#handleClick(event));
 		this.#ui.container.addEventListener('input',    (event) => this.#handleInput(event));
@@ -53,6 +64,14 @@ export default class InterfaceControls {
 	}
 
 	#setTrack() {
+		const sourceIndex = this.#ui.getTrackIndex(this.#track);
+		const newPosition = parseInt(this.#trackPositions.value);
+
+		if (newPosition === -1) {
+			this.#ui.swap.trashTrack(sourceIndex);
+			return;
+		}
+
 		const values = this.#track.dataset;
 		const fields = {
 			bars:   this.#ui.setBars.value,
@@ -62,14 +81,25 @@ export default class InterfaceControls {
 		};
 		const changes = {};
 		for (const [key, newValue] of Object.entries(fields)) {
-			if (values[key] !== newValue) {
-				changes[key] = Number(newValue);
-			}
+			if (values[key] !== newValue) changes[key] = Number(newValue);
 		}
-		if (Object.keys(changes).length === 0) return;
-		document.startViewTransition(() => Object.assign(values, changes));
-		const detail = { tracks: [ { id:values.index, changes } ] };
-		this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail }));
+		const hasChanges  = Object.keys(changes).length > 0;
+		const currentPosition = this.#ui.tracksOrder.indexOf(sourceIndex);
+		const targetIndex = newPosition > -1
+			? (newPosition > currentPosition
+				? this.#ui.tracksOrder[newPosition + 1] ?? null
+				: this.#ui.tracksOrder[newPosition] ?? null)
+			: null;
+		if (!hasChanges && targetIndex === null) return;
+
+		document.startViewTransition(() => {
+			if (targetIndex !== null) this.#ui.swap.moveTrack(sourceIndex, targetIndex);
+			if (hasChanges) Object.assign(values, changes);
+		});
+
+		if (hasChanges) {
+			this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail: { tracks: [{ id: values.index, changes }] } }));
+		}
 	}
 
 	async #handleClick(event) {
@@ -123,8 +153,26 @@ export default class InterfaceControls {
 	#showTrackSettings({ command, source }) {
 		if (command !== 'show-modal') return;
 		const track = this.#ui.getTrack(source);
-		const { bars, beats, steps, phrase, instrument } = track.dataset;
+		const index = this.#ui.getTrackIndex(track);
+		const { bars, beats, steps, phrase } = track.dataset;
+		const position =  this.#ui.tracksOrder.indexOf(index);
+		const isLastTrack = this.#ui.getTrackInstrument(track) === this.#ui.config.defaultInstrument;
+
+		let option = this.#positionTemplate;
+		let stop = false;
+		while (option) {
+			const trackIndex = this.#ui.tracksOrder[option.value];
+			if (trackIndex === undefined) break;
+			const instrument = this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex])
+			stop = stop || instrument === this.#ui.config.defaultInstrument;
+			option.hidden = stop && option !== this.#positionTemplate;
+			option.disabled = isLastTrack || (option.value | 0) === position;
+			option = option.nextElementSibling;
+		}
+
 		this.#track = track;
+		this.#trackPosition.textContent = position + 1;
+		this.#trackPositions.selectedIndex = 0;
 		this.#ui.setBars.value   = bars;
 		this.#ui.setBeats.value  = beats;
 		this.#ui.setSteps.value  = steps;

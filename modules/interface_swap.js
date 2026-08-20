@@ -1,7 +1,6 @@
 export default class InterfaceSwap {
 	#ui;
 	#bus;
-	#order;
 	#over          = new Set();
 	#swapClass     = 'swap';
 	#overClass     = 'over';
@@ -13,7 +12,6 @@ export default class InterfaceSwap {
 	constructor({ bus, parent }) {
 		this.#bus   = bus;
 		this.#ui    = parent;
-		this.#order = Array.from({ length: parent.config.tracksLength }, (_, i) => i);
 		this.#ui.container.addEventListener('dragstart', (event) => this.#handleDragStart(event));
 		this.#ui.container.addEventListener('dragenter', (event) => this.#handleDragEnter(event));
 		this.#ui.container.addEventListener('dragover',  (event) => this.#handleDragOver(event));
@@ -64,37 +62,20 @@ export default class InterfaceSwap {
 
 	#handleDrop(event) {
 		this.#removeOver();
-		const targetTrack  = this.#ui.getTrack(event.target);
-		const targetIndex  = targetTrack ? this.#ui.getTrackIndex(targetTrack) : null;
-		const sourceIndex  = Number(event.dataTransfer.getData('text/plain'));
+		const targetTrack = this.#ui.getTrack(event.target);
+		const targetIndex = targetTrack ? this.#ui.getTrackIndex(targetTrack) : null;
+		const sourceIndex = Number(event.dataTransfer.getData('text/plain'));
+
 		if (targetIndex !== null) {
-			const sourcePosition = this.#order.indexOf(sourceIndex);
-			const targetPosition = this.#order.indexOf(targetIndex);
-			if (sourcePosition === targetPosition || sourcePosition + 1 === targetPosition) {
-				return;
-			}
+			const sourcePosition = this.#ui.tracksOrder.indexOf(sourceIndex);
+			const targetPosition = this.#ui.tracksOrder.indexOf(targetIndex);
+			if (sourcePosition === targetPosition || sourcePosition + 1 === targetPosition) return;
 		}
-		const draggedTrack = this.#ui.tracks[sourceIndex];
-		const trashed = targetIndex === null ? sourceIndex : null;
-		const isLastVisualTrack = sourceIndex === this.#order.at(-1) || this.#ui.getTrackInstrument(draggedTrack) === this.#ui.config.defaultInstrument;
-		this.#swapOrder(sourceIndex, targetIndex);
-		const moveTrack = () => {
-			draggedTrack.parentNode.insertBefore(draggedTrack, targetTrack);
-			this.#bus.dispatchEvent(
-				new CustomEvent('interface:moveTrack', { detail: { trashed, order: this.#order } })
-			);
-		};
-		if (trashed !== null && isLastVisualTrack) {
-			const target = draggedTrack.nextElementSibling || draggedTrack;
-			moveTrack();
-			target.classList.remove(this.#resetedClass);
-			requestAnimationFrame(() => {
-				target.classList.add(this.#resetedClass);
-				target.addEventListener('animationend', () => target.classList.remove(this.#resetedClass), { once: true });
-			});
-		}
-		else {
-			document.startViewTransition(moveTrack);
+
+		if (targetIndex === null) {
+			this.trashTrack(sourceIndex);
+		} else {
+			document.startViewTransition(() => this.moveTrack(sourceIndex, targetIndex));
 		}
 	}
 
@@ -112,9 +93,39 @@ export default class InterfaceSwap {
 	}
 
 	#swapOrder(sourceIndex, targetIndex) {
-		const fromIndex = this.#order.indexOf(sourceIndex);
-		const [item] = this.#order.splice(fromIndex, 1);
-		const toIndex = targetIndex !== null ? this.#order.indexOf(targetIndex) : this.#ui.config.tracksLength;
-		this.#order.splice(toIndex, 0, item);
+		const fromIndex = this.#ui.tracksOrder.indexOf(sourceIndex);
+		const [item] = this.#ui.tracksOrder.splice(fromIndex, 1);
+		const toIndex = targetIndex !== null ? this.#ui.tracksOrder.indexOf(targetIndex) : this.#ui.config.tracksLength;
+		this.#ui.tracksOrder.splice(toIndex, 0, item);
 	}
+
+	moveTrack(sourceIndex, targetIndex) {
+		const draggedTrack = this.#ui.tracks[sourceIndex];
+		const targetTrack  = targetIndex !== null ? this.#ui.tracks[targetIndex] : null;
+		const trashed      = targetIndex === null ? sourceIndex : null;
+		this.#swapOrder(sourceIndex, targetIndex);
+		draggedTrack.parentNode.insertBefore(draggedTrack, targetTrack);
+		this.#bus.dispatchEvent(
+			new CustomEvent('interface:moveTrack', { detail: { trashed, order: this.#ui.tracksOrder } })
+		);
+	}
+
+	trashTrack(sourceIndex) {
+		const draggedTrack      = this.#ui.tracks[sourceIndex];
+		const isLastVisualTrack = sourceIndex === this.#ui.tracksOrder.at(-1)
+			|| this.#ui.getTrackInstrument(draggedTrack) === this.#ui.config.defaultInstrument;
+
+		if (isLastVisualTrack) {
+			const target = draggedTrack.nextElementSibling || draggedTrack;
+			this.moveTrack(sourceIndex, null);
+			target.classList.remove(this.#resetedClass);
+			requestAnimationFrame(() => {
+				target.classList.add(this.#resetedClass);
+				target.addEventListener('animationend', () => target.classList.remove(this.#resetedClass), { once: true });
+			});
+		} else {
+			document.startViewTransition(() => this.moveTrack(sourceIndex, null));
+		}
+	}
+
 }
