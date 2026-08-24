@@ -100,9 +100,11 @@ export default class InterfaceSwap {
 	}
 
 	moveTrack(sourceIndex, targetIndex) {
+		if (sourceIndex === targetIndex) return;
 		const draggedTrack = this.#ui.tracks[sourceIndex];
 		const targetTrack  = targetIndex !== null ? this.#ui.tracks[targetIndex] : null;
-		const trashed      = targetIndex === null ? sourceIndex : null;
+		if (draggedTrack.nextElementSibling === targetTrack) return;
+		const trashed = targetIndex === null ? sourceIndex : null;
 		this.#swapOrder(sourceIndex, targetIndex);
 		draggedTrack.parentNode.insertBefore(draggedTrack, targetTrack);
 		this.#bus.dispatchEvent(

@@ -10,21 +10,15 @@ export default class InterfaceControls {
 	#presetsButton    = document.querySelector('button.presets');
 	#trackSettings    = document.querySelector('#track-settings');
 	#trackPosition    = document.querySelector('#track-settings-title span');
-	#trackPositions   = document.querySelector('#positions');
-	#positionTemplate = this.#trackPositions.querySelector('[data-template]');
+	#positionSelect   = document.querySelector('#position');
 
 	constructor({ bus, parent }) {
 		this.#bus = bus;
 		this.#ui = parent;
 		this.#systemColor = matchMedia('(prefers-color-scheme: dark)');
 
-		const templateContent = this.#positionTemplate.dataset.templateContent;
-		const positionsOptions = Array.from({ length: this.#ui.config.tracksLength - 1 }, (_, i) => {
-			const option = new Option(templateContent.replace('{{n}}', i + 2), i + 1);
-			option.hidden = true;
-			return option;
-		});
-		this.#positionTemplate.after(...positionsOptions);
+		const options = Array.from({ length: this.#ui.config.tracksLength - 1 }, (_, i) => new Option(i + 2, i + 1));
+		this.#positionSelect.firstElementChild.after(...options);
 
 		document.addEventListener('click',              (event) => this.#handleClick(event));
 		this.#ui.container.addEventListener('input',    (event) => this.#handleInput(event));
@@ -65,7 +59,7 @@ export default class InterfaceControls {
 
 	#setTrack() {
 		const sourceIndex = this.#ui.getTrackIndex(this.#track);
-		const newPosition = parseInt(this.#trackPositions.value);
+		const newPosition = parseInt(this.#positionSelect.value);
 
 		if (newPosition === -1) {
 			this.#ui.swap.trashTrack(sourceIndex);
@@ -85,7 +79,7 @@ export default class InterfaceControls {
 		}
 		const hasChanges  = Object.keys(changes).length > 0;
 		const currentPosition = this.#ui.tracksOrder.indexOf(sourceIndex);
-		const targetIndex = newPosition > -1
+		const targetIndex = newPosition > -1 && newPosition !== currentPosition
 			? (newPosition > currentPosition
 				? this.#ui.tracksOrder[newPosition + 1] ?? null
 				: this.#ui.tracksOrder[newPosition] ?? null)
@@ -158,21 +152,20 @@ export default class InterfaceControls {
 		const position =  this.#ui.tracksOrder.indexOf(index);
 		const isLastTrack = this.#ui.getTrackInstrument(track) === this.#ui.config.defaultInstrument;
 
-		let option = this.#positionTemplate;
+		let option = this.#positionSelect.firstElementChild;
 		let stop = false;
 		while (option) {
 			const trackIndex = this.#ui.tracksOrder[option.value];
 			if (trackIndex === undefined) break;
-			const instrument = this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex])
+			const instrument = this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex]);
 			stop = stop || instrument === this.#ui.config.defaultInstrument;
-			option.hidden = stop && option !== this.#positionTemplate;
-			option.disabled = isLastTrack || (option.value | 0) === position;
+			option.hidden = isLastTrack ? (option.value | 0) !== position : stop;
 			option = option.nextElementSibling;
 		}
 
 		this.#track = track;
 		this.#trackPosition.textContent = position + 1;
-		this.#trackPositions.selectedIndex = 0;
+		this.#positionSelect.selectedIndex = position;
 		this.#ui.setBars.value   = bars;
 		this.#ui.setBeats.value  = beats;
 		this.#ui.setSteps.value  = steps;
