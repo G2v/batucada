@@ -7,7 +7,7 @@ export default class InterfaceControls {
 	#controls         = document.querySelector('#controls');
 	#skipButton       = document.querySelector('#skip');
 	#resetButton      = document.querySelector('#reset');
-	#presetsButton    = document.querySelector('button.presets');
+	#presetsButton    = document.querySelector('#preset button');
 	#trackSettings    = document.querySelector('#track-settings');
 	#trackPosition    = document.querySelector('#track-settings-title span');
 	#positionSelect   = document.querySelector('#position');

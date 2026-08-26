@@ -8,29 +8,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
 {
-	const forcedTheme = localStorage.theme;
-	const isDark = forcedTheme === undefined ? matchMedia('(prefers-color-scheme: dark)').matches : forcedTheme === 'dark';
+	const isDark = localStorage.theme === undefined
+		? matchMedia('(prefers-color-scheme: dark)').matches
+		: localStorage.theme === 'dark';
 	document.documentElement.classList.toggle('dark', isDark);
 
-	const urlParams = new URLSearchParams(location.search);
-	const placeholders = {
-		title:   [urlParams.get('title')?.trim() ? 1 : 0, '--has-title'],
-		presets: [urlParams.get('set')?.split('-').filter(Boolean).length ?? 0, '--tracks-count'],
-	};
-
-	for (const key in placeholders) {
-		const [value, property] = placeholders[key];
-		if (value) {
-			document.documentElement.style.setProperty(property, value);
-			(window.placeholders ??= {})[key] = property;
-		}
-	}
+	const tracks = new URLSearchParams(location.search).get('set')?.split('-').filter(Boolean).length;
+	if (tracks) document.documentElement.style.setProperty('--tracks-count', tracks);
 }
 </script>
 <style>
 :root {
 	color-scheme: light;
-	--has-title : 0;
 	--tracks-count : 0;
 
 	--color-primary:   hsl(215 20% 50%);
@@ -108,8 +97,8 @@
 	--icon-stop:       url('data:image/svg+xml,<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"><path d="m14 12l9 6-9 6z" stroke-width="1" stroke="black" stroke-linejoin="round"/></svg>');
 	--icon-start:      url('data:image/svg+xml,<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"><path d="m13.3 11v14h2v-14zm7 0v14h2v-14z" stroke-width="1" stroke="black" stroke-linejoin="round"/></svg>');
 	--icon-close:      url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m14 16l10 10m0 -10l-10 10" stroke-width="2" stroke="black" stroke-linecap="round"/></svg>');
-	--icon-saved:      url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 34v-19q0-3 3-3h10q3 0 3 3v19l-8-7z" stroke-width="1.7" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
-	--icon-unsaved:    url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 34v-19q0-3 3-3h5m4 0h8m-4 -4v8m0 4.5v13.5l-8-7l-8 7" stroke-width="1.7" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+	--icon-saved:      url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 33v-19q0-3 3-3h10q3 0 3 3v19l-8-7z" stroke-width="1.7" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+	--icon-unsaved:    url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 33v-19q0-3 3-3h5m4 0h8m-4 -4v8m0 4.5v13.5l-8-7l-8 7" stroke-width="1.7" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-trash:      url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m12 12l1.5 16a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2l1.5-16m1.5-.5h-21m8 0v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2m1.7 6l-.6 9m-3.6 0v-9m-4.2 0l.6 9" stroke-width="1.3" stroke="black" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>');
 	--icon-handle:     url('data:image/svg+xml,<svg viewBox="0 0 02 10" xmlns="http://www.w3.org/2000/svg"><path d="m1 .5v9" stroke-width="1" stroke="black" stroke-linecap="round"/></svg>');
 	--icon-phrase-1:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m22.5 7v23h-5v-16l-6 2v-4z" fill="white"/></svg>');
@@ -140,7 +129,7 @@ body {
 	--main-margin: .7em;
 	--track-col-1-width: 5.2em;
 	--track-col-2-width: 2.5em;
-	--track-col-3-width: calc(11.9em + 1px);
+	--track-col-3-width: 11.9em;
 	--track-col-4-width: 0px;
 	display: grid;
 	margin: 0 0 3.2em;
@@ -174,7 +163,6 @@ body {
 
 	h1 {
 		font-size: 1.2em;
-		min-height: calc(1lh * var(--has-title));
 	}
 
 	h2 {
@@ -187,7 +175,7 @@ body {
 		--grid-lines: 1;
 		--track-col-1-width: 8.1em;
 		--track-col-2-width: 2.5em;
-		--track-col-3-width: calc(23em + 1px);
+		--track-col-3-width: 23.1em;
 		--track-col-4-width: 6em;
 		font-size: clamp(.6em, 2.4svw, 1.2em);
 		h1 {
@@ -247,20 +235,42 @@ table {
 	}
 }
 
+caption {
+	margin: auto;
+	display: grid;
+	width: fit-content;
+	grid-template-columns: auto;
+
+	h1 {
+		grid-area: 1 / 1;
+		align-self: center;
+		padding: 0 2.5rem 0 .4em;
+	}
+
+	.icon {
+		height: 2.5rem;
+		grid-area: 1 / 1;
+
+		&:not(:hover) {
+			border-color:transparent;
+		}
+
+		&::before {
+			mask-position: right center;
+			mask-image: var(--icon-unsaved);
+		}
+
+		main:has(#preset :checked) &::before {
+			mask-image: var(--icon-saved);
+			background-color: var(--color-stroke-set);
+		}
+	}
+}
+
 tbody {
 	display: flex;
 	flex-direction: column;
 	min-height: calc((1em + 1.65em * var(--grid-lines) + .3em * (var(--grid-lines) - 1)) * (var(--tracks-count) + 1));
-}
-
-#title:empty,
-#title:not(:empty) + span {
-	display: none;
-}
-
-#title:empty + span {
-	position: absolute;
-	transform: scale(0);
 }
 
 .track {
@@ -304,8 +314,8 @@ tbody {
 
 	&.over .dropzone::after {
 		height: .3em;
+		margin-top: .3em;
 		border-radius: 3px;
-		margin-top: calc(.3em - 1px);
 		background: var(--color-background-base);
 		border: 1px solid var(--color-border-strong);
 	}
@@ -584,14 +594,13 @@ hr {
 		order: 4;
 	}
 
-	#combo_presets {
+	#preset {
 		flex: 1.4;
 		display: grid;
-		grid-template-columns: 2.5rem minmax(9em, 1fr);
 
-		#presets_label {
+		#preset_label {
 			overflow: hidden;
-			grid-area: 1 / 2;
+			grid-area: 1 / 1;
 			line-height: 2.5rem;
 			white-space: nowrap;
 			padding: 0 1em 0 .5em;
@@ -599,41 +608,20 @@ hr {
 		}
 
 		select,
-		.presets {
-			width: 100%;
-			grid-area: 1 / 2;
-			text-align: left;
-			margin-left: -1px;
+		button {
+			min-width: 9em;
+			grid-area: 1 / 1;
 			text-overflow: ellipsis;
-			border-radius: 0 4px 4px 0;
 		}
 
 		select:empty,
-		button.presets:has(+ select:not(:empty)) {
+		button:has(+ select:not(:empty)) {
 			display: none;
 		}
 
-		[commandfor="preset-edit"] {
-			width: 2.5rem;
-			border-radius: 4px 0 0 4px;
-
-			&::before {
-				mask-image: var(--icon-unsaved);
-			}
-
-			#combo_presets:has(:checked) &::before {
-				mask-image: var(--icon-saved);
-				background-color: var(--color-stroke-set);
-			}
-		}
-
-		button:focus,
-		select:focus {
-			z-index: 1;
-		}
 	}
 
-	#combo_tempo {
+	#tempo {
 		flex: 1;
 		order: 3;
 		display: flex;
@@ -701,7 +689,7 @@ hr {
 	justify-content: center;
 }
 
-#combo_tempo,
+#tempo,
 select,
 input:not([type]),
 button {
@@ -713,7 +701,6 @@ button {
 	user-select: none;
 	border-radius: 4px;
 	box-sizing: border-box;
-	font-family: sans-serif;
 	background: transparent no-repeat;
 	border: 1px solid var(--color-border-light);
 }
@@ -763,7 +750,7 @@ option {
 }
 
 select,
-.presets {
+.preset {
 	padding-right: .9em;
 	background-position: right center;
 	background-image: var(--icon-arrow-down);
@@ -939,11 +926,12 @@ dialog {
 		margin: auto;
 		gap: .5em 1em;
 		display: grid;
-		grid-template-columns: 1.5fr 1fr;
+		align-items: center;
+		grid-template-columns: auto 5.5em;
 	}
 
 	select {
-		height: 1.8em;
+		height: 1.6em;
 		font-size: .9em;
 	}
 }
@@ -1138,7 +1126,7 @@ body > footer {
 
 @media (pointer: fine) and (hover: hover) {
 	select:hover,
-	#combo_tempo:hover,
+	#tempo:hover,
 	input:not([type]):hover,
 	button:not([name="step"]):not(:disabled):hover {
 		border-color: var(--color-border-strong);
@@ -1191,20 +1179,20 @@ body > footer {
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
 		<table>
 			<caption>
-				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Morceau sans titre</span></h1>
+				<h1 aria-live="polite">Nouveau morceau</h1>
+				<button class="icon" title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
 			</caption>
 			<tbody>
 			</tbody>
 		</table>
 		<hr>
 		<section id="controls" aria-label="Boutons de contrôle" tabindex="-1">
-			<div id="combo_presets">
-				<button class="icon" title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
-				<span id="presets_label" aria-hidden="true">Morceaux enregistrés</span>
-				<button class="presets" aria-labelledby="presets_label" data-message="Aucun morceau n'est enregistré."></button>
-				<select aria-labelledby="presets_label"></select>
+			<div id="preset">
+				<span id="preset_label" aria-hidden="true">Morceaux enregistrés</span>
+				<button aria-labelledby="preset_label" data-message="Aucun morceau n'est enregistré."></button>
+				<select aria-labelledby="preset_label"></select>
 			</div>
-			<div id="combo_tempo">
+			<div id="tempo">
 				<input aria-label="Tempo" aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
 				<output aria-hidden="true"><span>80</span> bpm</output>
 			</div>
@@ -1262,7 +1250,7 @@ body > footer {
 				<h2 id="track-settings-title">Réglages de la piste <span>1</span></h2>
 			</header>
 			<form id="track-settings-form" method="dialog" autocomplete="off">
-				<label for="bars">Nombre de mesures</label>
+				<label for="bars">Mesures</label>
 				<select id="bars" name="bars">
 					<option value="1" selected>1</option>
 					<option value="2">2</option>
@@ -1271,19 +1259,19 @@ body > footer {
 					<option value="6">6</option>
 					<option value="8">8</option>
 				</select>
-				<label for="beats">Temps par mesure</label>
+				<label for="beats">Temps</label>
 				<select id="beats" name="beats">
 					<option value="4" selected>4</option>
 					<option value="6">6</option>
 				</select>
-				<label for="steps">Division du temps</label>
+				<label for="steps">Subdivision</label>
 				<select id="steps" name="steps">
 					<option value="3">3</option>
 					<option value="4" selected>4</option>
 					<option value="6">6</option>
 					<option value="8">8</option>
 				</select>
-				<label for="phrase">Type de phrase</label>
+				<label for="phrase">Phrase</label>
 				<select id="phrase" name="phrase">
 					<option value="1">Intro 1</option>
 					<option value="2">Intro 2</option>

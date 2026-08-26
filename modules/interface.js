@@ -38,12 +38,11 @@ export class Interface {
 		setBeats:      '#beats',
 		setSteps:      '#steps',
 		setPhrase:     '#phrase',
-		bpm:           '#combo_tempo span',
-		title:         '#title',
-		tempo:         '#combo_tempo input',
-		presets:       '#combo_presets select',
+		bpm:           '#tempo span',
+		title:         'h1',
+		tempo:         '#tempo input',
+		presets:       '#preset select',
 		appTitle:      '#app-title',
-		untitled:      '#untitled',
 		container:     'main',
 		startButton:   '#start',
 		themeButton:   '#theme',
@@ -150,7 +149,8 @@ export class Interface {
 	}
 
 	#buildDom() {
-		document.title = this.#headTitlePrefix + this.untitled;
+		this.#untitled = this.title.textContent;
+		document.title = this.#headTitlePrefix + this.#untitled;
 		const fragment = new DocumentFragment();
 		const masterTrack = this.trackTemplate.cloneNode(true);
 		const masterSelect = masterTrack.querySelector(this.#selectors.instrument);
@@ -257,9 +257,10 @@ export class Interface {
 	}
 
 	set #title(value) {
-		this.title.textContent = value;
-		navigator.mediaSession.metadata.title = value || this.untitled;
-		document.title = this.#headTitlePrefix + (value || this.untitled);
+		const titleText = value.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim() || this.#untitled;
+		this.title.textContent = titleText;
+		navigator.mediaSession.metadata.title = titleText;
+		document.title = this.#headTitlePrefix + titleText;
 	}
 
 	set #tempo(value) {
@@ -268,9 +269,12 @@ export class Interface {
 	}
 
 	set #presets({ lastModified, values }) {
+		if (document.documentElement.hasAttribute('style')) {
+			requestAnimationFrame(() => document.documentElement.removeAttribute('style'));
+		}
 		this.#presetsDate = lastModified;
 		const fragment = new DocumentFragment();
-		values.forEach(({ name, value }) => fragment.appendChild(new Option(name || this.untitled, value)));
+		values.forEach(({ name, value }) => fragment.appendChild(new Option(name || this.#untitled, value)));
 		this.presets.replaceChildren(fragment);
 	}
 
@@ -288,8 +292,6 @@ export class Interface {
 		if (presets !== undefined) this.#presets = presets;
 		if (index   !== undefined) this.#index   = index;
 
-		this.#removePlaceholders({ title, presets });
-
 		if (
 			tempo   !== undefined ||
 			title   !== undefined ||
@@ -300,24 +302,6 @@ export class Interface {
 			await this.#ready.aria;
 			this.#instances.aria.update({ tempo, sheet, tracks, volumes });
 		}
-	}
-
-	#removePlaceholders(items) {
-		const placeholders = window.placeholders;
-		if (!placeholders) return;
-		requestAnimationFrame(() => {
-			const root = document.documentElement;
-			for (const item in placeholders) {
-				if (items[item] !== undefined) {
-					root.style.removeProperty(placeholders[item]);
-					delete placeholders[item];
-				}
-			}
-			if (Object.keys(placeholders).length === 0) {
-				root.removeAttribute('style');
-				delete window.placeholders;
-			}
-		});
 	}
 
 	getStepIndex(step) {
@@ -355,7 +339,6 @@ export class Interface {
 	get setBeats()      { return this.#nodes.setBeats      ??= document.querySelector(this.#selectors.setBeats); }
 	get setPhrase()     { return this.#nodes.setPhrase     ??= document.querySelector(this.#selectors.setPhrase); }
 	get appTitle()      { return this.#nodes.appTitle      ??= document.querySelector(this.#selectors.appTitle).textContent; }
-	get untitled()      { return this.#nodes.untitled      ??= document.querySelector(this.#selectors.untitled).textContent; }
 	get container()     { return this.#nodes.container     ??= document.querySelector(this.#selectors.container); }
 	get startButton()   { return this.#nodes.startButton   ??= document.querySelector(this.#selectors.startButton); }
 	get themeButton()   { return this.#nodes.themeButton   ??= document.querySelector(this.#selectors.themeButton); }
