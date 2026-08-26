@@ -245,6 +245,16 @@ caption {
 		grid-area: 1 / 1;
 		align-self: center;
 		padding: 0 2.5rem 0 .4em;
+
+		#title:empty,
+		#title:not(:empty) + #untitled {
+			display: none;
+		}
+
+		#title:empty + #untitled {
+			display: block;
+		}
+
 	}
 
 	.icon {
@@ -1179,7 +1189,7 @@ body > footer {
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
 		<table>
 			<caption>
-				<h1 aria-live="polite">Nouveau morceau</h1>
+				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Nouveau morceau</span></h1>
 				<button class="icon" title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
 			</caption>
 			<tbody>

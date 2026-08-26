@@ -39,10 +39,11 @@ export class Interface {
 		setSteps:      '#steps',
 		setPhrase:     '#phrase',
 		bpm:           '#tempo span',
-		title:         'h1',
+		title:         '#title',
 		tempo:         '#tempo input',
 		presets:       '#preset select',
 		appTitle:      '#app-title',
+		untitled:      '#untitled',
 		container:     'main',
 		startButton:   '#start',
 		themeButton:   '#theme',
@@ -149,8 +150,7 @@ export class Interface {
 	}
 
 	#buildDom() {
-		this.#untitled = this.title.textContent;
-		document.title = this.#headTitlePrefix + this.#untitled;
+		document.title = this.#headTitlePrefix + this.untitled;
 		const fragment = new DocumentFragment();
 		const masterTrack = this.trackTemplate.cloneNode(true);
 		const masterSelect = masterTrack.querySelector(this.#selectors.instrument);
@@ -257,7 +257,7 @@ export class Interface {
 	}
 
 	set #title(value) {
-		const titleText = value.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim() || this.#untitled;
+		const titleText = value.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
 		this.title.textContent = titleText;
 		navigator.mediaSession.metadata.title = titleText;
 		document.title = this.#headTitlePrefix + titleText;
@@ -274,7 +274,7 @@ export class Interface {
 		}
 		this.#presetsDate = lastModified;
 		const fragment = new DocumentFragment();
-		values.forEach(({ name, value }) => fragment.appendChild(new Option(name || this.#untitled, value)));
+		values.forEach(({ name, value }) => fragment.appendChild(new Option(name || this.untitled, value)));
 		this.presets.replaceChildren(fragment);
 	}
 
@@ -338,7 +338,7 @@ export class Interface {
 	get setSteps()      { return this.#nodes.setSteps      ??= document.querySelector(this.#selectors.setSteps); }
 	get setBeats()      { return this.#nodes.setBeats      ??= document.querySelector(this.#selectors.setBeats); }
 	get setPhrase()     { return this.#nodes.setPhrase     ??= document.querySelector(this.#selectors.setPhrase); }
-	get appTitle()      { return this.#nodes.appTitle      ??= document.querySelector(this.#selectors.appTitle).textContent; }
+
 	get container()     { return this.#nodes.container     ??= document.querySelector(this.#selectors.container); }
 	get startButton()   { return this.#nodes.startButton   ??= document.querySelector(this.#selectors.startButton); }
 	get themeButton()   { return this.#nodes.themeButton   ??= document.querySelector(this.#selectors.themeButton); }
@@ -353,5 +353,5 @@ export class Interface {
 	get selectors()     { return this.#selectors; }
 	get presetsDate()   { return this.#presetsDate; }
 	get tracksOrder()   { return this.#tracksOrder; }
-
+	get untitled()      { return this.#untitled ??= document.querySelector(this.#selectors.untitled).textContent; }
 }

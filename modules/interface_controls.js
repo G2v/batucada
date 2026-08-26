@@ -4,6 +4,7 @@ export default class InterfaceControls {
 	#track;
 	#systemColor;
 
+	#artist           = document.querySelector('#app-title').textContent;
 	#controls         = document.querySelector('#controls');
 	#skipButton       = document.querySelector('#skip');
 	#resetButton      = document.querySelector('#reset');
@@ -11,6 +12,7 @@ export default class InterfaceControls {
 	#trackSettings    = document.querySelector('#track-settings');
 	#trackPosition    = document.querySelector('#track-settings-title span');
 	#positionSelect   = document.querySelector('#position');
+
 
 	constructor({ bus, parent }) {
 		this.#bus = bus;
@@ -43,7 +45,7 @@ export default class InterfaceControls {
 	#initMediaSession() {
 		navigator.mediaSession.metadata = new MediaMetadata({
 			title: this.#ui.untitled,
-			artist: this.#ui.appTitle,
+			artist: this.#artist,
 			artwork: [
 				{
 					src: './icons/icon_white-bg_512x512.png',
