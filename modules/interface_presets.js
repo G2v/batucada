@@ -48,11 +48,11 @@ export default class InterfacePresets {
 	#openEdit({ command }) {
 		if (command !=='show-modal' ) return;
 		const title = this.#ui.title.textContent.trim();
-		const exists = Array.from(this.#ui.presets.options).some(option => option.text === title);
+		const unsaved = this.#ui.presets.selectedIndex === -1;
 		this.#editForm.elements.name.value = title;
 		this.#editForm.elements.name.setCustomValidity('');
-		this.#editForm.elements.rename.disabled = !exists;
-		this.#editForm.elements.delete.disabled = !exists;
+		this.#editForm.elements.rename.disabled = unsaved;
+		this.#editForm.elements.delete.disabled = unsaved;
 	}
 
 	#cancelEdit(messages) {
