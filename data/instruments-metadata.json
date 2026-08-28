@@ -1,93 +1,160 @@
 {
   "name": "Batucada",
   "version": "1.0",
+  "format": 1,
   "instruments": [
     {
       "id": 0,
       "name": "",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        {
+          "name": "",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        }
       ]
     },
     {
       "id": 9,
       "name": "Répénique",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m11.9 3.5a6 6 0 0 0-9.3 7l9.3-7zm1.5 2a6 6 0 0 1-9.3 7l9.3-7z\"/></svg>"
+        {
+          "name": "frappe ouverte",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        },
+        {
+          "name": "frappe étouffée",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>"
+        },
+        {
+          "name": "frappe cerclée",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m11.9 3.5a6 6 0 0 0-9.3 7l9.3-7zm1.5 2a6 6 0 0 1-9.3 7l9.3-7z\"/></svg>"
+        }
       ]
     },
     {
       "id": 4,
       "name": "Tamborim",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m11.9 3.5a6 6 0 0 0-9.3 7l9.3-7zm1.5 2a6 6 0 0 1-9.3 7l9.3-7z\"/></svg>"
+        {
+          "name": "frappe ouverte",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        },
+        {
+          "name": "frappe étouffée",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m11.9 3.5a6 6 0 0 0-9.3 7l9.3-7zm1.5 2a6 6 0 0 1-9.3 7l9.3-7z\"/></svg>"
+        }
       ]
     },
     {
       "id": 1,
       "name": "Agogo",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"5.5\"  r=\"5.5\"/><path d=\"m3.73 10.4 a5 5 0 1 0 8.54 0 a6.5 6.5 0 0 1-8.54 0z\" fill-opacity=\".5\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"12.5\" r=\"5.5\"/><path d=\"m12.27 7.6 a5 5 0 1 0-8.54 0 a6.5 6.5 0 0 1 8.54 0z\" fill-opacity=\".5\"/></svg>"
+        {
+          "name": "frappe aiguë",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"5.5\"  r=\"5.5\"/><path d=\"m3.73 10.4 a5 5 0 1 0 8.54 0 a6.5 6.5 0 0 1-8.54 0z\" fill-opacity=\".5\"/></svg>"
+        },
+        {
+          "name": "frappe grave",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"12.5\" r=\"5.5\"/><path d=\"m12.27 7.6 a5 5 0 1 0-8.54 0 a6.5 6.5 0 0 1 8.54 0z\" fill-opacity=\".5\"/></svg>"
+        }
       ]
     },
     {
       "id": 2,
       "name": "Campana",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"5.5\"  r=\"5.5\"/><path d=\"m3.73 10.4 a5 5 0 1 0 8.54 0 a6.5 6.5 0 0 1-8.54 0z\" fill-opacity=\".5\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"12.5\" r=\"5.5\"/><path d=\"m12.27 7.6 a5 5 0 1 0-8.54 0 a6.5 6.5 0 0 1 8.54 0z\" fill-opacity=\".5\"/></svg>"
+        {
+          "name": "frappe aiguë",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"5.5\"  r=\"5.5\"/><path d=\"m3.73 10.4 a5 5 0 1 0 8.54 0 a6.5 6.5 0 0 1-8.54 0z\" fill-opacity=\".5\"/></svg>"
+        },
+        {
+          "name": "frappe grave",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"12.5\" r=\"5.5\"/><path d=\"m12.27 7.6 a5 5 0 1 0-8.54 0 a6.5 6.5 0 0 1 8.54 0z\" fill-opacity=\".5\"/></svg>"
+        }
       ]
     },
     {
       "id": 3,
       "name": "Chocalho",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m8  2-4 12h8z\" stroke=\"black\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m8 14-4-12h8z\" stroke=\"black\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/></svg>"
+        {
+          "name": "avant",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m8  2-4 12h8z\" stroke=\"black\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/></svg>"
+        },
+        {
+          "name": "arrière",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m8 14-4-12h8z\" stroke=\"black\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/></svg>"
+        }
       ]
     },
     {
       "id": 8,
       "name": "Caisse claire",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"4\" fill-opacity=\".7\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m2 6 12-5m-12 10.5 12-5m-12 10.5 12-5\" stroke=\"black\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>"
+        {
+          "name": "frappe ouverte",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        },
+        {
+          "name": "frappe fantôme",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"4\" fill-opacity=\".7\"/></svg>"
+        },
+        {
+          "name": "roulement",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m2 6 12-5m-12 10.5 12-5m-12 10.5 12-5\" stroke=\"black\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>"
+        }
       ]
     },
     {
       "id": 5,
-      "name": "Couper", 
+      "name": "Couper",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>"
+        {
+          "name": "frappe ouverte",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        },
+        {
+          "name": "frappe étouffée",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>"
+        }
       ]
     },
     {
       "id": 6,
       "name": "Contra",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>"
+        {
+          "name": "frappe ouverte",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        },
+        {
+          "name": "frappe étouffée",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>"
+        }
       ]
     },
     {
       "id": 7,
       "name": "Surdo",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>",
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>"
+        {
+          "name": "frappe ouverte",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        },
+        {
+          "name": "frappe étouffée",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill-opacity=\".1\" stroke=\"black\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"3.2\"/></svg>"
+        }
       ]
     },
     {
       "id": 10,
       "name": "Unisson",
       "strokes": [
-        "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        {
+          "name": "frappe",
+          "icon": "data:image/svg+xml,<svg viewBox=\"0 0 16 16\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>"
+        }
       ]
     }
   ]
