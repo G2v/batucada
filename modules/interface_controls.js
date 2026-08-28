@@ -220,7 +220,6 @@ export default class InterfaceControls {
 	#applyTheme(theme) {
 		document.startViewTransition(() => {
 			document.documentElement.classList.toggle('dark', theme);
-			this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail: { theme } }));
 		});
 	}
 

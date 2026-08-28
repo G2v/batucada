@@ -1,6 +1,8 @@
 import { fetchFromCache, downloadFile, getFileContent, writeData } from './utils.js';
 
 export default class InterfaceInstruments {
+	static #format = 1;
+
 	#ui;
 	#bus;
 	#pendingImport     = null;
@@ -50,8 +52,11 @@ export default class InterfaceInstruments {
 		const library = structuredClone(this.#ui.config.instrumentsLibrary);
 		const response = await fetchFromCache(this.#ui.config.dataCache, this.#ui.config.instrumentsSoundsFile);
 		const sounds = await response.json();
-		library.instruments.forEach(instrument => instrument.sounds = sounds[instrument.id]);
 		library.instruments.shift();
+		library.instruments.forEach(instrument => {
+			const instrumentSounds = sounds[instrument.id];
+			instrument.strokes = instrument.strokes.map((stroke, i) => ({ ...stroke, sound: instrumentSounds[i] }));
+		});
 		const content = JSON.stringify(library, null, 2);
 		const filename = `instruments-${this.#ui.config.instrumentsLibrary.name}-${this.#ui.config.instrumentsLibrary.version}.json`;
 		if (await downloadFile(filename, content)) this.#instrumentsDialog.close();
@@ -71,9 +76,12 @@ export default class InterfaceInstruments {
 		try {
 			const content = await getFileContent();
 			const data = JSON.parse(content);
-			if (!data || typeof data !== 'object') throw new Error("Invalid file");
-			if (!data.name)                        throw new Error("Missing 'name' property");
-			if (!data.version)                     throw new Error("Missing 'version' property");
+			if (!data || typeof data !== 'object')      throw new Error("Invalid file");
+			if (!data.name)                             throw new Error("Missing 'name' property");
+			if (!data.version)                          throw new Error("Missing 'version' property");
+			if (data.format !== InterfaceInstruments.#format) {
+				throw new Error(`Unsupported format: expected ${InterfaceInstruments.#format}`);
+			}
 			if (!Array.isArray(data.instruments) || data.instruments.length === 0) {
 				throw new Error("Invalid or missing instruments");
 			}
@@ -90,27 +98,25 @@ export default class InterfaceInstruments {
 				if (!Array.isArray(item.strokes) || item.strokes.length === 0) {
 					throw new Error(`Instrument ${index}: invalid strokes`);
 				}
-				if (!Array.isArray(item.sounds) || item.sounds.length === 0) {
-					throw new Error(`Instrument ${index}: invalid sounds`);
-				}
-				if (item.strokes.length !== item.sounds.length) {
-					throw new Error(`Instrument ${index}: strokes/sounds mismatch`);
-				}
-				const iconPromises = item.strokes.map((stroke, i) =>
-					this.#validateIcon(stroke).catch(error => {
-						throw new Error(`Instrument ${index} → stroke ${i}: ${error.message}`);
-					})
-				);
-				const soundPromises = item.sounds.map((sound, i) =>
-					this.#validateAudio(sound, audioContext).catch(error => {
-						throw new Error(`Instrument ${index} → sound ${i}: ${error.message}`);
-					})
-				);
-				return [...iconPromises, ...soundPromises];
+				return item.strokes.flatMap((stroke, i) => {
+					const fail = (message) => new Error(`Instrument ${index} → stroke ${i}: ${message}`);
+					if (!stroke || typeof stroke !== 'object') throw fail('invalid stroke');
+					if (!stroke.name)                          throw fail('missing name');
+					if (!stroke.icon)                          throw fail('missing icon');
+					if (!stroke.sound)                         throw fail('missing sound');
+					return [
+						this.#validateIcon(stroke.icon).catch(error => { throw fail(error.message); }),
+						this.#validateAudio(stroke.sound, audioContext).catch(error => { throw fail(error.message); }),
+					];
+				});
 			});
 			await Promise.all(validationPromises);
-			const sounds = Object.fromEntries(data.instruments.map(({ id, sounds }) => [id, sounds]));
-			data.instruments.forEach(instrument => delete instrument.sounds);
+			const sounds = Object.fromEntries(
+				data.instruments.map(({ id, strokes }) => [id, strokes.map(({ sound }) => sound)])
+			);
+			data.instruments.forEach(instrument => {
+				instrument.strokes = instrument.strokes.map(({ sound, ...stroke }) => stroke);
+			});
 			const defaultInstrument = structuredClone(this.#ui.config.instrumentsLibrary.instruments[0]);
 			const response = await fetchFromCache(this.#ui.config.dataCache, this.#ui.config.instrumentsSoundsFile);
 			const currentSounds = await response.json();
@@ -145,7 +151,7 @@ export default class InterfaceInstruments {
 			const buffer = await response.arrayBuffer();
 			return await audioContext.decodeAudioData(buffer);
 		} catch {
-			throw new Error('Audio invalide');
+			throw new Error('Invalide Audio');
 		}
 	}
 
@@ -153,7 +159,7 @@ export default class InterfaceInstruments {
 		return new Promise((resolve, reject) => {
 			const img = new Image();
 			img.onload = () => resolve(img);
-			img.onerror = () => reject(new Error('Image invalide'));
+			img.onerror = () => reject(new Error('Invalide Image'));
 			img.src = dataUrl;
 		});
 	}

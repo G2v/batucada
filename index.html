@@ -1040,7 +1040,6 @@ dialog {
 	height: 3.3em;
 	padding: 0 1em;
 	font-size: .8em;
-	align-self: start; 
 	border-radius: .4em;
 	backdrop-filter: blur(2px);
 	position-anchor: --sequencer;
@@ -1068,12 +1067,17 @@ dialog {
 	}
 
 	&:popover-open {
-		animation: fade-out 1s forwards 5s;
+		animation: fade-out 1s forwards 8s;
 	}
 
 	&:has(button[hidden]):popover-open {
-		animation: fade-out 1s forwards 2s;
+		animation: fade-out 1s forwards 5s;
 	}
+
+	&:popover-open:focus-within {
+		animation-play-state: paused;
+	}
+
 }
 
 @keyframes fade-out {
@@ -1187,6 +1191,10 @@ body > footer {
 <body>
 	<main>
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
+		<div id="toast" popover="manual" role="alert">
+			<p></p>
+			<button aria-label="Annuler cette action">Annuler</button>
+		</div>
 		<table>
 			<caption>
 				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Nouveau morceau</span></h1>
@@ -1195,7 +1203,7 @@ body > footer {
 			<tbody>
 			</tbody>
 		</table>
-		<hr>
+		<hr aria-hidden="true">
 		<section id="controls" aria-label="Boutons de contrôle" tabindex="-1">
 			<div id="preset">
 				<span id="preset_label" aria-hidden="true">Morceaux enregistrés</span>
@@ -1203,24 +1211,24 @@ body > footer {
 				<select aria-labelledby="preset_label"></select>
 			</div>
 			<div id="tempo">
-				<input aria-label="Tempo" aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
+				<input aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
 				<output aria-hidden="true"><span>80</span> bpm</output>
 			</div>
 			<button id="reset" title="Effacer le morceau">Effacer</button>
-			<button id="start" class="icon" role="switch" aria-checked="false" title="Jouer">Jouer</button>
+			<button id="start" class="icon" role="switch" aria-checked="false">Jouer</button>
 			<div id="trash" aria-hidden="true">Déposer ici pour supprimer</div>
 		</section>
 	</main>
-	<footer>
-		<button commandfor="app-menu" command="show-modal" aria-label="Menu de l'application">Application</button>
-		<button id="theme" role="switch" aria-checked="false" aria-label="Mode sombre">
-			<span class="state-light" aria-hidden="true">Mode clair</span>
-			<span class="state-dark" aria-hidden="true">Mode sombre</span>
-		</button>
-	</footer>
 	<datalist id="volume">
 		<option value="30"></option>
 	</datalist>
+	<footer>
+		<button commandfor="app-menu" command="show-modal" aria-label="Menu de l'application">Application</button>
+		<button id="theme">
+			<span class="state-light">Mode clair</span>
+			<span class="state-dark">Mode sombre</span>
+		</button>
+	</footer>
 	<template>
 		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
 			<td class="dropzone" aria-hidden="true"></td>
@@ -1232,24 +1240,24 @@ body > footer {
 			<td class="settings">
 				<button class="icon" title="Réglages de la piste" commandfor="track-settings" command="show-modal">Réglages de la piste</button>
 			</td>
-			<td class="sheet" role="toolbar" aria-label="Partition de la piste sans instrument" data-template data-template-aria-label-empty="Partition de la piste sans instrument" data-template-aria-label-filled="Partition de la piste {{instrument}}">
+			<td class="sheet" role="toolbar" aria-label="Partition">
 				<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
 					<span class="beat" role="group" aria-label="Temps 1" data-index="0">
-						<button name="step" data-index="0" value="0" tabindex="-1" aria-label="Division 1, vide" data-template data-template-aria-label-empty="Division 1, vide" data-template-aria-label-filled="Division 1, note {{stroke}}" aria-pressed="false"></button>
+						<button name="step" data-index="0" value="0" tabindex="-1" aria-label="Subdivision 1" data-template data-template-aria-label-empty="Subdivision 1" data-template-aria-label-filled="Subdivision 1, {{stroke}}" aria-pressed="false"></button>
 						<span class="grid">
-							<button name="step" data-index="1" value="0" tabindex="-1" aria-label="Division 2, vide" data-template data-template-aria-label-empty="Division 2, vide" data-template-aria-label-filled="Division 2, note {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="2" value="0" tabindex="-1" aria-label="Division 3, vide" data-template data-template-aria-label-empty="Division 3, vide" data-template-aria-label-filled="Division 3, note {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="3" value="0" tabindex="-1" aria-label="Division 4, vide" data-template data-template-aria-label-empty="Division 4, vide" data-template-aria-label-filled="Division 4, note {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="4" value="0" tabindex="-1" aria-label="Division 5, vide" data-template data-template-aria-label-empty="Division 5, vide" data-template-aria-label-filled="Division 5, note {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="5" value="0" tabindex="-1" aria-label="Division 6, vide" data-template data-template-aria-label-empty="Division 6, vide" data-template-aria-label-filled="Division 6, note {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="6" value="0" tabindex="-1" aria-label="Division 7, vide" data-template data-template-aria-label-empty="Division 7, vide" data-template-aria-label-filled="Division 7, note {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="7" value="0" tabindex="-1" aria-label="Division 8, vide" data-template data-template-aria-label-empty="Division 8, vide" data-template-aria-label-filled="Division 8, note {{stroke}}" aria-pressed="false"></button>
+							<button name="step" data-index="1" value="0" tabindex="-1" aria-label="Subdivision 2" data-template data-template-aria-label-empty="Subdivision 2" data-template-aria-label-filled="Subdivision 2, {{stroke}}" aria-pressed="false"></button>
+							<button name="step" data-index="2" value="0" tabindex="-1" aria-label="Subdivision 3" data-template data-template-aria-label-empty="Subdivision 3" data-template-aria-label-filled="Subdivision 3, {{stroke}}" aria-pressed="false"></button>
+							<button name="step" data-index="3" value="0" tabindex="-1" aria-label="Subdivision 4" data-template data-template-aria-label-empty="Subdivision 4" data-template-aria-label-filled="Subdivision 4, {{stroke}}" aria-pressed="false"></button>
+							<button name="step" data-index="4" value="0" tabindex="-1" aria-label="Subdivision 5" data-template data-template-aria-label-empty="Subdivision 5" data-template-aria-label-filled="Subdivision 5, {{stroke}}" aria-pressed="false"></button>
+							<button name="step" data-index="5" value="0" tabindex="-1" aria-label="Subdivision 6" data-template data-template-aria-label-empty="Subdivision 6" data-template-aria-label-filled="Subdivision 6, {{stroke}}" aria-pressed="false"></button>
+							<button name="step" data-index="6" value="0" tabindex="-1" aria-label="Subdivision 7" data-template data-template-aria-label-empty="Subdivision 7" data-template-aria-label-filled="Subdivision 7, {{stroke}}" aria-pressed="false"></button>
+							<button name="step" data-index="7" value="0" tabindex="-1" aria-label="Subdivision 8" data-template data-template-aria-label-empty="Subdivision 8" data-template-aria-label-filled="Subdivision 8, {{stroke}}" aria-pressed="false"></button>
 						</span>
 					</span>
 				</span>
 			</td>
 			<td class="volume">
-				<input name="volume" aria-label="Volume de la piste sans instrument" data-template data-template-aria-label-empty="Volume de la piste sans instrument" data-template-aria-label-filled="Volume de la piste {{instrument}}" aria-valuetext="50%" data-template-aria-valuetext="{{volume}}%" list="volume" title="Volume" type="range" value="30" min="0" max="60" autocomplete="off">
+				<input name="volume" data-template aria-valuetext="50%" data-template-aria-valuetext="{{volume}}%" list="volume" title="Volume" type="range" value="30" min="0" max="60" autocomplete="off">
 			</td>
 		</tr>
 	</template>
@@ -1274,7 +1282,7 @@ body > footer {
 					<option value="4" selected>4</option>
 					<option value="6">6</option>
 				</select>
-				<label for="steps">Subdivision</label>
+				<label for="steps">Subdivisions</label>
 				<select id="steps" name="steps">
 					<option value="3">3</option>
 					<option value="4" selected>4</option>
@@ -1441,10 +1449,6 @@ body > footer {
 			</div>
 		</dialog>
 	</dialog>
-	<div id="toast" popover="manual" role="status">
-		<p></p>
-		<button aria-label="Annuler cette action">Annuler</button>
-	</div>
 	<script type="module">
 		import { Audio }      from './modules/audio.js';
 		import { Presets }    from './modules/presets.js';

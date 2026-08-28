@@ -151,70 +151,68 @@ export class Interface {
 
 	#buildDom() {
 		document.title = this.#headTitlePrefix + this.untitled;
-		const fragment = new DocumentFragment();
+
+		const { tracksLength, defaultInstrument, defaultOrder } = this.#config;
 		const masterTrack = this.trackTemplate.cloneNode(true);
-		const masterSelect = masterTrack.querySelector(this.#selectors.instrument);
-		const options = instrumentsLibrary.instruments.slice(1).map(({ name, id }) => new Option(name, id));
-		masterSelect.append(...options);
+		const firstBar    = masterTrack.querySelector(this.#selectors.bar);
+		const firstBeat   = firstBar.querySelector(this.#selectors.beat);
 
-		const firstBar = masterTrack.querySelector(this.#selectors.bar);
-		const firstBeat = firstBar.querySelector(this.#selectors.beat);
-		const barLabelTemplate = firstBar.ariaLabel.slice(0, -1);
-		const beatLabelTemplate = firstBeat.ariaLabel.slice(0, -1);
+		masterTrack.querySelector(this.#selectors.instrument).append(
+			...instrumentsLibrary.instruments.slice(1).map(({ name, id }) => new Option(name, id))
+		);
+
 		this.#cleanTemplates(firstBar);
-
-		for (let beat = 1; beat < this.#resolution.maxBeats; beat++) {
-			const beatClone = firstBeat.cloneNode(true);
-			beatClone.dataset.index = beat;
-			beatClone.ariaLabel = `${beatLabelTemplate}${beat + 1}`;
-			firstBar.appendChild(beatClone);
-		}
-
-		for (let bar = 1; bar < this.#resolution.maxBars; bar++) {
-			const barClone = firstBar.cloneNode(true);
-			barClone.dataset.index = bar;
-			barClone.ariaLabel = `${barLabelTemplate}${bar + 1}`;
-			firstBar.parentNode.appendChild(barClone);
-		}
-
+		Interface.#cloneIndexed(firstBeat, this.#resolution.maxBeats, firstBar);
+		Interface.#cloneIndexed(firstBar, this.#resolution.maxBars, firstBar.parentNode);
 		this.#cleanTemplates(masterTrack);
 
-		for (let i = 0; i < app_config.tracksLength; i++) {
-			const trackClone = masterTrack.cloneNode(true);
-			trackClone.dataset.index = i;
-			const instrumentSelect = trackClone.querySelector(this.#selectors.instrument);
-			instrumentSelect.value = this.#config.defaultInstrument;
-			this.#nodes.tracks.push(trackClone);
-			this.#nodes.instruments.push(instrumentSelect);
-			this.#nodes.volumes.push(trackClone.querySelector(this.#selectors.volume));
-			const steps = trackClone.querySelectorAll(this.#selectors.step);
+		const fragment = new DocumentFragment();
+
+		for (let index = 0; index < tracksLength; index++) {
+			const track  = masterTrack.cloneNode(true);
+			const select = track.querySelector(this.#selectors.instrument);
+			const steps  = track.querySelectorAll(this.#selectors.step);
+
+			track.dataset.index = index;
+			select.value = defaultInstrument;
 			steps[0].tabIndex = 0;
+
+			this.#nodes.tracks.push(track);
+			this.#nodes.instruments.push(select);
+			this.#nodes.volumes.push(track.querySelector(this.#selectors.volume));
 			this.#nodes.steps.push(...steps);
-			fragment.appendChild(trackClone);
+			fragment.appendChild(track);
 		}
 
 		this.trackParent.appendChild(fragment);
-		this.#tracksOrder = Array.from({ length: app_config.tracksLength }, (_, i) => i);
+		this.#tracksOrder = [...defaultOrder];
 		this.#resolvers.dom();
 	}
 
-	#cleanTemplates(item) {
-		const elements = item.hasAttribute('data-template') ? [item, ...item.querySelectorAll('[data-template]')] : item.querySelectorAll('[data-template]');
-		for (const element of elements) {
+	static #cloneIndexed(node, count, parent) {
+		const label = node.ariaLabel.replace(/\s*\d+$/, '');
+		for (let index = 1; index < count; index++) {
+			const clone = node.cloneNode(true);
+			clone.dataset.index = index;
+			clone.ariaLabel = `${label} ${index + 1}`;
+			parent.appendChild(clone);
+		}
+	}
+
+	#cleanTemplates(root) {
+		for (const element of [root, ...root.querySelectorAll('[data-template]')]) {
 			for (const key in element.dataset) {
-				if (key.startsWith('template')) {
-					delete element.dataset[key];
-				}
+				if (key.startsWith('template')) delete element.dataset[key];
 			}
 		}
 	}
 
 	#buildCSS() {
 		const [first, ...rest] = instrumentsLibrary.instruments;
-		let rules = `[data-instrument] [name="step"]:not([value="0"]) { --current-icon: url('${first.strokes[0]}') }`;
+		let rules = `[data-instrument] [name="step"]:not([value="0"]) { --current-icon: url('${first.strokes[0].icon}') }`;
 		for (const { id, strokes } of rest) {
 			for (let j = 0; j < strokes.length; j++) {
-				rules += `[data-instrument="${id}"] [name="step"][value="${j + 1}"] { --current-icon: url('${strokes[j]}') }`;
+				rules += `[data-instrument="${id}"] [name="step"][value="${j + 1}"] { --current-icon: url('${strokes[j].icon}') }`;
 			}
 		}
 		const stylesheet = new CSSStyleSheet();

@@ -76,10 +76,12 @@ export default class InterfaceDialogs {
 	showToast(message, onCancel = null) {
 		if (this.#onCancel && onCancel === null) return;
 		this.#onCancel = onCancel;
-		this.#toastMessage.textContent = message;
-		this.#cancelButton.hidden = !onCancel;
 		this.#toast.getAnimations().forEach(animation => animation.cancel() || animation.play());
 		this.#toast.showPopover();
+		requestAnimationFrame(() => {
+			this.#toastMessage.textContent = message;
+			this.#cancelButton.hidden = !onCancel;
+		});
 	}
 
 }
