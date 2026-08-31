@@ -272,6 +272,7 @@ export class Interface {
 		}
 		this.#presetsDate = lastModified;
 		const fragment = new DocumentFragment();
+		fragment.appendChild(this.presets.firstElementChild);
 		values.forEach(({ name, value }) => fragment.appendChild(new Option(name || this.untitled, value)));
 		this.presets.replaceChildren(fragment);
 	}

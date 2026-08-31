@@ -1,13 +1,17 @@
 export default class InterfaceAnimation {
 	#ui;
 	#queueLimit;
+	#emptyStroke;
+	#playedClass    = 'played';
 	#currentClass   = 'current';
-	#finishedClass  = 'finished';
+	#playedSteps    = new Map();
+	#lastPlayed     = new Map();
 	#animationQueue = new Map();
 
 	constructor({ parent }) {
 		this.#ui = parent;
-		this.#queueLimit = this.#ui.config.resolution.beat * 3;
+		this.#queueLimit  = this.#ui.config.resolution.beat * 3;
+		this.#emptyStroke = this.#ui.config.emptyStroke;
 	}
 
 	start({ animations }) {
@@ -15,7 +19,7 @@ export default class InterfaceAnimation {
 		for (const [trackIndex, steps] of this.#animationQueue.entries()) {
 			if (!animations.has(trackIndex)) {
 				this.#animationQueue.delete(trackIndex);
-				this.#ui.tracks[trackIndex].classList.add(this.#finishedClass);
+				this.#lastPlayed.delete(trackIndex);
 				steps[0]?.step?.classList.remove(this.#currentClass);
 			}
 		}
@@ -24,12 +28,14 @@ export default class InterfaceAnimation {
 			let steps = this.#animationQueue.get(trackIndex);
 			// step fictif pour gérer la première animation
 			if (!steps) {
-				steps = [{ step: null, time: 0 }];
+				steps = [{ step: null, stepIndex: -1, time: 0 }];
 				this.#animationQueue.set(trackIndex, steps);
-				this.#ui.tracks[trackIndex].classList.remove(this.#finishedClass);
+				if (!this.#playedSteps.has(trackIndex)) {
+					this.#playedSteps.set(trackIndex, []);
+				}
 			}
-			for (const { stepIndex, time } of items) {
-				steps.push({ step: this.#ui.steps[stepIndex], time });
+			for (const { stepIndex, time, stroke } of items) {
+				steps.push({ step: this.#ui.steps[stepIndex], stepIndex, time, stroke });
 			}
 			//Évite l'accumulation d'animations non exécutées (onglet inactif, latence)
 			if (steps.length > this.#queueLimit) {
@@ -44,10 +50,12 @@ export default class InterfaceAnimation {
 		for (const steps of this.#animationQueue.values()) {
 			steps[0]?.step?.classList.remove(this.#currentClass);
 		}
-		this.#animationQueue.clear();
-		for (const track of this.#ui.tracks) {
-			track.classList.remove(this.#finishedClass);
+		for (const playedIndexes of this.#playedSteps.values()) {
+			this.#clearPlayed(playedIndexes);
 		}
+		this.#animationQueue.clear();
+		this.#playedSteps.clear();
+		this.#lastPlayed.clear();
 	}
 
 	#startLoop() {
@@ -60,21 +68,46 @@ export default class InterfaceAnimation {
 	#loop = () => {
 		if (!this.#ui.playing) return;
 		const now = performance.now();
-		for (const steps of this.#animationQueue.values()) {
-			if (steps.length < 2) continue;
-			let nextIndex = 0;
-			for (let i = steps.length - 1; i >= 1; i--) {
-				if (now >= steps[i].time) {
-					nextIndex = i;
-					break;
+		const playedClass  = this.#playedClass;
+		const currentClass = this.#currentClass;
+
+		for (const [trackIndex, steps] of this.#animationQueue) {
+			if (steps.length < 2 || now < steps[1].time) continue;
+
+			let nextIndex = 1;
+			for (let i = 2; i < steps.length; i++) {
+				if (now < steps[i].time) break;
+				nextIndex = i;
+			}
+
+			const playedIndexes = this.#playedSteps.get(trackIndex);
+			for (let i = 0; i < nextIndex; i++) {
+				const { step, stepIndex, stroke } = steps[i];
+				if (!step) continue;
+				step.classList.remove(currentClass);
+				if (stroke > this.#emptyStroke) {
+					step.classList.add(playedClass);
+					playedIndexes.push(stepIndex);
 				}
 			}
-			if (nextIndex === 0) continue;
-			steps[0]?.step?.classList.remove(this.#currentClass);
-			steps[nextIndex]?.step?.classList.add(this.#currentClass);
+
+			const nextStepIndex = steps[nextIndex].stepIndex;
+			const lastStepIndex = this.#lastPlayed.get(trackIndex);
+			if (lastStepIndex !== undefined && nextStepIndex <= lastStepIndex) {
+				this.#clearPlayed(playedIndexes);
+			}
+			this.#lastPlayed.set(trackIndex, nextStepIndex);
+
+			steps[nextIndex].step?.classList.add(currentClass);
 			steps.splice(0, nextIndex);
 		}
 		requestAnimationFrame(this.#loop);
 	};
 
+	#clearPlayed(playedIndexes) {
+		for (let i = 0; i < playedIndexes.length; i++) {
+			this.#ui.steps[playedIndexes[i]].classList.remove(this.#playedClass);
+		}
+		playedIndexes.length = 0;
+	}
 }

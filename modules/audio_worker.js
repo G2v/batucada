@@ -325,6 +325,7 @@ function reset(messages) {
 
 function moveTrack({ trashed, order: newOrder }, messages) {
 	if (trashed !== null) {
+		tracks[trashed].active = false;
 		if (tracks[trashed].instrument === config.defaultData.instrument) {
 			const nextIndex = order[order.indexOf(trashed) + 1];
 			if (nextIndex !== undefined) {

@@ -161,7 +161,7 @@ body {
 		font-weight: normal;
 	}
 
-	h1 {
+	caption {
 		font-size: 1.2em;
 	}
 
@@ -178,7 +178,7 @@ body {
 		--track-col-3-width: 23.1em;
 		--track-col-4-width: 6em;
 		font-size: clamp(.6em, 2.4svw, 1.2em);
-		h1 {
+		caption {
 			font-size: 1.4em;
 		}
 		h2 {
@@ -242,9 +242,10 @@ caption {
 	grid-template-columns: auto;
 
 	h1 {
+		margin: 0 .5em;
 		grid-area: 1 / 1;
-		align-self: center;
-		padding: 0 2.5rem 0 .4em;
+		font-size: inherit;
+		padding: .1em 1.7em .1em .6em;
 
 		#title:empty,
 		#title:not(:empty) + #untitled {
@@ -258,16 +259,19 @@ caption {
 	}
 
 	.icon {
-		height: 2.5rem;
+		margin: 0 .7em;
 		grid-area: 1 / 1;
+		font-size: inherit;
 
 		&:not(:hover) {
 			border-color:transparent;
 		}
 
 		&::before {
-			mask-position: right center;
 			mask-image: var(--icon-unsaved);
+			width: 1.45em;
+			height: 1.45em;
+			inset: .08em 0 auto auto;
 		}
 
 		main:has(#preset :checked) &::before {
@@ -287,7 +291,6 @@ tbody {
 	display: grid;
 	position: relative;
 	contain: layout style;
-	will-change: transform;
 	view-transition-name: match-element;
 	grid-template-rows: 1em 1.65em .3em 1.65em 1fr;
 	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
@@ -416,12 +419,6 @@ tbody {
 			outline-offset: .2em;
 			outline: .1em dashed currentColor;
 		}
-
-		:is(.bar, .beat):has(~ * .current) *,
-		:has(~ .current, ~ * .current),
-		.finished & {
-			--played: linear-gradient(var(--color-stroke-played), var(--color-stroke-played));
-		}
 	}
 
 	.bar {
@@ -473,7 +470,10 @@ tbody {
 
 		&:not([value="0"]) {
 			--step-background: var(--color-stroke-set);
-			background-image: var(--played, none);
+
+		&.played {
+			background-image: linear-gradient(var(--color-stroke-played), var(--color-stroke-played));
+		}
 
 			&::before {
 				content: '';
@@ -724,11 +724,18 @@ button:disabled {
 }
 
 select {
+	width: 100%;
 	align-items: center;
 	appearance: base-select;
 
 	&::picker-icon {
 		display: none;
+	}
+
+	selectedcontent {
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
 	}
 }
 
@@ -1208,14 +1215,18 @@ body > footer {
 			<div id="preset">
 				<span id="preset_label" aria-hidden="true">Morceaux enregistrés</span>
 				<button aria-labelledby="preset_label" data-message="Aucun morceau n'est enregistré."></button>
-				<select aria-labelledby="preset_label"></select>
+				<select aria-labelledby="preset_label">
+					<button>
+						<selectedcontent></selectedcontent>
+					</button>
+				</select>
 			</div>
 			<div id="tempo">
 				<input aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
 				<output aria-hidden="true"><span>80</span> bpm</output>
 			</div>
 			<button id="reset" title="Effacer le morceau">Effacer</button>
-			<button id="start" class="icon" role="switch" aria-checked="false">Jouer</button>
+			<button id="start" class="icon" role="switch" aria-checked="false">Lecture</button>
 			<div id="trash" aria-hidden="true">Déposer ici pour supprimer</div>
 		</section>
 	</main>
@@ -1235,7 +1246,11 @@ body > footer {
 			<th class="instrument" scope="row" draggable="true" aria-label="Piste sans instrument" data-template data-template-aria-label-empty="Piste sans instrument" data-template-aria-label-filled="Piste {{instrument}}">
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
 				<span aria-hidden="true">+ Instrument</span>
-				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label-empty="Ajouter un instrument" data-template-aria-label-filled="Modifier l'instrument" autocomplete="off"></select>
+				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label-empty="Ajouter un instrument" data-template-aria-label-filled="Modifier l'instrument" autocomplete="off">
+					<button>
+						<selectedcontent></selectedcontent>
+					</button>
+				</select>
 			</th>
 			<td class="settings">
 				<button class="icon" title="Réglages de la piste" commandfor="track-settings" command="show-modal">Réglages de la piste</button>

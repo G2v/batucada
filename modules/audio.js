@@ -7,6 +7,7 @@ export class Audio {
 	#masterGain;
 	#audioStream;
 	#audioContext;
+	#emptyStroke;
 	#hiddenPlayDuration;
 
 	#worker           = null;
@@ -21,6 +22,7 @@ export class Audio {
 
 	constructor({ bus, config }) {
 		this.#bus                 = bus;
+		this.#emptyStroke         = config.emptyStroke;
 		this.#hiddenPlayDuration  = config.hiddenPlayDuration;
 
 		this.#bus.addEventListener('navigation:decoded',       ({ detail }) => this.#updateData(detail, true));
@@ -225,7 +227,7 @@ export class Audio {
 			const instrument = ticks[i + 2];
 			const trackIndex = ticks[i + 3];
 			const stepIndex  = ticks[i + 4];
-			if (stroke > 0) {
+			if (stroke > this.#emptyStroke) {
 				hasStroke = true;
 				this.#playNote(instrument, trackIndex, stroke, time);
 			}
@@ -234,7 +236,8 @@ export class Audio {
 			}
 			animations.get(trackIndex).push({
 				time: (time * 1000) + timeDelta,
-				stepIndex
+				stepIndex,
+				stroke,
 			});
 		}
 		if (hasStroke) {
