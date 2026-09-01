@@ -244,9 +244,7 @@ export class Interface {
 				}
 			}
 		}
-		if (document.documentElement.hasAttribute('style')) {
-			requestAnimationFrame(() => document.documentElement.removeAttribute('style'));
-		}
+		document.documentElement.style.removeProperty('--tracks-count');
 	}
 
 	set #sheet(values) {

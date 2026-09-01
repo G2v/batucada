@@ -13,7 +13,7 @@
 		: localStorage.theme === 'dark';
 	document.documentElement.classList.toggle('dark', isDark);
 
-	const tracks = new URLSearchParams(location.search).get('set')?.split('-').filter(Boolean).length;
+	const tracks = new URLSearchParams(location.search).get('set')?.split('-').filter(s => s && s[0] !== '0').length;
 	if (tracks) document.documentElement.style.setProperty('--tracks-count', tracks);
 }
 </script>
