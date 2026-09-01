@@ -262,7 +262,7 @@ export class Interface {
 	set #title(value) {
 		const titleText = value.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
 		this.title.textContent = titleText;
-		document.title = this.#headTitlePrefix + titleText;
+		document.title = this.#headTitlePrefix + (titleText || this.untitled);
 	}
 
 	set #tempo(value) {
@@ -324,7 +324,7 @@ export class Interface {
 	set playing(status) {
 		this.#playing = status;
 		if (status) {
-			navigator.mediaSession.metadata.title = this.title.textContent;
+			navigator.mediaSession.metadata.title = (this.title.textContent || this.untitled);
 		}
 		navigator.mediaSession.playbackState = status ? 'playing' : 'paused';
 	}
