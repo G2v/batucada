@@ -624,11 +624,10 @@ hr {
 			text-overflow: ellipsis;
 		}
 
-		select:empty,
-		button:has(+ select:not(:empty)) {
+		select:not(:has(option)),
+		select:has(option) + button {
 			display: none;
 		}
-
 	}
 
 	#tempo {
@@ -1214,12 +1213,12 @@ body > footer {
 		<section id="controls" aria-label="Boutons de contrôle" tabindex="-1">
 			<div id="preset">
 				<span id="preset_label" aria-hidden="true">Morceaux enregistrés</span>
-				<button aria-labelledby="preset_label" data-message="Aucun morceau n'est enregistré."></button>
 				<select aria-labelledby="preset_label">
-					<button>
+					<button aria-label="Morceau">
 						<selectedcontent></selectedcontent>
 					</button>
 				</select>
+				<button aria-labelledby="preset_label" data-message="Aucun morceau n'est enregistré."></button>
 			</div>
 			<div id="tempo">
 				<input aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
@@ -1247,7 +1246,7 @@ body > footer {
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
 				<span aria-hidden="true">+ Instrument</span>
 				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label-empty="Ajouter un instrument" data-template-aria-label-filled="Modifier l'instrument" autocomplete="off">
-					<button>
+					<button aria-label="instrument">
 						<selectedcontent></selectedcontent>
 					</button>
 				</select>
@@ -1475,9 +1474,9 @@ body > footer {
 		const { config } = new Interface({ bus });
 		const params     = { bus, config };
 
-		new Audio(params);
 		new Navigation(params);
 		new Presets(params);
+		new Audio(params);
 		new SwClient(params);
 	</script>
 </body>

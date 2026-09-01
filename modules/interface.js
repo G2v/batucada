@@ -96,8 +96,8 @@ export class Interface {
 		this.#bus.addEventListener('navigation:closeModal', ({ detail }) => this.#instances.controls?.closeModal(detail));
 
 		queueMicrotask(async () => {
-			this.#buildDom();
 			this.#buildCSS();
+			this.#buildDom();
 			this.#loadModules();
 		});
 	}
@@ -209,11 +209,15 @@ export class Interface {
 
 	#buildCSS() {
 		const [first, ...rest] = instrumentsLibrary.instruments;
-		let rules = `[data-instrument] [name="step"]:not([value="0"]) { --current-icon: url('${first.strokes[0].icon}') }`;
+		let rules = `[data-instrument] { --icon-default: url('${first.strokes[0].icon}') }`;
+		let maxStrokes = 0;
 		for (const { id, strokes } of rest) {
-			for (let j = 0; j < strokes.length; j++) {
-				rules += `[data-instrument="${id}"] [name="step"][value="${j + 1}"] { --current-icon: url('${strokes[j].icon}') }`;
-			}
+			maxStrokes = Math.max(maxStrokes, strokes.length);
+			const icons = strokes.map(({ icon }, j) => `--icon-${j + 1}: url('${icon}')`).join('; ');
+			rules += `[data-instrument="${id}"] { ${icons} }`;
+		}
+ 		for (let j = 1; j <= maxStrokes; j++) {
+			rules += `[name="step"][value="${j}"] { --current-icon: var(--icon-${j}, var(--icon-default)) }`;
 		}
 		const stylesheet = new CSSStyleSheet();
 		stylesheet.replaceSync(rules);
@@ -240,6 +244,9 @@ export class Interface {
 				}
 			}
 		}
+		if (document.documentElement.hasAttribute('style')) {
+			requestAnimationFrame(() => document.documentElement.removeAttribute('style'));
+		}
 	}
 
 	set #sheet(values) {
@@ -257,7 +264,6 @@ export class Interface {
 	set #title(value) {
 		const titleText = value.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
 		this.title.textContent = titleText;
-		navigator.mediaSession.metadata.title = titleText;
 		document.title = this.#headTitlePrefix + titleText;
 	}
 
@@ -267,9 +273,6 @@ export class Interface {
 	}
 
 	set #presets({ lastModified, values }) {
-		if (document.documentElement.hasAttribute('style')) {
-			requestAnimationFrame(() => document.documentElement.removeAttribute('style'));
-		}
 		this.#presetsDate = lastModified;
 		const fragment = new DocumentFragment();
 		fragment.appendChild(this.presets.firstElementChild);
@@ -322,6 +325,9 @@ export class Interface {
 
 	set playing(status) {
 		this.#playing = status;
+		if (status) {
+			navigator.mediaSession.metadata.title = this.title.textContent;
+		}
 		navigator.mediaSession.playbackState = status ? 'playing' : 'paused';
 	}
 

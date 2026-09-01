@@ -1,7 +1,14 @@
 import { fetchFromCache } from './utils.js';
 
+const decodeBase64 = Uint8Array.fromBase64
+	? (base64) => Uint8Array.fromBase64(base64)
+	: (base64) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+
+const dataURIToBuffer = (dataURI) => decodeBase64(dataURI.slice(dataURI.indexOf(',') + 1)).buffer;
+
 export class Audio {
 	#bus;
+	#gains;
 	#maxGain;
 	#gainNodes;
 	#masterGain;
@@ -14,6 +21,8 @@ export class Audio {
 	#isReady          = false;
 	#wakeLock         = null;
 	#playTimer        = null;
+	#audioReady       = null;
+	#soundBytes       = null;
 	#idleDelay        = 10;
 	#instruments      = [];
 	#lastNoteTime     = 0;
@@ -22,8 +31,10 @@ export class Audio {
 
 	constructor({ bus, config }) {
 		this.#bus                 = bus;
+		this.#maxGain             = config.maxGain;
 		this.#emptyStroke         = config.emptyStroke;
 		this.#hiddenPlayDuration  = config.hiddenPlayDuration;
+		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain);
 
 		this.#bus.addEventListener('navigation:decoded',       ({ detail }) => this.#updateData(detail, true));
 		this.#bus.addEventListener('interface:reset',          () => this.#reset());
@@ -38,12 +49,78 @@ export class Audio {
 		queueMicrotask(() => {
 			this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 			this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
-			this.#initAudio(config);
-			this.#initAudioStream();
+
+			this.#configureWorker(config);
+			this.#isReady = true;
+			this.#flushPendingMessages();
+
+			this.#soundBytes = this.#fetchInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
+
+			this.#defer(() => this.#ensureAudio());
+			this.#defer(() => this.#ensureAudioStream());
 		});
 	}
 
-	#initAudioStream() {
+	#defer(task) {
+		if (globalThis.scheduler?.postTask) scheduler.postTask(task, { priority: 'background' }).catch(() => {});
+		else if ('requestIdleCallback' in window) requestIdleCallback(task, { timeout: 3000 });
+		else setTimeout(task, 500);
+	}
+
+	#configureWorker(config) {
+		const instrumentsStrokes = Object.fromEntries(
+			config.instrumentsLibrary.instruments.map(({ id, strokes }) => [id, strokes.length])
+		);
+
+		this.#worker.postMessage({
+			action: 'config',
+			payload: {
+				order:         config.defaultOrder,
+				tempo:         config.defaultTempo,
+				maxBars:       config.maxBars,
+				synchroBar:    config.defaultBars,
+				resolution:    config.resolution,
+				emptyStroke:   config.emptyStroke,
+				tracksLength:  config.tracksLength,
+				defaultData:   {
+					bars:       config.defaultBars,
+					beats:      config.defaultBeats,
+					steps:      config.defaultSteps,
+					phrase:     config.defaultPhrase,
+					volume:     config.defaultGain,
+					instrument: config.defaultInstrument,
+				},
+				instrumentsStrokes,
+			},
+		});
+	}
+
+	#ensureAudio() {
+		this.#audioReady ??= this.#initAudio();
+		return this.#audioReady;
+	}
+
+	async #initAudio() {
+		this.#audioContext = new AudioContext();
+		this.#audioContext.addEventListener('statechange', () => this.#handleAudioStateChange());
+
+		this.#masterGain = new GainNode(this.#audioContext);
+		this.#masterGain.connect(this.#audioContext.destination);
+
+		this.#gainNodes = this.#gains.map((gain) => {
+			const gainNode = new GainNode(this.#audioContext, { gain });
+			gainNode.connect(this.#masterGain);
+			return gainNode;
+		});
+
+		await this.#decodeInstrumentSounds();
+	}
+
+	#ensureAudioStream() {
+		return this.#audioStream ??= this.#createAudioStream();
+	}
+
+	#createAudioStream() {
 		const volume = 1000;
 		const frequency = 20;
 		const sampleRate = 8000;
@@ -68,7 +145,7 @@ export class Audio {
 		view.setUint16(34, 16, true);
 		writeString(36, 'data');
 		view.setUint32(40, length * 2, true);
-		const samplesPerCycle = sampleRate / frequency; 
+		const samplesPerCycle = sampleRate / frequency;
 		const cycleData = new Int16Array(samplesPerCycle);
 		const step = (2 * Math.PI * frequency) / sampleRate;
 		for (let i = 0; i < samplesPerCycle; i++) {
@@ -79,57 +156,27 @@ export class Audio {
 			pcmData.set(cycleData, i);
 		}
 		const blob = new Blob([header, pcmData.buffer], { type: 'audio/wav' });
-		this.#audioStream = new window.Audio(URL.createObjectURL(blob));
-		this.#audioStream.loop = true;
-		this.#audioStream.volume = 0.001;
-		document.body.append(this.#audioStream);
+		const audioStream = new window.Audio(URL.createObjectURL(blob));
+		audioStream.loop = true;
+		audioStream.volume = 0.001;
+		document.body.append(audioStream);
+		return audioStream;
 	}
 
-	async #initAudio(config) {
-		this.#audioContext = new AudioContext();
-		this.#masterGain = new GainNode(this.#audioContext);
-		this.#masterGain.connect(this.#audioContext.destination);
-		this.#audioContext.addEventListener('statechange', () => this.#handleAudioStateChange());
+	async #fetchInstrumentSounds(cacheName, fileName) {
+		const response = await fetchFromCache(cacheName, fileName);
+		const json = await response.json();
+		return Object.entries(json).map(([id, sounds]) => [id, sounds.map(dataURIToBuffer)]);
+	}
 
-		const loadInstruments    = this.#loadInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
-		const instrumentsStrokes = Object.fromEntries(config.instrumentsLibrary.instruments.map(({ id, strokes }) => [id, strokes.length]));
-
-		this.#maxGain = config.maxGain;
-
-		const workerConfig = {
-			order:         config.defaultOrder,
-			tempo:         config.defaultTempo,
-			maxBars:       config.maxBars,
-			synchroBar:    config.defaultBars,
-			resolution:    config.resolution,
-			emptyStroke:   config.emptyStroke,
-			tracksLength:  config.tracksLength,
-			defaultData:   {
-				bars:       config.defaultBars,
-				beats:      config.defaultBeats,
-				steps:      config.defaultSteps,
-				phrase:     config.defaultPhrase,
-				volume:     config.defaultGain,
-				instrument: config.defaultInstrument,
-			},
-			instrumentsStrokes,
-		}
-
-		this.#worker.postMessage({
-			action: 'config',
-			payload: workerConfig,
-		});
-
-		this.#gainNodes = Array.from({ length: config.tracksLength }, () => {
-			const gainNode = new GainNode(this.#audioContext, { gain: config.defaultGain / config.maxGain });
-			gainNode.connect(this.#masterGain);
-			return gainNode;
-		});
-
-		await loadInstruments;
-		this.#isReady = true; 
-		this.#pendingMessages.forEach(message => this.#updateData(message.changes, message.sendState));
-		this.#pendingMessages = [];
+	async #decodeInstrumentSounds() {
+		const entries = await Promise.all(
+			(await this.#soundBytes).map(async ([id, buffers]) => [
+				id,
+				await Promise.all(buffers.map((buffer) => this.#audioContext.decodeAudioData(buffer))),
+			])
+		);
+		this.#instruments = Object.fromEntries(entries);
 	}
 
 	#handleWorkerMessage(data) {
@@ -165,36 +212,22 @@ export class Audio {
 		});
 	}
 
-	async #loadInstrumentSounds(cacheName, fileName) {
-		const response = await fetchFromCache(cacheName, fileName);
-		const json = await response.json();
-		const entries = await Promise.all(
-			Object.entries(json).map(async ([id, sounds]) => {
-				const buffers = await Promise.all(sounds.map(async (dataURI) => {
-					const response = await fetch(dataURI);
-					const buffer = await response.arrayBuffer();
-					return await this.#audioContext.decodeAudioData(buffer);
-				}));
-				return [id, buffers];
-			})
-		);
-		this.#instruments = Object.fromEntries(entries);
-	}
-
 	async #start() {
 		await this.#startAudio();
-		this.#audioStream.play().catch(() => {});
+		this.#ensureAudioStream().play().catch(() => {});
 		this.#worker.postMessage({ action: 'start', payload: this.#audioContext.currentTime });
 		this.#wakeLockRequest();
 	}
 
 	#startAudio() {
-		return this.#audioContext.state !== 'running' 
-			? this.#audioContext.resume() 
+		this.#ensureAudio();
+		return this.#audioContext.state !== 'running'
+			? this.#audioContext.resume()
 			: Promise.resolve();
 	}
 
 	#stop() {
+		if (!this.#audioContext) return;
 		this.#worker.postMessage({ action: 'stop', payload: this.#audioContext.currentTime});
 		this.#muteSchedulesNotes();
 		this.#stopAudio();
@@ -202,8 +235,10 @@ export class Audio {
 
 	#stopAudio() {
 		this.#wakeLockRelease();
-		this.#audioStream.pause();
-		this.#audioStream.currentTime = 0;
+		if (this.#audioStream) {
+			this.#audioStream.pause();
+			this.#audioStream.currentTime = 0;
+		}
 		this.#bus.dispatchEvent(new CustomEvent('audio:stop'));
 	}
 
@@ -259,6 +294,12 @@ export class Audio {
 		this.#worker.postMessage({ action: 'moveTrack', payload: indexes });
 	}
 
+	#flushPendingMessages() {
+		const pending = this.#pendingMessages;
+		this.#pendingMessages = [];
+		pending.forEach(({ changes, sendState }) => this.#updateData(changes, sendState));
+	}
+
 	#updateData(changes, sendState) {
 		const { tempo, sheet, tracks, volumes, playing } = changes;
 		if ((tempo ?? sheet ?? tracks ?? volumes ?? playing) === undefined) return;
@@ -278,9 +319,11 @@ export class Audio {
 		if (volumes) this.#updateGains(volumes);
 	}
 
+	// Les gains sont mémorisés avant l'existence des GainNode et appliqués à leur création.
 	#updateGains(gains) {
 		for (const { id, value } of gains) {
-			this.#gainNodes[id].gain.value = value / this.#maxGain;
+			this.#gains[id] = value / this.#maxGain;
+			if (this.#gainNodes) this.#gainNodes[id].gain.value = this.#gains[id];
 		}
 	}
 
@@ -300,6 +343,7 @@ export class Audio {
 
 	#playNote(instrument, gainIndex, stroke, time = this.#audioContext.currentTime) {
 		const buffers = this.#instruments[instrument] || this.#instruments[0];
+		if (!buffers) return;
 		const buffer = buffers[stroke - 1] || buffers[0];
 		const sound = new AudioBufferSourceNode(this.#audioContext, { buffer });
 		sound.connect(this.#gainNodes[gainIndex]);
@@ -309,6 +353,7 @@ export class Audio {
 	}
 
 	#muteSchedulesNotes() {
+		if (!this.#audioContext) return;
 		const fadeOut = 0.05;
 		const now = this.#audioContext.currentTime;
 		this.#masterGain.gain.cancelScheduledValues(now);

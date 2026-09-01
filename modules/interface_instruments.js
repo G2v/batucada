@@ -71,8 +71,6 @@ export default class InterfaceInstruments {
 	}
 
 	async #libraryCheck(messages) {
-		let audioContext;
-
 		try {
 			const content = await getFileContent();
 			const data = JSON.parse(content);
@@ -85,7 +83,7 @@ export default class InterfaceInstruments {
 			if (!Array.isArray(data.instruments) || data.instruments.length === 0) {
 				throw new Error("Invalid or missing instruments");
 			}
-			audioContext = new AudioContext();
+			const audioContext = new OfflineAudioContext(1, 1, 44100);
 			const ids = new Set();
 			const validationPromises = data.instruments.flatMap((item, index) => {
 				if (item.id == null)  throw new Error(`Instrument ${index}: invalid id`);
@@ -130,11 +128,6 @@ export default class InterfaceInstruments {
 			console.error(error);
 			this.#instrumentsDialog.close();
 			this.#ui.dialogs.showToast(messages.failure);
-		}
-		finally {
-			if (audioContext && audioContext.state !== 'closed') {
-				await audioContext.close();
-			}
 		}
 	}
 
