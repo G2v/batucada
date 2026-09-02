@@ -88,7 +88,7 @@ export default class InterfaceControls {
 			: null;
 		if (!hasChanges && targetIndex === null) return;
 
-		document.startViewTransition(() => {
+		this.#ui.startViewTransition(() => {
 			if (targetIndex !== null) this.#ui.swap.moveTrack(sourceIndex, targetIndex);
 			if (hasChanges) Object.assign(values, changes);
 		});
@@ -178,7 +178,7 @@ export default class InterfaceControls {
 		const value = Number(target.value);
 		const track = this.#ui.getTrack(target);
 		const index = this.#ui.getTrackIndex(track);
-		document.startViewTransition(() => track.dataset.instrument = value);
+		this.#ui.startViewTransition(() => track.dataset.instrument = value);
 		const detail = { tracks: [ { id:index, changes: { instrument: value } } ] };
 		this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail }));
 	}

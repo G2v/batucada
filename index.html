@@ -291,10 +291,13 @@ tbody {
 	display: grid;
 	position: relative;
 	contain: layout style;
-	view-transition-name: match-element;
 	grid-template-rows: 1em 1.65em .3em 1.65em 1fr;
 	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
-
+	
+	[data-transitioning] & {
+		view-transition-name: match-element;
+	}
+	
 	&.reseted {
 		animation: reseted 250ms ease-out forwards;
 	}
@@ -1474,9 +1477,9 @@ body > footer {
 		const { config } = new Interface({ bus });
 		const params     = { bus, config };
 
+		new Audio(params);
 		new Navigation(params);
 		new Presets(params);
-		new Audio(params);
 		new SwClient(params);
 	</script>
 </body>

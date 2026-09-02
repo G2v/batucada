@@ -321,6 +321,12 @@ export class Interface {
 
 	getTrackInstrument(track) { return track.dataset[this.#trackKeys.instrument] | 0; }
 
+	startViewTransition(callback) {
+		document.documentElement.dataset.transitioning = '';
+		document.startViewTransition(callback)
+			.finished.finally(() => delete document.documentElement.dataset.transitioning);
+	}
+
 	set playing(status) {
 		this.#playing = status;
 		if (status) {

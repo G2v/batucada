@@ -75,7 +75,7 @@ export default class InterfaceSwap {
 		if (targetIndex === null) {
 			this.trashTrack(sourceIndex);
 		} else {
-			document.startViewTransition(() => this.moveTrack(sourceIndex, targetIndex));
+			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, targetIndex));
 		}
 	}
 
@@ -126,7 +126,7 @@ export default class InterfaceSwap {
 				target.addEventListener('animationend', () => target.classList.remove(this.#resetedClass), { once: true });
 			});
 		} else {
-			document.startViewTransition(() => this.moveTrack(sourceIndex, null));
+			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null));
 		}
 	}
 
