@@ -101,6 +101,7 @@
 	--icon-unsaved:    url('data:image/svg+xml,<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="m13.5 33v-19q0-3 3-3h5m4 0h8m-4 -4v8m0 4.5v13.5l-8-7l-8 7" stroke-width="1.7" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-trash:      url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m12 12l1.5 16a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2l1.5-16m1.5-.5h-21m8 0v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2m1.7 6l-.6 9m-3.6 0v-9m-4.2 0l.6 9" stroke-width="1.3" stroke="black" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>');
 	--icon-handle:     url('data:image/svg+xml,<svg viewBox="0 0 02 10" xmlns="http://www.w3.org/2000/svg"><path d="m1 .5v9" stroke-width="1" stroke="black" stroke-linecap="round"/></svg>');
+	--icon-volume:     url('data:image/svg+xml,<svg viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg"><path d="m1 13h7l7-7v24l-7-7h-7z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/></svg>');
 	--icon-phrase-1:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m22.5 7v23h-5v-16l-6 2v-4z" fill="white"/></svg>');
 	--icon-phrase-2:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m12.5 14c0-3 3-5 7-5 3 0 6 2 6 5 0 2-3 5-7 8l-7 6 16 0" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
 	--icon-phrase-3:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m13 14c0-3 3-5 7-5 3 0 6 2 6 5 0 2-2 4-8 4.5 6 0.5 8 2.5 8 5 0 3-3 5.5-7 5.5-4 0-7-2.5-7-5.5" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
@@ -383,16 +384,41 @@ tbody {
 	.volume {
 		display: flex;
 		grid-area: 4 / 1;
+		margin-left: .7em;
 		align-items: center;
-		margin: 0 0 0 var(--main-margin);
+
+		label {
+			width: 100%;
+			display: flex;
+			border-radius: 1px;
+			align-items: center;
+
+			&:has(:focus-visible) {
+				outline-offset: 2px;
+				outline: 2px solid CanvasText;
+			}
+		}
+
+		.icon {
+			width: .9em;
+			&::before {
+				mask-image: var(--icon-volume);
+			}
+		}
 
 		input {
+			flex: 1;
+			margin: 0;
 			padding: 0;
-			width: 100%;
-			margin: 0 0 .2em 0;
+			min-width: 0;
+			outline: none;
 			outline-offset: 4px;
 		}
 	}
+
+
+
+
 
 	.settings {
 		grid-area: 4 / 2;
@@ -1090,7 +1116,7 @@ dialog {
 }
 
 @keyframes fade-out {
-	100% {
+	to {
 		opacity: 0;
 	}
 }
@@ -1232,9 +1258,6 @@ body > footer {
 			<div id="trash" aria-hidden="true">Déposer ici pour supprimer</div>
 		</section>
 	</main>
-	<datalist id="volume">
-		<option value="30"></option>
-	</datalist>
 	<footer>
 		<button commandfor="app-menu" command="show-modal" aria-label="Menu de l'application">Application</button>
 		<button id="theme">
@@ -1242,6 +1265,9 @@ body > footer {
 			<span class="state-dark">Mode sombre</span>
 		</button>
 	</footer>
+	<datalist id="volume">
+		<option value="30"></option>
+	</datalist>
 	<template>
 		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
 			<td class="dropzone" aria-hidden="true"></td>
@@ -1274,7 +1300,10 @@ body > footer {
 				</span>
 			</td>
 			<td class="volume">
-				<input name="volume" data-template aria-valuetext="50%" data-template-aria-valuetext="{{volume}}%" list="volume" title="Volume" type="range" value="30" min="0" max="60" autocomplete="off">
+				<label title="Volume">
+					<span class="icon">Volume</span>
+					<input name="volume" data-template aria-valuetext="50%" data-template-aria-valuetext="{{volume}}%" list="volume" type="range" value="30" min="0" max="60" autocomplete="off">
+				</label>
 			</td>
 		</tr>
 	</template>
@@ -1331,8 +1360,8 @@ body > footer {
 				<button commandfor="preset-edit" command="close" class="icon">Fermer</button>
 				<h2 id="preset-edit-title">Gérer le morceau</h2>
 			</header>
-			<form method="dialog" autocomplete="off">
-				<label>Titre : <input name="name" placeholder="Titre du morceau"
+			<form method="dialog">
+				<label>Titre : <input name="name" placeholder="Titre du morceau" autocomplete="off"
 					data-invalid-empty="Le titre doit contenir au moins un caractère."
 					data-invalid-duplicated="Ce titre existe déjà."></label>
 				<button name="save"
