@@ -128,8 +128,8 @@ body {
 	--grid-lines: 2;
 	--body-margin: 0px;
 	--main-margin: .7em;
-	--track-col-1-width: 5.2em;
-	--track-col-2-width: 2.5em;
+	--track-col-1-width: 2.7em;
+	--track-col-2-width: 5em;
 	--track-col-3-width: 11.9em;
 	--track-col-4-width: 0px;
 	display: grid;
@@ -176,8 +176,8 @@ body {
 		--grid-lines: 1;
 		--track-col-1-width: 8.1em;
 		--track-col-2-width: 2.5em;
-		--track-col-3-width: 23.1em;
-		--track-col-4-width: 6em;
+		--track-col-3-width: 23.3em;
+		--track-col-4-width: 5.8em;
 		font-size: clamp(.6em, 2.4svw, 1.2em);
 		caption {
 			font-size: 1.4em;
@@ -383,8 +383,8 @@ tbody {
 
 	.volume {
 		display: flex;
-		grid-area: 4 / 1;
-		margin-left: .7em;
+		grid-area: 4 / 2;
+		margin-left: .5em;
 		align-items: center;
 
 		label {
@@ -416,16 +416,12 @@ tbody {
 		}
 	}
 
-
-
-
-
 	.settings {
-		grid-area: 4 / 2;
-		padding-left: .5em;
+		grid-area: 4 / 1;
+		justify-self: end;
 
 		button {
-			width: 100%;
+			width: 2em;
 			height: 100%;
 
 			&::before {
