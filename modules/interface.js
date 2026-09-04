@@ -93,7 +93,7 @@ export class Interface {
 		this.#bus.addEventListener('presets:invalidName',   ({ detail }) => this.#instances.presets?.reportNameValidity(detail));
 		this.#bus.addEventListener('sw-client:newVersion',  ({ detail }) => this.#instances.app?.showUpdateButton(detail));
 		this.#bus.addEventListener('navigation:decoded',    ({ detail }) => this.#update(detail));
-		this.#bus.addEventListener('navigation:closeModal', ({ detail }) => this.#instances.controls?.closeModal(detail));
+		this.#bus.addEventListener('navigation:closeModal', ({ detail }) => this.#instances.dialogs?.closeModal(detail));
 
 		queueMicrotask(async () => {
 			this.#buildCSS();
