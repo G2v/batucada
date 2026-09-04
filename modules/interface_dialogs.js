@@ -2,7 +2,7 @@ export default class InterfaceDialogs {
 	#ui;
 	#bus;
 	#modals         = [];
-	#onCancel       = null;
+	#cancel       = null;
 	#toast          = document.querySelector('#toast');
 	#toastMessage   = this.#toast.querySelector('p');
 	#cancelButton   = this.#toast.querySelector('button');
@@ -58,9 +58,10 @@ export default class InterfaceDialogs {
 	}
 
 	async #cancelToast() {
-		if (!this.#onCancel) return;
-		const { action, success, failure } = this.#onCancel;
+		if (!this.#cancel) return;
+		const { action, success, failure, invoker } = this.#cancel;
 		this.#toast.hidePopover();
+		invoker?.focus();
 		try {
 			await action();
 			this.showToast(success);
@@ -70,18 +71,16 @@ export default class InterfaceDialogs {
 	}
 
 	#clearCancel({ newState }) {
-		if (newState === 'closed') this.#onCancel = null;
+		if (newState === 'closed') this.#cancel = null;
 	}
 
-	showToast(message, onCancel = null) {
-		if (this.#onCancel && onCancel === null) return;
-		this.#onCancel = onCancel;
+	showToast(message, cancel = null) {
+		if (this.#cancel && !cancel) return;
+		this.#cancel = cancel;
+		this.#cancelButton.hidden = !cancel;
 		this.#toast.getAnimations().forEach(animation => animation.cancel() || animation.play());
-		this.#toast.showPopover();
-		requestAnimationFrame(() => {
-			this.#toastMessage.textContent = message;
-			this.#cancelButton.hidden = !onCancel;
-		});
+		this.#toast.showPopover(cancel?.invoker && { source: cancel.invoker });
+		requestAnimationFrame(() => this.#toastMessage.textContent = message);
 	}
 
 }

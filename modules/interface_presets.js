@@ -3,11 +3,13 @@ import { downloadFile, getFileContent } from './utils.js';
 export default class InterfacePresets {
 	#ui;
 	#bus;
-	#edit           = document.querySelector('#preset-edit');
-	#presetsDialog  = document.querySelector('#presets');
-	#confirmDialog  = document.querySelector('#presets-delete');
-	#editForm       = this.#edit.querySelector('form');
-	#dataDate       = this.#presetsDialog.querySelector('time');
+	#edit          = document.querySelector('#preset-edit');
+	#editButton    = document.querySelector('[commandfor="preset-edit"]');
+	#appMenuButton = document.querySelector('[commandfor="app-menu"]');
+	#presetsDialog = document.querySelector('#presets');
+	#confirmDialog = document.querySelector('#presets-delete');
+	#editForm      = this.#edit.querySelector('form');
+	#dataDate      = this.#presetsDialog.querySelector('time');
 
 	constructor({ bus, parent }) {
 		this.#bus = bus
@@ -55,7 +57,7 @@ export default class InterfacePresets {
 		this.#editForm.elements.delete.disabled = unsaved;
 	}
 
-	#cancelEdit(messages) {
+	#cancelEdit(messages, invoker = null) {
 		return {
 			action: () => new Promise((resolve, reject) => {
 				this.#bus.dispatchEvent(new CustomEvent('interface:editCancel', {
@@ -64,6 +66,7 @@ export default class InterfacePresets {
 			}),
 			success: messages.cancelSuccess,
 			failure: messages.cancelFailure,
+			invoker,
 		};
 	}
 
@@ -97,7 +100,8 @@ export default class InterfacePresets {
 			if (request === false) return;
 			this.#edit.close();
 			await request.result;
-			this.#ui.dialogs.showToast(messages.success, this.#cancelEdit(messages));
+			const cancel = this.#cancelEdit(messages, this.#editButton);
+			this.#ui.dialogs.showToast(messages.success, cancel);
 		} 
 		catch {
 			if (this.#edit.open) this.#edit.close();
@@ -152,7 +156,8 @@ export default class InterfacePresets {
 			const message = number === 0 ? messages.successZero
 				: number === 1 ? messages.successOne
 				: messages.successOther.replace('{{number}}', number);
-			this.#ui.dialogs.showToast(message, number ? this.#cancelEdit(messages) : null);
+			const cancel = number ? this.#cancelEdit(messages, this.#appMenuButton ) : null;
+			this.#ui.dialogs.showToast(message, cancel);
 		} catch (error) {
 			if (error.name === 'AbortError') return;
 			this.#ui.dialogs.showToast(messages.failure);

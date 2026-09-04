@@ -3,16 +3,16 @@ export default class InterfaceControls {
 	#bus;
 	#track;
 	#systemColor;
+	#anchoredVolume = null;
 
-	#artist           = document.querySelector('#app-title').textContent;
-	#controls         = document.querySelector('#controls');
-	#skipButton       = document.querySelector('#skip');
-	#resetButton      = document.querySelector('#reset');
-	#presetsButton    = document.querySelector('#preset > button');
-	#trackSettings    = document.querySelector('#track-settings');
-	#trackPosition    = document.querySelector('#track-settings-title span');
-	#positionSelect   = document.querySelector('#position');
-
+	#artist         = document.querySelector('#app-title').textContent;
+	#controls       = document.querySelector('#controls');
+	#skipButton     = document.querySelector('#skip');
+	#resetButton    = document.querySelector('#reset');
+	#presetsButton  = document.querySelector('#preset > button');
+	#trackSettings  = document.querySelector('#track-settings');
+	#trackPosition  = document.querySelector('#track-settings-title span');
+	#positionSelect = document.querySelector('#position');
 
 	constructor({ bus, parent }) {
 		this.#bus = bus;
@@ -22,12 +22,12 @@ export default class InterfaceControls {
 		const options = Array.from({ length: this.#ui.config.tracksLength - 1 }, (_, i) => new Option(i + 2, i + 1));
 		this.#positionSelect.firstElementChild.after(...options);
 
-		document.addEventListener('click',              (event) => this.#handleClick(event));
-		this.#ui.container.addEventListener('input',    (event) => this.#handleInput(event));
-		this.#ui.container.addEventListener('change',   (event) => this.#handleChange(event));
-		this.#trackSettings.addEventListener('submit',  (event) => this.#setTrack());
-		this.#trackSettings.addEventListener('command', (event) => this.#showTrackSettings(event));
-		this.#systemColor.addEventListener('change',    (event) => this.#setTheme(event));
+		document.addEventListener('click',                 (event) => this.#handleClick(event));
+		this.#ui.container.addEventListener('input',       (event) => this.#handleInput(event));
+		this.#ui.container.addEventListener('change',      (event) => this.#handleChange(event));
+		this.#trackSettings.addEventListener('submit',     (event) => this.#setTrack());
+		this.#trackSettings.addEventListener('command',    (event) => this.#showTrackSettings(event));
+		this.#systemColor.addEventListener('change',       (event) => this.#setTheme(event));
 		this.#initMediaSession();
 
 		if (!document.startViewTransition) {
