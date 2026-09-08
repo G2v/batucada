@@ -756,6 +756,10 @@ select {
 		display: none;
 	}
 
+	&::picker(select) {
+		overscroll-behavior: contain;
+	}
+
 	selectedcontent {
 		overflow: hidden;
 		white-space: nowrap;
