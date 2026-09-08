@@ -136,7 +136,6 @@ function scheduler(nextTickTime) {
 	}
 }
 
-
 function setStroke({ sheet: change }, messages, transferables) {
 	const [{ stepIndex, value }] = change;
 	const trackIndex = (stepIndex / config.resolution.track) | 0;
@@ -223,13 +222,15 @@ function updateTracks(values, items, collateralItems, messages) {
 				updateNextTrack(id, value, volumeChanges);
 				resetValue     = (config.instrumentsStrokes[value] || 1);
 				resetCondition = (stepValue) => stepValue > resetValue;
-			} 
+			}
+
 			else if (item === 'bars' || item === 'beats' || item === 'steps') {
 				resetValue = config.emptyStroke;
 				if (item === 'bars')  resetCondition = (_, bars, beats, step) => bars  >= value;
 				if (item === 'beats') resetCondition = (_, bars, beats, step) => beats >= value;
 				if (item === 'steps') resetCondition = (_, bars, beats, step) => step  >= value;
 			}
+
 			if (resetCondition) {
 				const resetChanges = updateSheetWith(track, resetValue, resetCondition);
 				if (resetChanges.length) sheetChanges.push(...resetChanges);

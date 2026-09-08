@@ -119,7 +119,9 @@ export default class InterfaceSwap {
 		const trashed = targetIndex === null ? sourceIndex : null;
 		this.#swapOrder(sourceIndex, targetIndex);
 		draggedTrack.parentNode.insertBefore(draggedTrack, targetTrack);
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceMoveTrack, { detail: { trashed, order: this.#ui.tracksOrder } }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceMoveTrack, {
+			detail: { trashed, order: [...this.#ui.tracksOrder] }
+		}));
 	}
 
 	trashTrack(sourceIndex) {

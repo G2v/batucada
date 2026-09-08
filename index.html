@@ -1511,8 +1511,7 @@ body > footer {
 		import { Interface }  from './modules/interface.js';
 		import { SwClient }   from './modules/sw-client.js';
 
-		const bus    = new EventTarget();
-		const params = { bus, config };
+		const params = { bus : new EventTarget(), config };
 
 		new Interface(params);
 		new Audio(params);

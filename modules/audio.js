@@ -315,7 +315,6 @@ export class Audio {
 		if (volumes) this.#updateGains(volumes);
 	}
 
-	// Les gains sont mémorisés avant l'existence des GainNode et appliqués à leur création.
 	#updateGains(gains) {
 		for (const { id, value } of gains) {
 			this.#gains[id] = value / this.#maxGain;

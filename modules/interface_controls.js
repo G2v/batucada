@@ -206,7 +206,7 @@ export default class InterfaceControls {
 		const index = this.#ui.getTrackIndex(track);
 		this.#ui.startViewTransition(() => track.dataset.instrument = value);
 		const detail = { tracks: [ { id:index, changes: { instrument: value } } ] };
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { detail } }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail }));
 	}
 
 	#inputVolume(target) {
@@ -214,14 +214,14 @@ export default class InterfaceControls {
 		const trackIndex = this.#ui.getTrackIndex(track);
 		const value = Number(target.value);
 		const detail = { volumes: [ { id:trackIndex, value } ] };
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { detail } }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail }));
 	}
 
 	#inputTempo(target) {
 		this.#ui.tempoValue.textContent = target.value;
 		const value = Number(target.value);
 		const detail = { tempo: value };
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { detail } }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail }));
 	}
 
 	#start(state = !this.#ui.playing) {
