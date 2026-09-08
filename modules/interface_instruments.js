@@ -5,19 +5,36 @@ export default class InterfaceInstruments {
 
 	#ui;
 	#bus;
-	#pendingImport     = null;
-	#instrumentsDialog = document.querySelector('#instruments');
-	#confirmImport     = this.#instrumentsDialog.querySelector('#instruments-import');
-	#confirmRestore    = this.#instrumentsDialog.querySelector('#instruments-restore');
-	#restoreButton     = this.#instrumentsDialog.querySelector('[commandfor="instruments-restore"]');
-	#libraryName       = this.#instrumentsDialog.querySelector('p span');
+	#events;
+	#dataCache;
+	#instrumentsDialog;
+	#instrumentsLibraryName;
+	#instrumentsRestoreButton;
+	#importConfirmDialog;
+	#instrumentsLibrary;
+	#instrumentsSoundsFile;
+	#instrumentsMetadataFile;
+	#pendingImport = null;
 
-	constructor({ bus, parent }) {
-		this.#bus = bus
-		this.#ui = parent;
-		this.#confirmImport.addEventListener('command',     (event) => this.#confirmImportCommand(event));
-		this.#confirmRestore.addEventListener('command',    (event) => this.#confirmRestoreCommand(event));
-		this.#instrumentsDialog.addEventListener('command', (event) => this.#instrumentsDialogCommands(event));
+	constructor({ bus, parent, config }) {
+		this.#bus                     = bus;
+		this.#events                  = config.events;
+		this.#ui                      = parent;
+		this.#dataCache               = config.dataCache;
+		this.#instrumentsLibrary      = config.instrumentsLibrary;
+		this.#instrumentsSoundsFile   = config.instrumentsSoundsFile;
+		this.#instrumentsMetadataFile = config.instrumentsMetadataFile;
+
+		const { selectors } = config;
+
+		this.#instrumentsDialog        = document.querySelector(selectors.instrumentsDialog);
+		this.#instrumentsLibraryName   = document.querySelector(selectors.instrumentsLibraryName);
+		this.#instrumentsRestoreButton = document.querySelector(selectors.instrumentsRestoreButton);
+		this.#importConfirmDialog      = document.querySelector(selectors.importConfirmDialog);
+
+		this.#importConfirmDialog.addEventListener('command',                              (event) => this.#confirmImportCommand(event));
+		document.querySelector(selectors.restoreConfirmDialog).addEventListener('command', (event) => this.#confirmRestoreCommand(event));
+		this.#instrumentsDialog.addEventListener('command',                                (event) => this.#instrumentsDialogCommands(event));
 	}
 
 	#instrumentsDialogCommands(event) {
@@ -30,10 +47,10 @@ export default class InterfaceInstruments {
 	}
 
 	async #updateLibraryName() {
-		this.#libraryName.textContent = `${this.#ui.config.instrumentsLibrary.name} ${this.#ui.config.instrumentsLibrary.version}`;
-		const cache = await caches.open(this.#ui.config.dataCache);
-		const response = await cache.match(this.#ui.config.instrumentsMetadataFile);
-		this.#restoreButton.disabled = !response;
+		this.#instrumentsLibraryName.textContent = `${this.#instrumentsLibrary.name} ${this.#instrumentsLibrary.version}`;
+		const cache = await caches.open(this.#dataCache);
+		const response = await cache.match(this.#instrumentsMetadataFile);
+		this.#instrumentsRestoreButton.disabled = !response;
 	}
 
 	#confirmImportCommand(event) {
@@ -49,8 +66,8 @@ export default class InterfaceInstruments {
 	}
 
 	async #instrumentsExport() {
-		const library = structuredClone(this.#ui.config.instrumentsLibrary);
-		const response = await fetchFromCache(this.#ui.config.dataCache, this.#ui.config.instrumentsSoundsFile);
+		const library = structuredClone(this.#instrumentsLibrary);
+		const response = await fetchFromCache(this.#dataCache, this.#instrumentsSoundsFile);
 		const sounds = await response.json();
 		library.instruments.shift();
 		library.instruments.forEach(instrument => {
@@ -58,16 +75,16 @@ export default class InterfaceInstruments {
 			instrument.strokes = instrument.strokes.map((stroke, i) => ({ ...stroke, sound: instrumentSounds[i] }));
 		});
 		const content = JSON.stringify(library, null, 2);
-		const filename = `instruments-${this.#ui.config.instrumentsLibrary.name}-${this.#ui.config.instrumentsLibrary.version}.json`;
+		const filename = `instruments-${this.#instrumentsLibrary.name}-${this.#instrumentsLibrary.version}.json`;
 		if (await downloadFile(filename, content)) this.#instrumentsDialog.close();
 	}
 
 	async #instrumentsRestore() {
 		document.body.inert = true;
-		const cache = await caches.open(this.#ui.config.dataCache);
-		await cache.delete(this.#ui.config.instrumentsSoundsFile);
-		await cache.delete(this.#ui.config.instrumentsMetadataFile);
-		this.#bus.dispatchEvent(new CustomEvent('interface:install'));
+		const cache = await caches.open(this.#dataCache);
+		await cache.delete(this.#instrumentsSoundsFile);
+		await cache.delete(this.#instrumentsMetadataFile);
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
 	}
 
 	async #libraryCheck(messages) {
@@ -103,8 +120,8 @@ export default class InterfaceInstruments {
 					if (!stroke.icon)                          throw fail('missing icon');
 					if (!stroke.sound)                         throw fail('missing sound');
 					return [
-						this.#validateIcon(stroke.icon).catch(error => { throw fail(error.message); }),
-						this.#validateAudio(stroke.sound, audioContext).catch(error => { throw fail(error.message); }),
+						InterfaceInstruments.#validateIcon(stroke.icon).catch(error => { throw fail(error.message); }),
+						InterfaceInstruments.#validateAudio(stroke.sound, audioContext).catch(error => { throw fail(error.message); }),
 					];
 				});
 			});
@@ -115,13 +132,13 @@ export default class InterfaceInstruments {
 			data.instruments.forEach(instrument => {
 				instrument.strokes = instrument.strokes.map(({ sound, ...stroke }) => stroke);
 			});
-			const defaultInstrument = structuredClone(this.#ui.config.instrumentsLibrary.instruments[0]);
-			const response = await fetchFromCache(this.#ui.config.dataCache, this.#ui.config.instrumentsSoundsFile);
+			const defaultInstrument = structuredClone(this.#instrumentsLibrary.instruments[0]);
+			const response = await fetchFromCache(this.#dataCache, this.#instrumentsSoundsFile);
 			const currentSounds = await response.json();
 			data.instruments.unshift(defaultInstrument);
 			sounds[defaultInstrument.id] = currentSounds[defaultInstrument.id];
 			this.#pendingImport = { metadata: data, sounds };
-			this.#confirmImport.showModal();
+			this.#importConfirmDialog.showModal();
 		}
 		catch (error) {
 			if (error.name === 'AbortError') return;
@@ -133,12 +150,12 @@ export default class InterfaceInstruments {
 
 	async #instrumentsImport() {
 		document.body.inert = true;
-		await writeData(this.#ui.config.dataCache, this.#ui.config.instrumentsSoundsFile, this.#pendingImport.sounds);
-		await writeData(this.#ui.config.dataCache, this.#ui.config.instrumentsMetadataFile, this.#pendingImport.metadata);
-		this.#bus.dispatchEvent(new CustomEvent('interface:install'));
+		await writeData(this.#dataCache, this.#instrumentsSoundsFile, this.#pendingImport.sounds);
+		await writeData(this.#dataCache, this.#instrumentsMetadataFile, this.#pendingImport.metadata);
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
 	}
 
-	async #validateAudio(dataUrl, audioContext) {
+	static async #validateAudio(dataUrl, audioContext) {
 		try {
 			const response = await fetch(dataUrl);
 			const buffer = await response.arrayBuffer();
@@ -148,7 +165,7 @@ export default class InterfaceInstruments {
 		}
 	}
 
-	#validateIcon(dataUrl) {
+	static #validateIcon(dataUrl) {
 		return new Promise((resolve, reject) => {
 			const img = new Image();
 			img.onload = () => resolve(img);
@@ -156,5 +173,4 @@ export default class InterfaceInstruments {
 			img.src = dataUrl;
 		});
 	}
-
 }

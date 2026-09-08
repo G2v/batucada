@@ -1,3 +1,4 @@
+
 export default class InterfaceAria {
 	static #bpmToken         = 'bpm';
 	static #volumeToken      = 'volume';
@@ -9,35 +10,46 @@ export default class InterfaceAria {
 	static #keys             = Object.freeze(['bars', 'beats', 'steps']);
 
 	#ui;
-	#rowNodes   = [];
-	#sheetNodes = [];
-	#templates  = {};
+	#events;
+	#names;
+	#resolution;
+	#emptyStroke;
 	#strokeNames;
 	#instrumentNames;
 	#trackInstruments;
+	#defaultInstrument;
 	#volumeRatioPerCent;
 
-	constructor({ bus, parent }) {
-		this.#ui = parent;
-		this.#init();
-		bus.addEventListener('audio:stop',           () => this.#playing = false);
-		bus.addEventListener('interface:reset',      () => this.#resetAll());
-		bus.addEventListener('interface:moveTrack',  ({ detail }) => this.#resetTrashed(detail));
-		bus.addEventListener('interface:updateData', ({ detail }) => this.update(detail));
-		this.#ui.trackParent.addEventListener('keydown', (event) => this.#navigate(event));
-		this.#ui.trackParent.addEventListener('focusin', (event) => this.#syncTabIndex(event));
+	#rowNodes   = [];
+	#sheetNodes = [];
+	#templates  = {};
+
+	constructor({ bus, parent, config }) {
+		this.#ui                = parent;
+		this.#events            = config.events;
+		this.#names             = config.names;
+		this.#resolution        = config.resolution;
+		this.#emptyStroke       = config.emptyStroke;
+		this.#defaultInstrument = config.defaultInstrument;
+		this.#init(config);
+		bus.addEventListener(this.#events.audioStop,           () => this.#playing = false);
+		bus.addEventListener(this.#events.interfaceReset,      () => this.#resetAll());
+		bus.addEventListener(this.#events.interfaceMoveTrack,  ({ detail }) => this.#resetTrashed(detail));
+		bus.addEventListener(this.#events.interfaceUpdateData, ({ detail }) => this.update(detail));
+		this.#ui.trackList.addEventListener('keydown', (event) => this.#navigate(event));
+		this.#ui.trackList.addEventListener('focusin', (event) => this.#syncTabIndex(event));
 	}
 
-	#init() {
+	#init({ instrumentsLibrary, tracksLength, selectors }) {
 		const track      = this.#ui.trackTemplate;
 		const row        = track.querySelector(InterfaceAria.#scopeRowSelector);
-		const steps      = Array.from(track.querySelectorAll(this.#ui.selectors.step));
-		const volume     = track.querySelector(this.#ui.selectors.volume);
-		const instrument = track.querySelector(this.#ui.selectors.instrument);
+		const steps      = Array.from(track.querySelectorAll(selectors.stepButton));
+		const volume     = track.querySelector(selectors.volumeSlider);
+		const instrument = track.querySelector(selectors.instrumentSelect);
 
-		const { instruments } = this.#ui.config.instrumentsLibrary;
+		const { instruments } = instrumentsLibrary;
 
-		this.#trackInstruments = new Array(this.#ui.config.tracksLength).fill(this.#ui.config.defaultInstrument);
+		this.#trackInstruments = new Array(tracksLength).fill(this.#defaultInstrument);
 		this.#instrumentNames  = Object.fromEntries(instruments.map(({ id, name }) => [id, name]));
 		this.#strokeNames      = Object.fromEntries(
 			instruments.map(({ id, strokes }) => [id, strokes.map(({ name }) => name)])
@@ -47,12 +59,12 @@ export default class InterfaceAria {
 			rowLabel:        InterfaceAria.#readTemplate(row),
 			stepLabels:      steps.map(step => InterfaceAria.#readTemplate(step)),
 			instrumentLabel: InterfaceAria.#readTemplate(instrument),
-			tempoValuetext:  this.#ui.tempo.dataset.templateAriaValuetext,
+			tempoValuetext:  this.#ui.tempoSlider.dataset.templateAriaValuetext,
 			volumeValuetext: volume.dataset.templateAriaValuetext,
 		};
 
-		this.#ui.tempo.removeAttribute('data-template');
-		this.#ui.tempo.removeAttribute('data-template-aria-valuetext');
+		this.#ui.tempoSlider.removeAttribute('data-template');
+		this.#ui.tempoSlider.removeAttribute('data-template-aria-valuetext');
 
 		this.#volumeRatioPerCent = 100 / ((volume.max | 0) - (volume.min | 0));
 
@@ -79,15 +91,14 @@ export default class InterfaceAria {
 
 	#strokeName(instrument, value) {
 		return this.#strokeNames[instrument]?.[value - 1]
-			|| this.#strokeNames[this.#ui.config.defaultInstrument]?.[0]
+			|| this.#strokeNames[this.#defaultInstrument]?.[0]
 			|| null;
 	}
 
 	#labelStep(stepIndex, value, instrument) {
-		const { resolution, emptyStroke } = this.#ui.config;
 		const step     = this.#ui.steps[stepIndex];
-		const template = this.#templates.stepLabels[stepIndex % resolution.beat];
-		const isEmpty  = value === emptyStroke;
+		const template = this.#templates.stepLabels[stepIndex % this.#resolution.beat];
+		const isEmpty  = value === this.#emptyStroke;
 		const stroke   = isEmpty ? null : this.#strokeName(instrument, value);
 
 		step.ariaPressed = !isEmpty;
@@ -97,19 +108,18 @@ export default class InterfaceAria {
 	}
 
 	#relabelSteps(trackIndex, instrument) {
-		const { resolution, emptyStroke } = this.#ui.config;
 		const { bars, beats, steps } = this.#ui.tracks[trackIndex].dataset;
 		const barCount  = bars  | 0;
 		const beatCount = beats | 0;
 		const stepCount = steps | 0;
-		const offset    = trackIndex * resolution.track;
+		const offset    = trackIndex * this.#resolution.track;
 
 		for (let bar = 0; bar < barCount; bar++) {
 			for (let beat = 0; beat < beatCount; beat++) {
-				const base = offset + bar * resolution.bar + beat * resolution.beat;
+				const base = offset + bar * this.#resolution.bar + beat * this.#resolution.beat;
 				for (let step = 0; step < stepCount; step++) {
 					const value = this.#ui.steps[base + step].value | 0;
-					if (value !== emptyStroke) this.#labelStep(base + step, value, instrument);
+					if (value !== this.#emptyStroke) this.#labelStep(base + step, value, instrument);
 				}
 			}
 		}
@@ -117,7 +127,7 @@ export default class InterfaceAria {
 
 	#navigate(event) {
 		const { key, target: active } = event;
-		if (active.name !== this.#ui.names.step) return;
+		if (active.name !== this.#names.step) return;
 
 		const isHorizontal = key === 'ArrowRight' || key === 'ArrowLeft';
 		const isVertical   = key === 'ArrowUp'    || key === 'ArrowDown';
@@ -127,10 +137,9 @@ export default class InterfaceAria {
 
 		event.preventDefault();
 
-		const resolution = this.#ui.config.resolution;
 		const track      = this.#ui.getTrack(active);
 		const trackIndex = this.#ui.getTrackIndex(track);
-		const local      = this.#ui.getStepIndex(active) - trackIndex * resolution.track;
+		const local      = this.#ui.getStepIndex(active) - trackIndex * this.#resolution.track;
 
 		let targetTrack = track;
 		let targetLocal;
@@ -138,43 +147,43 @@ export default class InterfaceAria {
 		if (isVertical) {
 			const isDown = key === 'ArrowDown';
 			targetTrack = isDown ? track.nextElementSibling : track.previousElementSibling;
-			if (!targetTrack || (isDown && track.dataset.instrument === "0")) return;
-			targetLocal = this.#clampPosition(local, resolution, targetTrack.dataset);
+			if (!targetTrack || (isDown && this.#ui.getTrackInstrument(track) === this.#defaultInstrument)) return;
+			targetLocal = this.#clampPosition(local, targetTrack.dataset);
 		} else if (isEdge) {
-			targetLocal = key === 'Home' ? 0 : this.#clampPosition(resolution.track - 1, resolution, track.dataset);
+			targetLocal = key === 'Home' ? 0 : this.#clampPosition(this.#resolution.track - 1, track.dataset);
 		} else {
-			targetLocal = this.#adjacentPosition(local, resolution, track.dataset, key === 'ArrowRight' ? 1 : -1);
+			targetLocal = this.#adjacentPosition(local, track.dataset, key === 'ArrowRight' ? 1 : -1);
 		}
 
 		const targetIndex = this.#ui.getTrackIndex(targetTrack);
-		const nextStep    = this.#ui.steps[targetIndex * resolution.track + targetLocal];
+		const nextStep    = this.#ui.steps[targetIndex * this.#resolution.track + targetLocal];
 
 		this.#updateTabIndex(targetTrack === track ? active : null, nextStep, targetIndex);
 		nextStep.focus();
 	}
 
-	#clampPosition(local, resolution, { bars, beats, steps }) {
-		const bar  = Math.min(local / resolution.bar | 0,                     (bars  | 0) - 1);
-		const beat = Math.min((local % resolution.bar) / resolution.beat | 0, (beats | 0) - 1);
-		const step = Math.min(local % resolution.beat,                        (steps | 0) - 1);
-		return bar * resolution.bar + beat * resolution.beat + step;
+	#clampPosition(local, { bars, beats, steps }) {
+		const bar  = Math.min(local / this.#resolution.bar | 0,                     (bars  | 0) - 1);
+		const beat = Math.min((local % this.#resolution.bar) / this.#resolution.beat | 0, (beats | 0) - 1);
+		const step = Math.min(local % this.#resolution.beat,                        (steps | 0) - 1);
+		return bar * this.#resolution.bar + beat * this.#resolution.beat + step;
 	}
 
-	#adjacentPosition(local, resolution, { bars, beats, steps }, direction) {
+	#adjacentPosition(local, { bars, beats, steps }, direction) {
 		const perStep = steps | 0;
 		const perBar  = (beats | 0) * perStep;
 		const total   = (bars  | 0) * perBar;
-		const index   = ((local / resolution.bar | 0) * perBar) +
-			(((local % resolution.bar) / resolution.beat | 0) * perStep) +
-			(local % resolution.beat);
+		const index   = ((local / this.#resolution.bar | 0) * perBar) +
+			(((local % this.#resolution.bar) / this.#resolution.beat | 0) * perStep) +
+			(local % this.#resolution.beat);
 		const next = (index + direction + total) % total;
-		return ((next / perBar | 0) * resolution.bar) +
-			(((next % perBar) / perStep | 0) * resolution.beat) +
+		return ((next / perBar | 0) * this.#resolution.bar) +
+			(((next % perBar) / perStep | 0) * this.#resolution.beat) +
 			(next % perStep);
 	}
 
 	#syncTabIndex({ target }) {
-		if (target.name !== this.#ui.names.step || target.tabIndex === 0) return;
+		if (target.name !== this.#names.step || target.tabIndex === 0) return;
 		this.#updateTabIndex(null, target, this.#ui.getTrackIndex(this.#ui.getTrack(target)));
 	}
 
@@ -187,7 +196,7 @@ export default class InterfaceAria {
 	}
 
 	#resetTabIndex(trackIndex) {
-		const firstStep = this.#ui.steps[trackIndex * this.#ui.config.resolution.track];
+		const firstStep = this.#ui.steps[trackIndex * this.#resolution.track];
 		if (firstStep && firstStep.tabIndex !== 0) this.#updateTabIndex(null, firstStep, trackIndex);
 	}
 
@@ -211,26 +220,23 @@ export default class InterfaceAria {
 	}
 
 	set #tempo(value) {
-		this.#ui.tempo.ariaValueText = InterfaceAria.#format(this.#templates.tempoValuetext, {
+		this.#ui.tempoSlider.ariaValueText = InterfaceAria.#format(this.#templates.tempoValuetext, {
 			[InterfaceAria.#bpmToken]: value
 		});
 	}
 
 	set #sheet(values) {
-		const { resolution: { track } } = this.#ui.config;
 		for (const { stepIndex, value } of values) {
-			this.#labelStep(stepIndex, value, this.#trackInstruments[stepIndex / track | 0]);
+			this.#labelStep(stepIndex, value, this.#trackInstruments[stepIndex / this.#resolution.track | 0]);
 		}
 	}
 
 	set #tracks(values) {
-		const { defaultInstrument } = this.#ui.config;
-
 		for (const { id, changes } of values) {
 			if ('instrument' in changes) {
 				const { instrument } = changes;
 				this.#trackInstruments[id] = instrument;
-				const hasInstrument = instrument !== defaultInstrument && Object.hasOwn(this.#instrumentNames, instrument);
+				const hasInstrument = instrument !== this.#defaultInstrument && Object.hasOwn(this.#instrumentNames, instrument);
 				const token = hasInstrument
 					? { [InterfaceAria.#instrumentToken]: this.#instrumentNames[instrument].toLowerCase() }
 					: null;

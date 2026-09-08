@@ -1,31 +1,46 @@
 import { downloadFile, getFileContent } from './utils.js';
 
 export default class InterfacePresets {
+	static #newNameActions   = Object.freeze(['save', 'rename']);
+	static #enabledButtons   = 'button:not(:disabled)';
+	static #validityMessages = Object.freeze({
+		empty:      'invalidEmpty',
+		duplicated: 'invalidDuplicated',
+	});
+
 	#ui;
 	#bus;
-	#edit          = document.querySelector('#preset-edit');
-	#editButton    = document.querySelector('[commandfor="preset-edit"]');
-	#appMenuButton = document.querySelector('[commandfor="app-menu"]');
-	#presetsDialog = document.querySelector('#presets');
-	#confirmDialog = document.querySelector('#presets-delete');
-	#editForm      = this.#edit.querySelector('form');
-	#dataDate      = this.#presetsDialog.querySelector('time');
+	#events;
+	#presetsDialog;
+	#presetEditDialog;
+	#presetEditForm;
+	#presetEditButton;
+	#presetsDataDate;
+	#appMenuButton;
 
-	constructor({ bus, parent }) {
-		this.#bus = bus
-		this.#ui = parent;
+	constructor({ bus, parent, config }) {
+		this.#bus = bus;
+		this.#events = config.events;
+		this.#ui  = parent;
 
-		this.#edit.         addEventListener('submit',  (event) => this.#saveEdit(event));
-		this.#edit.         addEventListener('command', (event) => this.#openEdit(event));
-		this.#ui.presets.   addEventListener('change',  (event) => this.#presetSelected(event));
-		this.#presetsDialog.addEventListener('command', (event) => this.#presetsDialogCommands(event));
-		this.#confirmDialog.addEventListener('command', (event) => this.#confirmDialogCommands(event));
+		const { selectors } = config;
+
+		this.#presetEditDialog = document.querySelector(selectors.presetEditDialog);
+		this.#presetEditForm   = document.querySelector(selectors.presetEditForm);
+		this.#presetEditButton = document.querySelector(selectors.presetEditButton);
+		this.#presetsDialog    = document.querySelector(selectors.presetsDialog);
+		this.#presetsDataDate  = document.querySelector(selectors.presetsDataDate);
+		this.#appMenuButton    = document.querySelector(selectors.appMenuButton);
+
+		this.#presetsDialog.addEventListener('command',                                  (event) => this.#presetsDialogCommands(event));
+		this.#presetEditDialog.addEventListener('submit',                                (event) => this.#saveEdit(event));
+		this.#presetEditDialog.addEventListener('command',                               (event) => this.#openEdit(event));
+		this.#ui.presetsSelect.addEventListener('change',                                (event) => this.#presetSelected(event));
+		document.querySelector(selectors.presetDeleteDialog).addEventListener('command', (event) => this.#confirmDialogCommands(event));
 	}
 
 	#presetSelected(event) {
-		this.#bus.dispatchEvent(
-			new CustomEvent('interface:presetSelected', { detail: event.target.selectedIndex })
-		);
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetSelected, { detail: event.target.selectedIndex }));
 	}
 
 	#presetsDialogCommands(event) {
@@ -40,29 +55,25 @@ export default class InterfacePresets {
 	#confirmDialogCommands(event) {
 		if (event.source.value === 'delete') {
 			new Promise((resolve, reject) => {
-				this.#bus.dispatchEvent(new CustomEvent('interface:presetsDelete', {
-					detail: { resolve, reject }
-				}));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetsDelete, { detail: { resolve, reject } }));
 			}).catch(() => this.#ui.dialogs.showToast(event.source.dataset.failure));
 		}
 	}
 
 	#openEdit({ command }) {
-		if (command !=='show-modal' ) return;
-		const title = this.#ui.title.textContent.trim();
-		const unsaved = this.#ui.presets.selectedIndex === -1;
-		this.#editForm.elements.name.value = title;
-		this.#editForm.elements.name.setCustomValidity('');
-		this.#editForm.elements.rename.disabled = unsaved;
-		this.#editForm.elements.delete.disabled = unsaved;
+		if (command !== 'show-modal') return;
+		const title = this.#ui.sequenceTitle.textContent.trim();
+		const unsaved = this.#ui.presetsSelect.selectedIndex === -1;
+		this.#presetEditForm.elements.name.value = title;
+		this.#presetEditForm.elements.name.setCustomValidity('');
+		this.#presetEditForm.elements.rename.disabled = unsaved;
+		this.#presetEditForm.elements.delete.disabled = unsaved;
 	}
 
 	#cancelEdit(messages, invoker = null) {
 		return {
 			action: () => new Promise((resolve, reject) => {
-				this.#bus.dispatchEvent(new CustomEvent('interface:editCancel', {
-					detail: { resolve, reject }
-				}));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceEditCancel, { detail: { resolve, reject } }));
 			}),
 			success: messages.cancelSuccess,
 			failure: messages.cancelFailure,
@@ -72,12 +83,12 @@ export default class InterfacePresets {
 
 	async #saveEdit(event) {
 		const { dataset: messages, name: action } = event.submitter;
-		const actionButtons = this.#editForm.querySelectorAll('button:not(:disabled)');
+		const actionButtons = this.#presetEditForm.querySelectorAll(InterfacePresets.#enabledButtons);
 		try {
 			if (action === 'share') {
-				this.#edit.close();
+				this.#presetEditDialog.close();
 				const url = new URL(location.origin + location.pathname);
-				this.#bus.dispatchEvent(new CustomEvent('interface:share', { detail: { url } }));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceShare, { detail: { url } }));
 				if (navigator.share) {
 					try { await navigator.share({ url: url.toString() }); } catch {}
 				} else {
@@ -87,24 +98,22 @@ export default class InterfacePresets {
 				return;
 			}
 			event.preventDefault();
-			const isNewName = ['save', 'rename'].includes(action);
-			const rawName = this.#editForm.elements.name.value;
+			const isNewName = InterfacePresets.#newNameActions.includes(action);
+			const rawName = this.#presetEditForm.elements.name.value;
 			const name = rawName.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
 			if (isNewName && !name) return this.reportNameValidity('empty');
 			actionButtons.forEach(button => button.disabled = true);
 			const request = await new Promise((resolve, reject) => {
-				this.#bus.dispatchEvent(new CustomEvent('interface:editSave', { 
-					detail: { action, name, promise: { resolve, reject } }
-				}));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceEditSave, { detail: { action, name, promise: { resolve, reject } } }));
 			});
 			if (request === false) return;
-			this.#edit.close();
+			this.#presetEditDialog.close();
 			await request.result;
-			const cancel = this.#cancelEdit(messages, this.#editButton);
+			const cancel = this.#cancelEdit(messages, this.#presetEditButton);
 			this.#ui.dialogs.showToast(messages.success, cancel);
-		} 
+		}
 		catch {
-			if (this.#edit.open) this.#edit.close();
+			if (this.#presetEditDialog.open) this.#presetEditDialog.close();
 			this.#ui.dialogs.showToast(messages.failure);
 		}
 		finally {
@@ -113,9 +122,8 @@ export default class InterfacePresets {
 	}
 
 	reportNameValidity(status) {
-		const input = this.#editForm.elements.name;
-		const datasetNames = { empty: 'invalidEmpty', duplicated: 'invalidDuplicated' };
-		const validityMessage = input.dataset[datasetNames[status]];
+		const input = this.#presetEditForm.elements.name;
+		const validityMessage = input.dataset[InterfacePresets.#validityMessages[status]];
 		input.setCustomValidity(validityMessage);
 		input.reportValidity();
 		input.addEventListener('input',    () => input.setCustomValidity(''), { once: true });
@@ -123,14 +131,14 @@ export default class InterfacePresets {
 	}
 
 	#updatePresetsDate() {
-		this.#dataDate.textContent = this.#ui.presetsDate?.toLocaleString('fr-FR', { 
-			hour12: false 
+		this.#presetsDataDate.textContent = this.#ui.presetsDate?.toLocaleString('fr-FR', {
+			hour12: false
 		}) ?? '';
 	}
 
 	async #presetsExport() {
 		const presets = [];
-		this.#bus.dispatchEvent(new CustomEvent('interface:export', { detail: presets }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceExport, { detail: presets }));
 		const content = JSON.stringify(presets, null, 2);
 
 		let dateSuffix = '';
@@ -149,19 +157,16 @@ export default class InterfacePresets {
 			const data = JSON.parse(content);
 			if (!data || typeof data !== 'object') throw new Error();
 			const number = await new Promise((resolve, reject) => {
-				this.#bus.dispatchEvent(new CustomEvent('interface:import', {
-					detail: { data, promise: { resolve, reject } }
-				}));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceImport, { detail: { data, promise: { resolve, reject } } }));
 			});
 			const message = number === 0 ? messages.successZero
 				: number === 1 ? messages.successOne
 				: messages.successOther.replace('{{number}}', number);
-			const cancel = number ? this.#cancelEdit(messages, this.#appMenuButton ) : null;
+			const cancel = number ? this.#cancelEdit(messages, this.#appMenuButton) : null;
 			this.#ui.dialogs.showToast(message, cancel);
 		} catch (error) {
 			if (error.name === 'AbortError') return;
 			this.#ui.dialogs.showToast(messages.failure);
 		}
 	}
-
 }

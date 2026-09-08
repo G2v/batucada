@@ -1,32 +1,39 @@
 import version from '../version.js';
 
 export default class InterfaceApp {
-	#ui;
 	#bus;
-	#about        = document.querySelector('#about');
-	#contact      = this.#about.querySelector('#contact');
-	#updateButton = this.#about.querySelector('[value="update"]');
-	#version      = this.#about.querySelector('#version');
+	#events;
+	#aboutDialog;
+	#aboutUpdateButton;
 
-	constructor({ bus, parent }) {
+	constructor({ bus, config }) {
 		this.#bus = bus;
-		this.#ui = parent;
-		this.#contact.href = `mailto:${parent.config.email}`;
-		this.#contact.textContent = parent.config.email;
-		this.#version.textContent = version;
-		this.#about.addEventListener('command', (event) => this.#aboutCommands(event));
+		this.#events = config.events;
+
+		const { selectors } = config;
+
+		this.#aboutDialog       = document.querySelector(selectors.aboutDialog);
+		this.#aboutUpdateButton = document.querySelector(selectors.aboutUpdateButton);
+
+		Object.assign(document.querySelector(selectors.aboutContactLink), {
+			href:        `mailto:${config.email}`,
+			textContent: config.email,
+		});
+		document.querySelector(selectors.aboutVersionText).textContent = version;
+
+		this.#aboutDialog.addEventListener('command', (event) => this.#aboutCommands(event));
 	}
 
 	showUpdateButton() {
-		this.#updateButton.hidden = false;
+		this.#aboutUpdateButton.hidden = false;
 	}
 
 	#aboutCommands(event) {
 		const commands = {
-			'show-modal': () => this.#bus.dispatchEvent(new CustomEvent('interface:findUpdate')),
+			'show-modal': () => this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceFindUpdate)),
 			'update':     () => {
 				document.body.inert = true;
-				this.#bus.dispatchEvent(new CustomEvent('interface:install'));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
 			},
 		};
 		commands[event.source?.value || event.command]?.();

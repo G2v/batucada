@@ -1230,10 +1230,6 @@ body > footer {
 <body>
 	<main>
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
-		<div id="toast" popover="manual" role="alert">
-			<p></p>
-			<button aria-label="Annuler cette action">Annuler</button>
-		</div>
 		<table>
 			<caption>
 				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Nouveau morceau</span></h1>
@@ -1311,6 +1307,10 @@ body > footer {
 			</td>
 		</tr>
 	</template>
+	<div id="toast" popover="manual" role="alert">
+		<p></p>
+		<button aria-label="Annuler cette action">Annuler</button>
+	</div>
 	<dialog id="track-settings" aria-labelledby="track-settings-title" data-dismiss>
 		<div>
 			<header>
@@ -1500,16 +1500,17 @@ body > footer {
 		</dialog>
 	</dialog>
 	<script type="module">
+		import { config }     from './modules/build-config.js';
 		import { Audio }      from './modules/audio.js';
 		import { Presets }    from './modules/presets.js';
 		import { Navigation } from './modules/navigation.js';
 		import { Interface }  from './modules/interface.js';
 		import { SwClient }   from './modules/sw-client.js';
 
-		const bus        = new EventTarget();
-		const { config } = new Interface({ bus });
-		const params     = { bus, config };
+		const bus    = new EventTarget();
+		const params = { bus, config };
 
+		new Interface(params);
 		new Audio(params);
 		new Navigation(params);
 		new Presets(params);

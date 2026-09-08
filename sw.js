@@ -17,6 +17,8 @@ const assets = [
 	'./data/presets.json',
 	'./modules/audio.js',
 	'./modules/audio_worker.js',
+	'./modules/build-config.js',
+	'./modules/build-dom.js',
 	'./modules/interface.js',
 	'./modules/interface_animation.js',
 	'./modules/interface_app.js',

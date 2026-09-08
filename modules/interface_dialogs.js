@@ -1,24 +1,29 @@
 export default class InterfaceDialogs {
 	#ui;
-	#bus;
-	#modals         = [];
-	#cancel       = null;
-	#toast          = document.querySelector('#toast');
-	#toastMessage   = this.#toast.querySelector('p');
-	#cancelButton   = this.#toast.querySelector('button');
+	#toast;
+	#toastMessage;
+	#toastCancelButton;
+	#modals = [];
+	#cancel = null;
 
-	constructor({ bus, parent }) {
-		this.#bus = bus;
+	constructor({ parent, config }) {
 		this.#ui = parent;
-		document.addEventListener('click',           (event) => this.#dismissModal(event));
-		document.addEventListener('cancel',          (event) => this.#cancelModal(event), { capture: true });
-		document.addEventListener('toggle',          (event) => this.#setModal(event), { capture: true });
-		this.#cancelButton.addEventListener('click', (event) => this.#cancelToast());
-		this.#toast.addEventListener('animationend', (event) => this.#toast.hidePopover());
-		this.#toast.addEventListener('toggle',       (event) => this.#clearCancel(event));
+
+		const { selectors } = config;
+
+		this.#toast             = document.querySelector(selectors.toast);
+		this.#toastMessage      = document.querySelector(selectors.toastMessage);
+		this.#toastCancelButton = document.querySelector(selectors.toastCancelButton);
+
+		document.addEventListener('click',                 (event) => this.#dismissModal(event));
+		document.addEventListener('cancel',                (event) => InterfaceDialogs.#cancelModal(event), { capture: true });
+		document.addEventListener('toggle',                (event) => this.#setModal(event), { capture: true });
+		this.#toastCancelButton.addEventListener('click',  (event) => this.#cancelToast());
+		this.#toast.addEventListener('animationend',       (event) => this.#toast.hidePopover());
+		this.#toast.addEventListener('toggle',             (event) => this.#clearCancel(event));
+
 		this.#toastPositioning();
 	}
-
 
 	async #toastPositioning() {
 		if (!CSS.supports('position-area', 'bottom')) {
@@ -46,7 +51,7 @@ export default class InterfaceDialogs {
 		}
 	}
 
-	#cancelModal(event) {
+	static #cancelModal(event) {
 		event.preventDefault();
 		event.target.close('back');
 	}
@@ -77,10 +82,9 @@ export default class InterfaceDialogs {
 	showToast(message, cancel = null) {
 		if (this.#cancel && !cancel) return;
 		this.#cancel = cancel;
-		this.#cancelButton.hidden = !cancel;
+		this.#toastCancelButton.hidden = !cancel;
 		this.#toast.getAnimations().forEach(animation => animation.cancel() || animation.play());
 		this.#toast.showPopover(cancel?.invoker && { source: cancel.invoker });
 		requestAnimationFrame(() => this.#toastMessage.textContent = message);
 	}
-
 }

@@ -39,7 +39,7 @@ function init(payload) {
 	Object.assign(config, payload);
 	Object.freeze(config);
 
-	order    = config.order;
+	order    = Array.from({ length: config.tracksLength }, (_, i) => i),
 	sheet    = new Uint8Array(config.tracksLength * config.resolution.track).fill(config.emptyStroke);
 	tempo    = config.tempo;
 	beatSync = config.defaultData.bars * config.defaultData.beats;

@@ -43,6 +43,7 @@ function unpack(value, bases) {
 
 export class Navigation {
 	#bus;
+	#events;
 	#worker = null;
 	#config;
 	#params;
@@ -66,6 +67,7 @@ export class Navigation {
 
 	constructor({ bus, config }) {
 		this.#bus               = bus;
+		this.#events            = config.events;
 		this.#searchParams      = new URLSearchParams(location.search);
 		this.#setSearchParam    = config.setSearchParam;
 		this.#titleSearchParam  = config.titleSearchParam;
@@ -85,13 +87,13 @@ export class Navigation {
 		const navigationReady = window.navigation ? Promise.resolve() : import('./polyfills/navigation.js');
 		navigationReady.then(() => navigation.addEventListener('navigate', event => this.#handleNavigation(event)));
 
-		this.#bus.addEventListener('audio:state',            ({ detail }) => this.#updateState(detail));
-		this.#bus.addEventListener('audio:changed',          ({ detail }) => this.#encodeURL(detail));
-		this.#bus.addEventListener('presets:changed',        ({ detail }) => this.#encodeURL(detail));
-		this.#bus.addEventListener('presets:presetSelected', ({ detail }) => this.#presetSelected(detail));
-		this.#bus.addEventListener('interface:reset',        ({ detail }) => this.#reset());
-		this.#bus.addEventListener('interface:moveTrack',    ({ detail }) => this.#moveTrack(detail));
-		this.#bus.addEventListener('sw-client:install',      () => this.#reload());
+		this.#bus.addEventListener(this.#events.audioState,            ({ detail }) => this.#updateState(detail));
+		this.#bus.addEventListener(this.#events.audioChanged,          ({ detail }) => this.#encodeURL(detail));
+		this.#bus.addEventListener(this.#events.presetsChanged,        ({ detail }) => this.#encodeURL(detail));
+		this.#bus.addEventListener(this.#events.presetsPresetSelected, ({ detail }) => this.#presetSelected(detail));
+		this.#bus.addEventListener(this.#events.interfaceReset,        ({ detail }) => this.#reset());
+		this.#bus.addEventListener(this.#events.interfaceMoveTrack,    ({ detail }) => this.#moveTrack(detail));
+		this.#bus.addEventListener(this.#events.swClientInstall,      () => this.#reload());
 	}
 
 	#init(config) {
@@ -124,9 +126,9 @@ export class Navigation {
 			instrumentsBase:   Object.fromEntries(config.instrumentsLibrary.instruments.map(({ id, strokes }) => [id, strokes.length + 1])),
 		});
 
-		this.#state.order = this.#config.defaultOrder;
 		this.#state.tempo = this.#config.defaultTempo;
 		this.#state.title = this.#config.defaultTitleValue;
+		this.#state.order = Array.from({ length: this.#config.tracksLength }, (_, i) => i),
 
 		this.#params = {
 			[this.#config.setSearchParam]: {
@@ -148,7 +150,7 @@ export class Navigation {
 		};
 
 		if (this.#searchParams.size > 0) {
-			const changes = this.#decodeUrl(this.#searchAsObject());
+			const changes = this.#decodeUrl(this.#paramsAsObject());
 			if (changes) queueMicrotask(() => this.#dispatchDecoded(changes));
 		}
 	}
@@ -315,7 +317,7 @@ export class Navigation {
 	}
 
 	#dispatchDecoded(changes) {
-		this.#bus.dispatchEvent(new CustomEvent('navigation:decoded', { detail: changes }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationDecoded, { detail: changes }));
 	}
 
 	#cleanUpdateSearchParam() {
@@ -347,7 +349,7 @@ export class Navigation {
 
 		if (navigationType === 'traverse') {
 			const modal = { closed: false };
-			this.#bus.dispatchEvent(new CustomEvent('navigation:closeModal', { detail: modal }));
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationCloseModal, { detail: modal }));
 			if (modal.closed) {
 				event.preventDefault();
 				return;
@@ -374,9 +376,7 @@ export class Navigation {
 					this.#decodeAction(action);
 				}
 				if (shouldDispatch) {
-					this.#bus.dispatchEvent(new CustomEvent('navigation:changed', {
-						detail: new Map(this.#searchParams) 
-					}));
+					this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationChanged, { detail: new Map(this.#searchParams) }));
 				}
 			}
 		});
@@ -387,7 +387,7 @@ export class Navigation {
 			this.#resetState();
 			return;
 		}
-		const searchParams = this.#searchAsObject();
+		const searchParams = this.#paramsAsObject();
 		const changes = action === 'decodeAll'
 			? this.#decodeAll(searchParams)
 			: this.#decodeUrl(searchParams);
@@ -431,14 +431,14 @@ export class Navigation {
 		this.#encoder.postMessage({
 			action,
 			payload: {
-				searchParams: this.#searchAsObject(),
+				searchParams: this.#paramsAsObject(),
 				state: this.#state,
 				values,
 			},
 		});
 	}
 
-	#searchAsObject() {
+	#paramsAsObject() {
 		return Object.fromEntries(this.#searchParams.entries());
 	}
 

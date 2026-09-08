@@ -1,14 +1,17 @@
+
 export class SwClient {
 	#bus;
+	#events;
 	#registration;
 
-	constructor({ bus }) {
+	constructor({ bus, config }) {
 		if (!('serviceWorker' in navigator)) return;
 
 		this.#bus = bus;
+		this.#events = config.events;
 		navigator.serviceWorker.addEventListener('message', ({ data }) => this.#readMessage(data));
-		this.#bus.addEventListener('interface:install',     ({ detail }) => this.#install(detail));
-		this.#bus.addEventListener('interface:findUpdate',  () => this.#findUpdate());
+		this.#bus.addEventListener(this.#events.interfaceInstall,     ({ detail }) => this.#install(detail));
+		this.#bus.addEventListener(this.#events.interfaceFindUpdate,  () => this.#findUpdate());
 
 		if ('requestIdleCallback' in window) {
 			requestIdleCallback(() => this.#init());
@@ -40,14 +43,14 @@ export class SwClient {
 		// alors il s'agit une mise à jour.
 		if (this.#registration.waiting && this.#registration.active) {
 			queueMicrotask(() => {
-				this.#bus.dispatchEvent(new CustomEvent('sw-client:newVersion'));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.swClientNewVersion));
 			});
 		}
 	}
 
 	#readMessage({ type }) {
 		if (type === 'update') {
-			this.#bus.dispatchEvent(new CustomEvent('sw-client:install'));
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.swClientInstall));
 		}
 	}
 
@@ -57,7 +60,7 @@ export class SwClient {
 			waiting.postMessage({ action: 'skipWaiting' });
 			return;
 		}
-		this.#bus.dispatchEvent(new CustomEvent('sw-client:install'));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.swClientInstall));
 	}
 
 }

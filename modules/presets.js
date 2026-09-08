@@ -1,7 +1,10 @@
 import { fetchFromCache, writeData, downloadFile, getFileContent } from './utils.js';
 
 export class Presets {
+	static #newNameActions = Object.freeze(['save', 'rename']);
+
 	#bus;
+	#events;
 	#params;
 	#cacheName;
 	#presetsDate;
@@ -15,11 +18,11 @@ export class Presets {
 	#index              = -1;
 	#presets            = null;
 	#lastAction         = null;
-	#emptyPresets       = [];
 	#isPersistedStorage = null;
 
 	constructor({ bus, config }) {
 		this.#bus               = bus;
+		this.#events            = config.events;
 		this.#params            = new Map(new URLSearchParams(location.search));
 		this.#cacheName         = config.dataCache;
 		this.#presetsFile       = config.presetsFile;
@@ -30,17 +33,17 @@ export class Presets {
 		this.#defaultSetValue   = config.defaultSetValue;
 		this.#defaultTitleValue = config.defaultTitleValue;
 
-		this.#loadPresets(this.#emptyPresets);
+		this.#loadPresets([]);
 
-		this.#bus.addEventListener('interface:reset',          ({ detail }) => this.#reset(detail));
-		this.#bus.addEventListener('interface:share',          ({ detail }) => this.#sharePreset(detail));
-		this.#bus.addEventListener('interface:import',         ({ detail }) => this.#presetsImport(detail));
-		this.#bus.addEventListener('interface:export',         ({ detail }) => this.#presetsExport(detail));
-		this.#bus.addEventListener('interface:editSave',       ({ detail }) => this.#editSave(detail));
-		this.#bus.addEventListener('interface:editCancel',     ({ detail }) => this.#editCancel(detail));
-		this.#bus.addEventListener('interface:presetSelected', ({ detail }) => this.#presetSelected(detail));
-		this.#bus.addEventListener('interface:presetsDelete',  ({ detail }) => this.#deleteData(detail));
-		this.#bus.addEventListener('navigation:changed',       ({ detail }) => this.#updateParams(detail));
+		this.#bus.addEventListener(this.#events.interfaceReset,          ({ detail }) => this.#reset(detail));
+		this.#bus.addEventListener(this.#events.interfaceShare,          ({ detail }) => this.#sharePreset(detail));
+		this.#bus.addEventListener(this.#events.interfaceImport,         ({ detail }) => this.#presetsImport(detail));
+		this.#bus.addEventListener(this.#events.interfaceExport,         ({ detail }) => this.#presetsExport(detail));
+		this.#bus.addEventListener(this.#events.interfaceEditSave,       ({ detail }) => this.#editSave(detail));
+		this.#bus.addEventListener(this.#events.interfaceEditCancel,     ({ detail }) => this.#editCancel(detail));
+		this.#bus.addEventListener(this.#events.interfacePresetSelected, ({ detail }) => this.#presetSelected(detail));
+		this.#bus.addEventListener(this.#events.interfacePresetsDelete,  ({ detail }) => this.#deleteData(detail));
+		this.#bus.addEventListener(this.#events.navigationChanged,       ({ detail }) => this.#updateParams(detail));
 		document.addEventListener('visibilitychange',          () => this.#syncPresets());
 	}
 
@@ -71,9 +74,9 @@ export class Presets {
 
 	async #deleteData({ resolve, reject }) {
 		try {
-			await writeData(this.#cacheName, this.#presetsFile, this.#emptyPresets, false);
+			await writeData(this.#cacheName, this.#presetsFile, [], false);
 			this.#presetsDate = null;
-			this.#updatePresets(this.#emptyPresets, this.#defaultTitleValue);
+			this.#updatePresets([], this.#defaultTitleValue);
 			resolve();
 		} catch {
 			reject();
@@ -84,7 +87,7 @@ export class Presets {
 		const preset = this.#presets[index];
 		if (!preset) return;
 		this.#index = index;
-		this.#bus.dispatchEvent(new CustomEvent('presets:presetSelected', { detail: preset }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsPresetSelected, { detail: preset }));
 	}
 
 	#reset() {
@@ -147,9 +150,9 @@ export class Presets {
 
 	#dispatchChanges(changes) {
 		if (Object.keys(changes).length) {
-			this.#bus.dispatchEvent(new CustomEvent('presets:updateData', { detail: changes }));
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsUpdateData, { detail: changes }));
 			if ('title' in changes) {
-				this.#bus.dispatchEvent(new CustomEvent('presets:changed', { detail: { title: changes.title } }));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsChanged, { detail: { title: changes.title } }));
 			}
 		}
 	}
@@ -157,11 +160,11 @@ export class Presets {
 	async #editSave({ action, name, promise }) {
 		try {
 			const data = this.#presets;
-			const isNewName = ['save', 'rename'].includes(action);
+			const isNewName = Presets.#newNameActions.includes(action);
 			const status = this.#validateNewName(data, name);
 
 			if (isNewName && status !== 'valid') {
-				this.#bus.dispatchEvent(new CustomEvent('presets:invalidName', { detail: status }));
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsInvalidName, { detail: status }));
 				promise.resolve(false);
 				return;
 			}
@@ -177,7 +180,7 @@ export class Presets {
 	}
 
 	async #applyModification(data, action, name) {
-		const isNewName = ['save', 'rename'].includes(action);
+		const isNewName = Presets.#newNameActions.includes(action);
 		const value = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
 		const indexName = action === 'rename' ? this.#params.get(this.#titleSearchParam) : name;
 		const index = data.findIndex(preset => preset.name === indexName);
@@ -296,6 +299,4 @@ export class Presets {
 			}
 		}
 	}
-
 }
-

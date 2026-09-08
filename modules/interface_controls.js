@@ -1,33 +1,59 @@
+
 export default class InterfaceControls {
 	#ui;
 	#bus;
+	#events;
 	#track;
+	#names;
+	#appTitle;
+	#barsSelect;
+	#beatsSelect;
+	#stepsSelect;
+	#phraseSelect;
+	#skipButton;
+	#themeButton;
+	#resetButton;
+	#presetsMenuButton;
+	#trackSettingsDialog;
+	#trackPositionText;
+	#positionSelect;
 	#systemColor;
-	#anchoredVolume = null;
+	#controlsSection;
+	#defaultInstrument;
 
-	#artist         = document.querySelector('#app-title').textContent;
-	#controls       = document.querySelector('#controls');
-	#skipButton     = document.querySelector('#skip');
-	#resetButton    = document.querySelector('#reset');
-	#presetsButton  = document.querySelector('#preset > button');
-	#trackSettings  = document.querySelector('#track-settings');
-	#trackPosition  = document.querySelector('#track-settings-title span');
-	#positionSelect = document.querySelector('#position');
+	constructor({ bus, parent, config }) {
+		this.#bus               = bus;
+		this.#events            = config.events;
+		this.#ui                = parent;
+		this.#names             = config.names;
+		this.#systemColor       = matchMedia('(prefers-color-scheme: dark)');
+		this.#defaultInstrument = config.defaultInstrument;
 
-	constructor({ bus, parent }) {
-		this.#bus = bus;
-		this.#ui = parent;
-		this.#systemColor = matchMedia('(prefers-color-scheme: dark)');
+		const { selectors } = config;
 
-		const options = Array.from({ length: this.#ui.config.tracksLength - 1 }, (_, i) => new Option(i + 2, i + 1));
+		this.#appTitle            = document.querySelector(selectors.appTitle);
+		this.#barsSelect          = document.querySelector(selectors.barsSelect);
+		this.#beatsSelect         = document.querySelector(selectors.beatsSelect);
+		this.#stepsSelect         = document.querySelector(selectors.stepsSelect);
+		this.#phraseSelect        = document.querySelector(selectors.phraseSelect);
+		this.#skipButton          = document.querySelector(selectors.skipButton);
+		this.#themeButton         = document.querySelector(selectors.themeButton);
+		this.#resetButton         = document.querySelector(selectors.resetButton);
+		this.#presetsMenuButton   = document.querySelector(selectors.presetsMenuButton);
+		this.#trackSettingsDialog = document.querySelector(selectors.trackSettingsDialog);
+		this.#trackPositionText   = document.querySelector(selectors.trackPositionText);
+		this.#positionSelect      = document.querySelector(selectors.positionSelect);
+		this.#controlsSection     = document.querySelector(selectors.controlsSection);
+
+		const options = Array.from({ length: config.tracksLength - 1 }, (_, i) => new Option(i + 2, i + 1));
 		this.#positionSelect.firstElementChild.after(...options);
 
-		document.addEventListener('click',                 (event) => this.#handleClick(event));
-		this.#ui.container.addEventListener('input',       (event) => this.#handleInput(event));
-		this.#ui.container.addEventListener('change',      (event) => this.#handleChange(event));
-		this.#trackSettings.addEventListener('submit',     (event) => this.#setTrack());
-		this.#trackSettings.addEventListener('command',    (event) => this.#showTrackSettings(event));
-		this.#systemColor.addEventListener('change',       (event) => this.#setTheme(event));
+		document.addEventListener('click',                       (event) => this.#handleClick(event));
+		this.#ui.container.addEventListener('input',             (event) => this.#handleInput(event));
+		this.#ui.container.addEventListener('change',            (event) => this.#handleChange(event));
+		this.#trackSettingsDialog.addEventListener('submit',     (event) => this.#setTrack());
+		this.#trackSettingsDialog.addEventListener('command',    (event) => this.#showTrackSettings(event));
+		this.#systemColor.addEventListener('change',             (event) => this.#setTheme(event));
 		this.#initMediaSession();
 
 		if (!document.startViewTransition) {
@@ -45,7 +71,7 @@ export default class InterfaceControls {
 	#initMediaSession() {
 		navigator.mediaSession.metadata = new MediaMetadata({
 			title: this.#ui.untitled,
-			artist: this.#artist,
+			artist: this.#appTitle.textContent,
 			artwork: [
 				{
 					src: './icons/icon_white-bg_512x512.png',
@@ -70,10 +96,10 @@ export default class InterfaceControls {
 
 		const values = this.#track.dataset;
 		const fields = {
-			bars:   this.#ui.setBars.value,
-			beats:  this.#ui.setBeats.value,
-			steps:  this.#ui.setSteps.value,
-			phrase: this.#ui.setPhrase.value,
+			bars:   this.#barsSelect.value,
+			beats:  this.#beatsSelect.value,
+			steps:  this.#stepsSelect.value,
+			phrase: this.#phraseSelect.value,
 		};
 		const changes = {};
 		for (const [key, newValue] of Object.entries(fields)) {
@@ -94,54 +120,54 @@ export default class InterfaceControls {
 		});
 
 		if (hasChanges) {
-			this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail: { tracks: [{ id: values.index, changes }] } }));
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { tracks: [{ id: values.index, changes }] } }));
 		}
 	}
 
 	async #handleClick(event) {
 		const { target } = event;
-		if (target.name === this.#ui.names.step) {
+		if (target.name === this.#names.step) {
 			this.#changeNote(target);
 		}
 		else if (target === this.#resetButton) {
-			this.#bus.dispatchEvent(new CustomEvent('interface:reset'));
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceReset));
 		}
 		else if (target === this.#ui.startButton) {
 			this.#start();
 		}
-		else if (target === this.#presetsButton) {
+		else if (target === this.#presetsMenuButton) {
 			this.#ui.dialogs.showToast(target.dataset.message);
 		}
-		else if (target === this.#ui.themeButton) {
+		else if (target === this.#themeButton) {
 			this.#changeTheme();
 		}
 		else if (target === this.#skipButton) {
 			this.#skipContent(event);
 		}
-		this.#bus.dispatchEvent(new CustomEvent('interface:userGesture'));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUserGesture));
 	}
 
 	#handleChange({ target }) {
-		if (target === this.#ui.tempo) {
-			this.#bus.dispatchEvent(new CustomEvent('interface:change', { detail: 'tempo' }));
-		} else if (target.name === this.#ui.names.volume) {
-			this.#bus.dispatchEvent(new CustomEvent('interface:change', { detail: 'volumes' }));
+		if (target === this.#ui.tempoSlider) {
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceChange, { detail: 'tempo' }));
+		} else if (target.name === this.#names.volume) {
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceChange, { detail: 'volumes' }));
 		}
 	}
 
 	#changeNote(target) {
 		const change = { sheet: [{ stepIndex: this.#ui.getStepIndex(target), value: Number(target.value) }] };
-		this.#bus.dispatchEvent(new CustomEvent('interface:setStroke', { detail: change }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceSetStroke, { detail: change }));
 	}
 
 	#handleInput({ target }) {
-		if (target.name === this.#ui.names.instrument) {
+		if (target.name === this.#names.instrument) {
 			this.#inputInstrument(target);
 		}
-		else if (target.name === this.#ui.names.volume) {
+		else if (target.name === this.#names.volume) {
 			this.#inputVolume(target);
 		}
-		else if (target === this.#ui.tempo) {
+		else if (target === this.#ui.tempoSlider) {
 			this.#inputTempo(target);
 		}
 	}
@@ -152,7 +178,7 @@ export default class InterfaceControls {
 		const index = this.#ui.getTrackIndex(track);
 		const { bars, beats, steps, phrase } = track.dataset;
 		const position =  this.#ui.tracksOrder.indexOf(index);
-		const isLastTrack = this.#ui.getTrackInstrument(track) === this.#ui.config.defaultInstrument;
+		const isLastTrack = this.#ui.getTrackInstrument(track) === this.#defaultInstrument;
 
 		let option = this.#positionSelect.firstElementChild;
 		let stop = false;
@@ -160,18 +186,18 @@ export default class InterfaceControls {
 			const trackIndex = this.#ui.tracksOrder[option.value];
 			if (trackIndex === undefined) break;
 			const instrument = this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex]);
-			stop = stop || instrument === this.#ui.config.defaultInstrument;
+			stop = stop || instrument === this.#defaultInstrument;
 			option.hidden = isLastTrack ? (option.value | 0) !== position : stop;
 			option = option.nextElementSibling;
 		}
 
 		this.#track = track;
-		this.#trackPosition.textContent = position + 1;
-		this.#positionSelect.selectedIndex = position;
-		this.#ui.setBars.value   = bars;
-		this.#ui.setBeats.value  = beats;
-		this.#ui.setSteps.value  = steps;
-		this.#ui.setPhrase.value = phrase;
+		this.#trackPositionText.textContent = position + 1;
+		this.#positionSelect.selectedIndex  = position;
+		this.#barsSelect.value   = bars;
+		this.#beatsSelect.value  = beats;
+		this.#stepsSelect.value  = steps;
+		this.#phraseSelect.value = phrase;
 	}
 
 	#inputInstrument(target) {
@@ -180,7 +206,7 @@ export default class InterfaceControls {
 		const index = this.#ui.getTrackIndex(track);
 		this.#ui.startViewTransition(() => track.dataset.instrument = value);
 		const detail = { tracks: [ { id:index, changes: { instrument: value } } ] };
-		this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { detail } }));
 	}
 
 	#inputVolume(target) {
@@ -188,18 +214,18 @@ export default class InterfaceControls {
 		const trackIndex = this.#ui.getTrackIndex(track);
 		const value = Number(target.value);
 		const detail = { volumes: [ { id:trackIndex, value } ] };
-		this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { detail } }));
 	}
 
 	#inputTempo(target) {
-		this.#ui.bpm.textContent = target.value;
+		this.#ui.tempoValue.textContent = target.value;
 		const value = Number(target.value);
 		const detail = { tempo: value };
-		this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { detail } }));
 	}
 
 	#start(state = !this.#ui.playing) {
-		this.#bus.dispatchEvent(new CustomEvent('interface:updateData', { detail: { playing: state } }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { playing: state } }));
 	}
 
 	#changeTheme() {
@@ -209,15 +235,15 @@ export default class InterfaceControls {
 		} else {
 			localStorage.theme = theme ? 'dark' : 'light';
 		}
-		this.#applyTheme(theme);
+		InterfaceControls.#applyTheme(theme);
 	}
 
 	#setTheme({ matches }) {
 		if (localStorage.theme !== undefined) return;
-		this.#applyTheme(matches);
+		InterfaceControls.#applyTheme(matches);
 	}
 
-	#applyTheme(theme) {
+	static #applyTheme(theme) {
 		document.startViewTransition(() => {
 			document.documentElement.classList.toggle('dark', theme);
 		});
@@ -225,7 +251,7 @@ export default class InterfaceControls {
 
 	#skipContent(event) {
 		event.preventDefault();
-		this.#controls.focus({ preventScroll: true });
-		this.#controls.scrollIntoView({ behavior: 'smooth' });
+		this.#controlsSection.focus({ preventScroll: true });
+		this.#controlsSection.scrollIntoView({ behavior: 'smooth' });
 	}
 }
