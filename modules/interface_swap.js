@@ -11,17 +11,15 @@ export default class InterfaceSwap {
 	#events;
 	#trashZone;
 	#trashSelector;
-	#tracksLength;
 	#defaultInstrument;
 	#over = new Set();
 
 	constructor({ bus, parent, config }) {
+		this.#ui                = parent;
 		this.#bus               = bus;
 		this.#events            = config.events;
-		this.#ui                = parent;
 		this.#trashSelector     = config.selectors.trashZone;
 		this.#trashZone         = document.querySelector(this.#trashSelector);
-		this.#tracksLength      = config.tracksLength;
 		this.#defaultInstrument = config.defaultInstrument;
 
 		this.#ui.container.addEventListener('dragstart', (event) => this.#handleDragStart(event));
@@ -79,8 +77,9 @@ export default class InterfaceSwap {
 		const sourceIndex = Number(event.dataTransfer.getData('text/plain'));
 
 		if (targetIndex !== null) {
-			const sourcePosition = this.#ui.tracksOrder.indexOf(sourceIndex);
-			const targetPosition = this.#ui.tracksOrder.indexOf(targetIndex);
+			const order = this.#ui.tracksOrder;
+			const sourcePosition = order.indexOf(sourceIndex);
+			const targetPosition = order.indexOf(targetIndex);
 			if (sourcePosition === targetPosition || sourcePosition + 1 === targetPosition) return;
 		}
 
@@ -104,23 +103,15 @@ export default class InterfaceSwap {
 		this.#over.clear();
 	}
 
-	#swapOrder(sourceIndex, targetIndex) {
-		const fromIndex = this.#ui.tracksOrder.indexOf(sourceIndex);
-		const [item] = this.#ui.tracksOrder.splice(fromIndex, 1);
-		const toIndex = targetIndex !== null ? this.#ui.tracksOrder.indexOf(targetIndex) : this.#tracksLength;
-		this.#ui.tracksOrder.splice(toIndex, 0, item);
-	}
-
 	moveTrack(sourceIndex, targetIndex) {
 		if (sourceIndex === targetIndex) return;
 		const draggedTrack = this.#ui.tracks[sourceIndex];
 		const targetTrack  = targetIndex !== null ? this.#ui.tracks[targetIndex] : null;
 		if (draggedTrack.nextElementSibling === targetTrack) return;
 		const trashed = targetIndex === null ? sourceIndex : null;
-		this.#swapOrder(sourceIndex, targetIndex);
 		draggedTrack.parentNode.insertBefore(draggedTrack, targetTrack);
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceMoveTrack, {
-			detail: { trashed, order: [...this.#ui.tracksOrder] }
+			detail: { trashed, order: this.#ui.tracksOrder }
 		}));
 	}
 

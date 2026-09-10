@@ -49,6 +49,7 @@ export default class InterfaceControls {
 		this.#positionSelect.firstElementChild.after(...options);
 
 		document.addEventListener('click',                       (event) => this.#handleClick(event));
+		document.addEventListener('click',                       (event) => this.#userGesture(), { once: true });
 		this.#ui.container.addEventListener('input',             (event) => this.#handleInput(event));
 		this.#ui.container.addEventListener('change',            (event) => this.#handleChange(event));
 		this.#trackSettingsDialog.addEventListener('submit',     (event) => this.#setTrack());
@@ -86,11 +87,11 @@ export default class InterfaceControls {
 	}
 
 	#setTrack() {
-		const sourceIndex = this.#ui.getTrackIndex(this.#track);
+		const trackIndex = this.#ui.getTrackIndex(this.#track);
 		const newPosition = parseInt(this.#positionSelect.value);
 
 		if (newPosition === -1) {
-			this.#ui.swap.trashTrack(sourceIndex);
+			this.#ui.swap.trashTrack(trackIndex);
 			return;
 		}
 
@@ -106,25 +107,26 @@ export default class InterfaceControls {
 			if (values[key] !== newValue) changes[key] = Number(newValue);
 		}
 		const hasChanges  = Object.keys(changes).length > 0;
-		const currentPosition = this.#ui.tracksOrder.indexOf(sourceIndex);
+		const order = this.#ui.tracksOrder;
+		const currentPosition = order.indexOf(trackIndex);
 		const targetIndex = newPosition > -1 && newPosition !== currentPosition
 			? (newPosition > currentPosition
-				? this.#ui.tracksOrder[newPosition + 1] ?? null
-				: this.#ui.tracksOrder[newPosition] ?? null)
+				? order[newPosition + 1] ?? null
+				: order[newPosition] ?? null)
 			: null;
 		if (!hasChanges && targetIndex === null) return;
 
 		this.#ui.startViewTransition(() => {
-			if (targetIndex !== null) this.#ui.swap.moveTrack(sourceIndex, targetIndex);
+			if (targetIndex !== null) this.#ui.swap.moveTrack(trackIndex, targetIndex);
 			if (hasChanges) Object.assign(values, changes);
 		});
 
 		if (hasChanges) {
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { tracks: [{ id: values.index, changes }] } }));
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { tracks: [{ id: trackIndex, changes }] } }));
 		}
 	}
 
-	async #handleClick(event) {
+	#handleClick(event) {
 		const { target } = event;
 		if (target.name === this.#names.step) {
 			this.#changeNote(target);
@@ -144,6 +146,9 @@ export default class InterfaceControls {
 		else if (target === this.#skipButton) {
 			this.#skipContent(event);
 		}
+	}
+
+	#userGesture() {
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUserGesture));
 	}
 
@@ -177,13 +182,15 @@ export default class InterfaceControls {
 		const track = this.#ui.getTrack(source);
 		const index = this.#ui.getTrackIndex(track);
 		const { bars, beats, steps, phrase } = track.dataset;
-		const position =  this.#ui.tracksOrder.indexOf(index);
+
+		const order    = this.#ui.tracksOrder;
+		const position = order.indexOf(index);
 		const isLastTrack = this.#ui.getTrackInstrument(track) === this.#defaultInstrument;
 
 		let option = this.#positionSelect.firstElementChild;
 		let stop = false;
 		while (option) {
-			const trackIndex = this.#ui.tracksOrder[option.value];
+			const trackIndex = order[option.value];
 			if (trackIndex === undefined) break;
 			const instrument = this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex]);
 			stop = stop || instrument === this.#defaultInstrument;

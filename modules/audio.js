@@ -20,8 +20,9 @@ export class Audio {
 	#emptyStroke;
 	#hiddenPlayDuration;
 
-	#worker           = null;
-	#isReady          = false;
+	#worker;
+	#workerReady;
+	#configured       = false;
 	#wakeLock         = null;
 	#playTimer        = null;
 	#audioReady       = null;
@@ -29,9 +30,8 @@ export class Audio {
 	#instruments      = [];
 	#lastNoteTime     = 0;
 	#activeSources    = new Set();
-	#pendingMessages  = [];
 
-	constructor({ bus, config }) {
+	constructor({ bus, config, initial = {} }) {
 		this.#bus                 = bus;
 		this.#events              = config.events;
 		this.#maxGain             = config.maxGain;
@@ -49,19 +49,15 @@ export class Audio {
 		this.#bus.addEventListener(this.#events.interfacePresetSelected, () => this.#restart());
 		document.addEventListener('visibilitychange',         () => this.#handleVisibilityChange());
 
-		queueMicrotask(() => {
-			this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
-			this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
+		this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
+		this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
 
-			this.#configureWorker(config);
-			this.#isReady = true;
-			this.#flushPendingMessages();
+		this.#workerReady = this.#configureWorker(config, initial);
 
-			this.#soundBytes = this.#fetchInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
+		this.#soundBytes = this.#fetchInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
 
-			this.#defer(() => this.#ensureAudio());
-			this.#defer(() => this.#ensureAudioStream());
-		});
+		this.#defer(() => this.#ensureAudio());
+		this.#defer(() => this.#ensureAudioStream());
 	}
 
 	#defer(task) {
@@ -70,9 +66,11 @@ export class Audio {
 		else setTimeout(task, 500);
 	}
 
-	#configureWorker(config) {
+	async #configureWorker(config, initial) {
+		const { instruments } = await config.instrumentsLibraryReady;
+
 		const instrumentsStrokes = Object.fromEntries(
-			config.instrumentsLibrary.instruments.map(({ id, strokes }) => [id, strokes.length])
+			instruments.map(({ id, strokes }) => [id, strokes.length])
 		);
 
 		this.#worker.postMessage({
@@ -95,6 +93,15 @@ export class Audio {
 				instrumentsStrokes,
 			},
 		});
+
+		this.#configured = true;
+
+		this.#updateData(initial, true);
+	}
+
+	#post(message) {
+		if (this.#configured) this.#worker.postMessage(message);
+		else this.#workerReady.then(() => this.#worker.postMessage(message));
 	}
 
 	#ensureAudio() {
@@ -211,7 +218,7 @@ export class Audio {
 	async #start() {
 		await this.#startAudio();
 		this.#ensureAudioStream().play().catch(() => {});
-		this.#worker.postMessage({ action: 'start', payload: this.#audioContext.currentTime });
+		this.#post({ action: 'start', payload: this.#audioContext.currentTime });
 		this.#wakeLockRequest();
 	}
 
@@ -224,12 +231,14 @@ export class Audio {
 
 	#stop() {
 		if (!this.#audioContext) return;
-		this.#worker.postMessage({ action: 'stop', payload: this.#audioContext.currentTime});
+		this.#post({ action: 'stop', payload: this.#audioContext.currentTime });
 		this.#muteSchedulesNotes();
 		this.#stopAudio();
 	}
 
 	#stopAudio() {
+		clearTimeout(this.#playTimer);
+		this.#playTimer = null;
 		this.#wakeLockRelease();
 		if (this.#audioStream) {
 			this.#audioStream.pause();
@@ -239,11 +248,11 @@ export class Audio {
 	}
 
 	#restart() {
-		this.#worker.postMessage({ action: 'restart' });
+		this.#post({ action: 'restart' });
 	}
 
 	#reset() {
-		this.#worker.postMessage({ action: 'reset' });
+		this.#post({ action: 'reset' });
 		this.#muteSchedulesNotes();
 	}
 
@@ -279,38 +288,27 @@ export class Audio {
 
 	async #setStroke(payload) {
 		await this.#startAudio();
-		this.#worker.postMessage({ action: 'setStroke', payload });
+		this.#post({ action: 'setStroke', payload });
 	}
 
 	#change(payload) {
-		this.#worker.postMessage({ action: 'change', payload });
+		this.#post({ action: 'change', payload });
 	}
 
 	#moveTrack(indexes) {
-		this.#worker.postMessage({ action: 'moveTrack', payload: indexes });
-	}
-
-	#flushPendingMessages() {
-		const pending = this.#pendingMessages;
-		this.#pendingMessages = [];
-		pending.forEach(({ changes, sendState }) => this.#updateData(changes, sendState));
+		this.#post({ action: 'moveTrack', payload: indexes });
 	}
 
 	#updateData(changes, sendState) {
 		const { tempo, sheet, tracks, volumes, playing } = changes;
 		if ((tempo ?? sheet ?? tracks ?? volumes ?? playing) === undefined) return;
 
-		if (!this.#isReady || !this.#worker) {
-			this.#pendingMessages.push({ changes, sendState });
-			return; 
-		}
-
 		if (playing === true) this.#start();
 		else if (playing === false) this.#stop();
 
 		const payload = { tempo, sheet, tracks, volumes };
 		payload.sendState = sendState === true;
-		this.#worker.postMessage({ action: 'updateData', payload });
+		this.#post({ action: 'updateData', payload });
 
 		if (volumes) this.#updateGains(volumes);
 	}

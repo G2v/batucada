@@ -16,8 +16,8 @@ function cleanTemplates(root) {
 	}
 }
 
-export function buildStyles({ instrumentsLibrary, selectors }) {
-	const [first, ...rest] = instrumentsLibrary.instruments;
+function instrumentRules(instruments, selectors) {
+	const [first, ...rest] = instruments;
 	let rules = `[data-instrument] { --icon-default: url('${first.strokes[0].icon}') }`;
 	let maxStrokes = 0;
 
@@ -29,22 +29,24 @@ export function buildStyles({ instrumentsLibrary, selectors }) {
 	for (let j = 1; j <= maxStrokes; j++) {
 		rules += `${selectors.stepButton}[value="${j}"] { --current-icon: var(--icon-${j}, var(--icon-default)) }`;
 	}
-
-	const stylesheet = new CSSStyleSheet();
-	stylesheet.replaceSync(rules);
-	document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+	return rules;
 }
 
-export function buildTracks(config, template, trackList) {
-	const { tracksLength, defaultInstrument, instrumentsLibrary, selectors, resolution } = config;
+export function buildStyles({ instrumentsLibraryReady, selectors }) {
+	const stylesheet = new CSSStyleSheet();
+	document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+
+	return instrumentsLibraryReady.then(({ instruments }) => {
+		stylesheet.replaceSync(instrumentRules(instruments, selectors));
+	});
+}
+
+export function buildTracks(config, template) {
+	const { tracksLength, selectors, resolution } = config;
 
 	const masterTrack = template.cloneNode(true);
 	const firstBar    = masterTrack.querySelector(selectors.bar);
 	const firstBeat   = firstBar.querySelector(selectors.beat);
-
-	masterTrack.querySelector(selectors.instrumentSelect).append(
-		...instrumentsLibrary.instruments.slice(1).map(({ name, id }) => new Option(name, id))
-	);
 
 	cleanTemplates(firstBar);
 	cloneIndexed(firstBeat, resolution.maxBeats, firstBar);
@@ -56,20 +58,30 @@ export function buildTracks(config, template, trackList) {
 
 	for (let index = 0; index < tracksLength; index++) {
 		const track  = masterTrack.cloneNode(true);
-		const select = track.querySelector(selectors.instrumentSelect);
 		const steps  = track.querySelectorAll(selectors.stepButton);
 
 		track.dataset.index = index;
-		select.value = defaultInstrument;
 		steps[0].tabIndex = 0;
 
 		nodes.tracks.push(track);
-		nodes.instruments.push(select);
+		nodes.instruments.push(track.querySelector(selectors.instrumentSelect));
 		nodes.volumes.push(track.querySelector(selectors.volumeSlider));
 		nodes.steps.push(...steps);
 		fragment.appendChild(track);
 	}
 
-	trackList.appendChild(fragment);
-	return nodes;
+	return { nodes, fragment };
+}
+
+export function fillInstruments(config, nodes) {
+	const instrumentKey = config.trackKeys.instrument;
+
+	return config.instrumentsLibraryReady.then(({ instruments }) => {
+		const values = instruments.slice(1);
+
+		nodes.instruments.forEach((select, index) => {
+			select.append(...values.map(({ name, id }) => new Option(name, id)));
+			select.value = nodes.tracks[index].dataset[instrumentKey];
+		});
+	});
 }

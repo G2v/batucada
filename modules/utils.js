@@ -41,7 +41,7 @@ export async function downloadFile(filename, content) {
 		if (error.name === 'AbortError') return false;
 		const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
 		Object.assign(document.createElement('a'), { download: filename, href: url }).click();
-		URL.revokeObjectURL(url);
+		setTimeout(() => URL.revokeObjectURL(url), 0);
 		return true;
 	}
 }

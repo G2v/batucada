@@ -303,6 +303,10 @@ tbody {
 		animation: reseted 250ms ease-out forwards;
 	}
 
+	&:not([data-instrument="0"]) .instrument span {
+		visibility: hidden;
+	}
+
 	&[data-instrument="0"] ~ .track,
 		&[data-bars="1"] .bar:nth-child(n+2),
 		&[data-bars="2"] .bar:nth-child(n+3),
@@ -507,7 +511,7 @@ tbody {
 				mask-position: center;
 				mask-repeat: no-repeat;
 				background-color: white;
-				mask-image: var(--current-icon);
+				mask-image: var(--current-icon, linear-gradient(#0000, #0000));
 			}
 		}
 
@@ -1504,19 +1508,25 @@ body > footer {
 		</dialog>
 	</dialog>
 	<script type="module">
-		import { config }     from './modules/build-config.js';
-		import { Audio }      from './modules/audio.js';
-		import { Presets }    from './modules/presets.js';
-		import { Navigation } from './modules/navigation.js';
-		import { Interface }  from './modules/interface.js';
-		import { SwClient }   from './modules/sw-client.js';
+		import { config }        from './modules/build-config.js';
+		import { decodeInitial } from './modules/navigation_decode.js';
+		import { Interface }     from './modules/interface.js';
+		import { Presets }       from './modules/presets.js';
+		import { Audio }         from './modules/audio.js';
+		import { Navigation }    from './modules/navigation.js';
+		import { SwClient }      from './modules/sw-client.js';
 
-		const params = { bus : new EventTarget(), config };
+		const initial = decodeInitial(config, new URLSearchParams(location.search));
+		const params = {
+			bus: new EventTarget(),
+			config,
+			initial,
+		};
 
 		new Interface(params);
+		new Presets(params);
 		new Audio(params);
 		new Navigation(params);
-		new Presets(params);
 		new SwClient(params);
 	</script>
 </body>

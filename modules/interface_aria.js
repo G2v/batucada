@@ -1,4 +1,3 @@
-
 export default class InterfaceAria {
 	static #bpmToken         = 'bpm';
 	static #volumeToken      = 'volume';
@@ -20,11 +19,12 @@ export default class InterfaceAria {
 	#defaultInstrument;
 	#volumeRatioPerCent;
 
+	#ready;
 	#rowNodes   = [];
 	#sheetNodes = [];
 	#templates  = {};
 
-	constructor({ bus, parent, config }) {
+	constructor({ bus, parent, config, initial = {} }) {
 		this.#ui                = parent;
 		this.#events            = config.events;
 		this.#names             = config.names;
@@ -38,22 +38,21 @@ export default class InterfaceAria {
 		bus.addEventListener(this.#events.interfaceUpdateData, ({ detail }) => this.update(detail));
 		this.#ui.trackList.addEventListener('keydown', (event) => this.#navigate(event));
 		this.#ui.trackList.addEventListener('focusin', (event) => this.#syncTabIndex(event));
+
+		this.#ready = config.instrumentsLibraryReady.then(({ instruments }) => {
+			this.#initNames(instruments);
+			this.#update(initial);
+		});
 	}
 
-	#init({ instrumentsLibrary, tracksLength, selectors }) {
+	#init({ tracksLength, selectors }) {
 		const track      = this.#ui.trackTemplate;
 		const row        = track.querySelector(InterfaceAria.#scopeRowSelector);
 		const steps      = Array.from(track.querySelectorAll(selectors.stepButton));
 		const volume     = track.querySelector(selectors.volumeSlider);
 		const instrument = track.querySelector(selectors.instrumentSelect);
 
-		const { instruments } = instrumentsLibrary;
-
 		this.#trackInstruments = new Array(tracksLength).fill(this.#defaultInstrument);
-		this.#instrumentNames  = Object.fromEntries(instruments.map(({ id, name }) => [id, name]));
-		this.#strokeNames      = Object.fromEntries(
-			instruments.map(({ id, strokes }) => [id, strokes.map(({ name }) => name)])
-		);
 
 		this.#templates = {
 			rowLabel:        InterfaceAria.#readTemplate(row),
@@ -72,6 +71,13 @@ export default class InterfaceAria {
 			this.#rowNodes[id]   = container.querySelector(InterfaceAria.#scopeRowSelector);
 			this.#sheetNodes[id] = container.querySelector(InterfaceAria.#toolbarSelector);
 		});
+	}
+
+	#initNames(instruments) {
+		this.#instrumentNames = Object.fromEntries(instruments.map(({ id, name }) => [id, name]));
+		this.#strokeNames     = Object.fromEntries(
+			instruments.map(({ id, strokes }) => [id, strokes.map(({ name }) => name)])
+		);
 	}
 
 	static #readTemplate(element) {
@@ -206,7 +212,11 @@ export default class InterfaceAria {
 		newTarget.tabIndex = 0;
 	}
 
-	update({ tempo, sheet, tracks, volumes, playing }) {
+	update(changes) {
+		this.#ready.then(() => this.#update(changes));
+	}
+
+	#update({ tempo, sheet, tracks, volumes, playing }) {
 		if (tempo   !== undefined) this.#tempo   = tempo;
 		if (tracks  !== undefined) this.#tracks  = tracks;
 		/* sheet needs to be set after tracks */

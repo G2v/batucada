@@ -1,4 +1,4 @@
-import { buildStyles, buildTracks } from './build-dom.js';
+import { buildStyles, buildTracks, fillInstruments } from './build-dom.js';
 
 export class Interface {
 	static #modules = Object.freeze([
@@ -12,13 +12,11 @@ export class Interface {
 		{ name: 'app',         path: './interface_app.js' },
 	]);
 
+	#untitled;
 	#selectors;
 	#resolution;
 	#instrumentKey;
 	#trackProperties;
-
-	#untitled;
-	#tracksOrder;
 
 	#nodes           = {};
 	#ready           = {};
@@ -28,15 +26,13 @@ export class Interface {
 	#presetsDate     = null;
 	#headTitlePrefix = `${document.title} - `;
 
-	constructor({ bus, config }) {
+	constructor({ bus, config, initial = {} }) {
 		const events             = config.events;
 		this.#selectors          = config.selectors;
 		this.#resolution         = config.resolution;
 		this.#instrumentKey      = config.trackKeys.instrument;
 		this.#trackProperties    = new Set(Object.values(config.trackKeys));
-		this.#tracksOrder        = Array.from({ length: config.tracksLength }, (_, i) => i);
 
-		this.#ready.dom = new Promise(resolve => this.#resolvers.dom = resolve);
 		Interface.#modules.forEach(({ name }) => {
 			this.#ready[name] = new Promise(resolve => this.#resolvers[name] = resolve);
 		});
@@ -50,14 +46,25 @@ export class Interface {
 		bus.addEventListener(events.navigationDecoded,    ({ detail }) => this.#update(detail));
 		bus.addEventListener(events.navigationCloseModal, ({ detail }) => this.#instances.dialogs?.closeModal(detail));
 
-		queueMicrotask(() => {
-			buildStyles(config);
-			const nodes = buildTracks(config, this.trackTemplate, this.trackList);
-			Object.assign(this.#nodes, nodes);
-			document.title = this.#headTitlePrefix + this.untitled;
-			this.#resolvers.dom();
-			this.#loadModules({ bus, config });
-		});
+		this.#build({ bus, config, initial });
+	}
+
+	#build(params) {
+		const { config, initial } = params;
+
+		buildStyles(config);
+
+		const { nodes, fragment } = buildTracks(config, this.trackTemplate);
+		Object.assign(this.#nodes, nodes);
+
+		document.title = this.#headTitlePrefix + this.untitled;
+		this.#apply(initial);
+		this.trackList.appendChild(fragment);
+		document.documentElement.style.removeProperty('--tracks-count');
+
+		fillInstruments(config, this.#nodes);
+
+		this.#loadModules(params);
 	}
 
 	#loadModules(params) {
@@ -80,7 +87,6 @@ export class Interface {
 				}
 			}
 		}
-		document.documentElement.style.removeProperty('--tracks-count');
 	}
 
 	set #sheet(values) {
@@ -118,8 +124,7 @@ export class Interface {
 		this.presetsSelect.selectedIndex = index;
 	}
 
-	async #update({ tempo, title, sheet, tracks, volumes, presets, index }) {
-		await this.#ready.dom;
+	#apply({ tempo, title, sheet, tracks, volumes, presets, index }) {
 		if (tempo   !== undefined) this.#tempo   = tempo;
 		if (title   !== undefined) this.#title   = title;
 		if (sheet   !== undefined) this.#sheet   = sheet;
@@ -127,17 +132,24 @@ export class Interface {
 		if (volumes !== undefined) this.#volumes = volumes;
 		if (presets !== undefined) this.#presets = presets;
 		if (index   !== undefined) this.#index   = index;
+	}
 
+	async #updateAria({ tempo, title, sheet, tracks, volumes }) {
 		if (
-			tempo   !== undefined ||
-			title   !== undefined ||
-			sheet   !== undefined ||
-			tracks  !== undefined ||
-			volumes !== undefined
-		) {
-			await this.#ready.aria;
-			this.#instances.aria.update({ tempo, sheet, tracks, volumes });
-		}
+			tempo   === undefined &&
+			title   === undefined &&
+			sheet   === undefined &&
+			tracks  === undefined &&
+			volumes === undefined
+		) return;
+
+		await this.#ready.aria;
+		this.#instances.aria.update({ tempo, sheet, tracks, volumes });
+	}
+
+	#update(changes) {
+		this.#apply(changes);
+		this.#updateAria(changes);
 	}
 
 	getStepIndex(step) {
@@ -190,5 +202,5 @@ export class Interface {
 	get playing()       { return this.#playing; }
 	get dialogs()       { return this.#instances.dialogs; }
 	get presetsDate()   { return this.#presetsDate; }
-	get tracksOrder()   { return this.#tracksOrder; }
+	get tracksOrder()   { return [...this.trackList.children].map(track => track.dataset.index | 0); }
 }

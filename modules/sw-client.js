@@ -1,4 +1,3 @@
-
 export class SwClient {
 	#bus;
 	#events;
@@ -23,7 +22,6 @@ export class SwClient {
 
 	async #init() {
 		this.#registration = await navigator.serviceWorker.register('./sw.js', { type: 'module' });
-		this.#checkUpdate();
 		this.#registration.addEventListener('updatefound', () => {
 			const newWorker = this.#registration.installing;
 			newWorker.addEventListener('statechange', () => {
@@ -34,18 +32,21 @@ export class SwClient {
 		});
 	}
 
-	#findUpdate() {
-		this.#registration?.active.postMessage({ action: 'findUpdate' });
+	get #hasUpdate() {
+		// Si un service worker est en attente alors qu'un service worker est déja actif,
+		// alors il s'agit une mise à jour.
+		return Boolean(this.#registration?.waiting && this.#registration.active);
 	}
 
 	#checkUpdate() {
-		// Si un service worker est en attente alors qu'un service worker est déja actif,
-		// alors il s'agit une mise à jour.
-		if (this.#registration.waiting && this.#registration.active) {
-			queueMicrotask(() => {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.swClientNewVersion));
-			});
-		}
+		if (this.#hasUpdate) this.#bus.dispatchEvent(new CustomEvent(this.#events.swClientNewVersion));
+	}
+
+	async #findUpdate() {
+		this.#registration ??= await navigator.serviceWorker.ready;
+		this.#checkUpdate();
+		if (this.#hasUpdate) return;
+		this.#registration.active.postMessage({ action: 'findUpdate' });
 	}
 
 	#readMessage({ type }) {
@@ -55,7 +56,7 @@ export class SwClient {
 	}
 
 	#install() {
-		const { waiting } = this.#registration;
+		const waiting = this.#registration?.waiting;
 		if (waiting) {
 			waiting.postMessage({ action: 'skipWaiting' });
 			return;

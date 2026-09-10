@@ -114,13 +114,23 @@ const trackKeys = Object.freeze({
 	instrument: 'instrument',
 });
 
-const instrumentsLibrary = await (async () => {
-	const url    = new URL(core_config.instrumentsMetadataFile, location.href).href;
-	const cache  = await caches.open(core_config.dataCache);
-	const cached = await cache.match(url);
-	if (cached) return cached.json();
+const trackFormatSeparator  = '-';
+const trackFormatAllocation = Object.freeze({ phrase: 6, bars: 8, beats: 4, steps: 5, reserved: 4 });
+const formatDigits          = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+
+const instrumentsLibraryReady = (async () => {
+	const url = new URL(core_config.instrumentsMetadataFile, location.href).href;
+	try {
+		const cache  = await caches.open(core_config.dataCache);
+		const cached = await cache.match(url);
+		if (cached) return cached.json();
+	}
+	catch {}
 	return (await fetch(url)).json();
 })();
+
+instrumentsLibraryReady.catch(() => {});
 
 const query         = selector => document.querySelector(selector);
 const optionsValues = node => Array.from(node.options, option => option.value | 0);
@@ -138,6 +148,22 @@ const maxSteps      = Math.max(...stepsValues);
 
 const { bars, beats, steps, phrase, instrument } = trackTemplate.dataset;
 
+const defaultTempo      = query(selectors.tempoSlider).value | 0;
+const defaultGain       = volumeSlider.value | 0;
+const maxGain           = volumeSlider.max   | 0;
+const defaultBars       = bars       | 0;
+const defaultBeats      = beats      | 0;
+const defaultSteps      = steps      | 0;
+const defaultPhrase     = phrase     | 0;
+const defaultInstrument = instrument | 0;
+
+
+const indexFrom = (values, defaultValue) => Object.freeze(
+	[defaultValue, ...values.filter(value => value !== defaultValue)]
+);
+
+const defaultVolume = formatDigits[defaultGain];
+
 export const config = Object.freeze({
 	...app_config,
 	...core_config,
@@ -145,25 +171,33 @@ export const config = Object.freeze({
 	events,
 	trackKeys,
 	selectors,
-	emptyStroke:       0,
-	resolution:        Object.freeze({
-		beat:  maxSteps,
-		bar:   maxSteps * maxBeats,
-		track: maxSteps * maxBeats * maxBars,
-		maxBars, maxBeats,
-	}),
-	maxGain:           volumeSlider.max | 0,
-	defaultTempo:      query(selectors.tempoSlider).value | 0,
-	defaultGain:       volumeSlider.value | 0,
-	defaultBars:       bars   | 0,
-	defaultBeats:      beats  | 0,
-	defaultSteps:      steps  | 0,
-	defaultPhrase:     phrase | 0,
-	defaultInstrument: instrument | 0,
 	barsValues,
 	beatsValues,
 	stepsValues,
 	phraseValues,
-	maxPhrase: Math.max(...phraseValues),
-	instrumentsLibrary,
+	instrumentsLibraryReady,
+	emptyStroke:           0,
+	resolution:            {
+		beat:  maxSteps,
+		bar:   maxSteps * maxBeats,
+		track: maxSteps * maxBeats * maxBars,
+		maxBars, maxBeats,
+	},
+	maxGain,
+	maxPhrase:             Math.max(...phraseValues),
+	defaultTempo,
+	defaultGain,
+	defaultBars,
+	defaultBeats,
+	defaultSteps,
+	defaultPhrase,
+	defaultInstrument,
+	defaultVolume,
+	barsIndex:             indexFrom(barsValues,   defaultBars),
+	beatsIndex:            indexFrom(beatsValues,  defaultBeats),
+	stepsIndex:            indexFrom(stepsValues,  defaultSteps),
+	phraseIndex:           indexFrom(phraseValues, defaultPhrase),
+	trackFormatSeparator,
+	trackFormatAllocation,
+	formatDigits,
 });

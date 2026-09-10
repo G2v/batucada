@@ -24,7 +24,7 @@ self.onmessage = ({ data }) => {
 		case 'stop':          stop(); break;
 		case 'restart':       restart(); break;
 		case 'reset':         reset(messages); break;
-		case 'change':        pushMessage('changed', [payload], messages); break;
+		case 'change':        pushMessage('changed', [payload], messages, transferables); break;
 		case 'setStroke':     setStroke(payload, messages, transferables); break;
 		case 'updateData':    updateData(payload, messages, transferables); break;
 		case 'moveTrack':     moveTrack(payload, messages); break;
@@ -78,7 +78,7 @@ function stop() {
 function scheduler(nextTickTime) {
 	let noteCount = 0;
 	const secondsPerBar = 60 / tempo;
-	const ticksBuffer = new Float64Array(tracks.length * config.resolution.track * 5);
+	const ticksBuffer = new Float64Array(tracks.length * config.resolution.beat * 5);
 
 	const currentPhraseBeats = tracks
 		.filter(track => track.active && track.phrase === phraseCounter)

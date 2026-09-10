@@ -2,6 +2,8 @@ import { fetchFromCache, downloadFile, getFileContent, writeData } from './utils
 
 export default class InterfaceInstruments {
 	static #format = 1;
+	static #maxStrokes = 9;
+	static #maxInstruments = 60;
 
 	#ui;
 	#bus;
@@ -11,7 +13,7 @@ export default class InterfaceInstruments {
 	#instrumentsLibraryName;
 	#instrumentsRestoreButton;
 	#importConfirmDialog;
-	#instrumentsLibrary;
+	#instrumentsLibraryReady;
 	#instrumentsSoundsFile;
 	#instrumentsMetadataFile;
 	#pendingImport = null;
@@ -21,7 +23,7 @@ export default class InterfaceInstruments {
 		this.#events                  = config.events;
 		this.#ui                      = parent;
 		this.#dataCache               = config.dataCache;
-		this.#instrumentsLibrary      = config.instrumentsLibrary;
+		this.#instrumentsLibraryReady = config.instrumentsLibraryReady;
 		this.#instrumentsSoundsFile   = config.instrumentsSoundsFile;
 		this.#instrumentsMetadataFile = config.instrumentsMetadataFile;
 
@@ -47,7 +49,8 @@ export default class InterfaceInstruments {
 	}
 
 	async #updateLibraryName() {
-		this.#instrumentsLibraryName.textContent = `${this.#instrumentsLibrary.name} ${this.#instrumentsLibrary.version}`;
+		const library = await this.#instrumentsLibraryReady;
+		this.#instrumentsLibraryName.textContent = `${library.name} ${library.version}`;
 		const cache = await caches.open(this.#dataCache);
 		const response = await cache.match(this.#instrumentsMetadataFile);
 		this.#instrumentsRestoreButton.disabled = !response;
@@ -66,7 +69,7 @@ export default class InterfaceInstruments {
 	}
 
 	async #instrumentsExport() {
-		const library = structuredClone(this.#instrumentsLibrary);
+		const library = structuredClone(await this.#instrumentsLibraryReady);
 		const response = await fetchFromCache(this.#dataCache, this.#instrumentsSoundsFile);
 		const sounds = await response.json();
 		library.instruments.shift();
@@ -75,16 +78,21 @@ export default class InterfaceInstruments {
 			instrument.strokes = instrument.strokes.map((stroke, i) => ({ ...stroke, sound: instrumentSounds[i] }));
 		});
 		const content = JSON.stringify(library, null, 2);
-		const filename = `instruments-${this.#instrumentsLibrary.name}-${this.#instrumentsLibrary.version}.json`;
+		const filename = `instruments-${library.name}-${library.version}.json`;
 		if (await downloadFile(filename, content)) this.#instrumentsDialog.close();
 	}
 
 	async #instrumentsRestore() {
 		document.body.inert = true;
-		const cache = await caches.open(this.#dataCache);
-		await cache.delete(this.#instrumentsSoundsFile);
-		await cache.delete(this.#instrumentsMetadataFile);
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
+		try {
+			const cache = await caches.open(this.#dataCache);
+			await cache.delete(this.#instrumentsSoundsFile);
+			await cache.delete(this.#instrumentsMetadataFile);
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
+		}
+		catch {
+			document.body.inert = false;
+		}
 	}
 
 	async #libraryCheck(messages) {
@@ -103,16 +111,14 @@ export default class InterfaceInstruments {
 			const audioContext = new OfflineAudioContext(1, 1, 44100);
 			const ids = new Set();
 			const validationPromises = data.instruments.flatMap((item, index) => {
-				if (item.id == null)  throw new Error(`Instrument ${index}: invalid id`);
-				if (item.id < 0)      throw new Error(`Instrument ${index}: invalid id`);
-				if (item.id === 0)    throw new Error(`Instrument ${index}: id 0 is reserved`);
-				if (item.id > 60)     throw new Error(`Instrument ${index}: id greater than 60`);
-				if (ids.has(item.id)) throw new Error(`Instrument ${index}: duplicated id`);
-				if (!item.name)       throw new Error(`Instrument ${index}: missing name`);
+				if (!Number.isInteger(item.id))                                throw new Error(`Instrument ${index}: invalid id`);
+				if (item.id === 0)                                             throw new Error(`Instrument ${index}: id 0 is reserved`);
+				if (item.id > InterfaceInstruments.#maxInstruments)            throw new Error(`Instrument ${index}: id greater than ${InterfaceInstruments.#maxInstruments}`);
+				if (ids.has(item.id))                                          throw new Error(`Instrument ${index}: duplicated id`);
+				if (!item.name)                                                throw new Error(`Instrument ${index}: missing name`);
+				if (!Array.isArray(item.strokes) || item.strokes.length === 0) throw new Error(`Instrument ${index}: invalid strokes`);
+				if (item.strokes.length > InterfaceInstruments.#maxStrokes)    throw new Error(`Instrument ${index}: more than ${InterfaceInstruments.#maxStrokes} strokes`);
 				ids.add(item.id);
-				if (!Array.isArray(item.strokes) || item.strokes.length === 0) {
-					throw new Error(`Instrument ${index}: invalid strokes`);
-				}
 				return item.strokes.flatMap((stroke, i) => {
 					const fail = (message) => new Error(`Instrument ${index} → stroke ${i}: ${message}`);
 					if (!stroke || typeof stroke !== 'object') throw fail('invalid stroke');
@@ -132,7 +138,8 @@ export default class InterfaceInstruments {
 			data.instruments.forEach(instrument => {
 				instrument.strokes = instrument.strokes.map(({ sound, ...stroke }) => stroke);
 			});
-			const defaultInstrument = structuredClone(this.#instrumentsLibrary.instruments[0]);
+			const currentLibrary = await this.#instrumentsLibraryReady;
+			const defaultInstrument = structuredClone(currentLibrary.instruments[0]);
 			const response = await fetchFromCache(this.#dataCache, this.#instrumentsSoundsFile);
 			const currentSounds = await response.json();
 			data.instruments.unshift(defaultInstrument);
@@ -150,9 +157,14 @@ export default class InterfaceInstruments {
 
 	async #instrumentsImport() {
 		document.body.inert = true;
-		await writeData(this.#dataCache, this.#instrumentsSoundsFile, this.#pendingImport.sounds);
-		await writeData(this.#dataCache, this.#instrumentsMetadataFile, this.#pendingImport.metadata);
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
+		try {
+			await writeData(this.#dataCache, this.#instrumentsSoundsFile, this.#pendingImport.sounds);
+			await writeData(this.#dataCache, this.#instrumentsMetadataFile, this.#pendingImport.metadata);
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
+		}
+		catch {
+			document.body.inert = false;
+		}
 	}
 
 	static async #validateAudio(dataUrl, audioContext) {
