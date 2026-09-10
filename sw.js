@@ -29,6 +29,7 @@ const assets = [
 	'./modules/interface_presets.js',
 	'./modules/interface_swap.js',
 	'./modules/navigation.js',
+	'./modules/navigation_decode.js',
 	'./modules/navigation_worker.js',
 	'./modules/presets.js',
 	'./modules/utils.js',
