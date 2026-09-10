@@ -1,4 +1,4 @@
-import { fetchFromCache } from './utils.js';
+import { defer, fetchFromCache } from './utils.js';
 
 const decodeBase64 = Uint8Array.fromBase64
 	? (base64) => Uint8Array.fromBase64(base64)
@@ -56,19 +56,12 @@ export class Audio {
 
 		this.#soundBytes = this.#fetchInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
 
-		this.#defer(() => this.#ensureAudio());
-		this.#defer(() => this.#ensureAudioStream());
-	}
-
-	#defer(task) {
-		if (globalThis.scheduler?.postTask) scheduler.postTask(task, { priority: 'background' }).catch(() => {});
-		else if ('requestIdleCallback' in window) requestIdleCallback(task, { timeout: 3000 });
-		else setTimeout(task, 500);
+		defer(() => this.#ensureAudio());
+		defer(() => this.#ensureAudioStream());
 	}
 
 	async #configureWorker(config, initial) {
 		const { instruments } = await config.instrumentsLibraryReady;
-
 		const instrumentsStrokes = Object.fromEntries(
 			instruments.map(({ id, strokes }) => [id, strokes.length])
 		);
@@ -95,7 +88,6 @@ export class Audio {
 		});
 
 		this.#configured = true;
-
 		this.#updateData(initial, true);
 	}
 

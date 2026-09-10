@@ -1,3 +1,5 @@
+import { defer } from './utils.js';
+
 export class SwClient {
 	#bus;
 	#events;
@@ -12,12 +14,7 @@ export class SwClient {
 		this.#bus.addEventListener(this.#events.interfaceInstall,     ({ detail }) => this.#install(detail));
 		this.#bus.addEventListener(this.#events.interfaceFindUpdate,  () => this.#findUpdate());
 
-		if ('requestIdleCallback' in window) {
-			requestIdleCallback(() => this.#init());
-		} else {
-			//fallback pour Safari
-			setTimeout(() => this.#init(), 0);
-		}
+		defer(() => this.#init());
 	}
 
 	async #init() {

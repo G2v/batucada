@@ -53,6 +53,7 @@ export default class InterfaceInstruments {
 		this.#instrumentsLibraryName.textContent = `${library.name} ${library.version}`;
 		const cache = await caches.open(this.#dataCache);
 		const response = await cache.match(this.#instrumentsMetadataFile);
+		console.log({cache, response })
 		this.#instrumentsRestoreButton.disabled = !response;
 	}
 

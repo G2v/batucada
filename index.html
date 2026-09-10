@@ -13,8 +13,10 @@
 		: localStorage.theme === 'dark';
 	document.documentElement.classList.toggle('dark', isDark);
 
-	const tracks = new URLSearchParams(location.search).get('set')?.split('-').filter(s => s && s[0] !== '0').length;
+	const params = new URLSearchParams(location.search);
+	const tracks = params.get('set')?.split('-').filter(s => s && s[0] !== '0').length;
 	if (tracks) document.documentElement.style.setProperty('--tracks-count', tracks);
+	if (params.get('title')?.trim()) document.documentElement.style.setProperty('--untitled', 'hidden');
 }
 </script>
 <style>
@@ -241,6 +243,7 @@ caption {
 	display: grid;
 	width: fit-content;
 	grid-template-columns: auto;
+	visibility: var(--untitled, visible);
 
 	h1 {
 		margin: 0 .5em;

@@ -1,4 +1,5 @@
-import { initialState, decode, decodeAll } from './navigation_decode.js';
+import { defer } from './utils.js';
+import { decode, decodeAll, initialState } from './navigation_decode.js';
 
 export class Navigation {
 	#bus;
@@ -19,8 +20,6 @@ export class Navigation {
 
 		history.scrollRestoration = 'manual';
 
-		this.#scheduleWorker();
-
 		const navigationReady = window.navigation ? Promise.resolve() : import('./polyfills/navigation.js');
 		navigationReady.then(() => navigation.addEventListener('navigate', event => this.#handleNavigation(event)));
 
@@ -31,21 +30,17 @@ export class Navigation {
 		this.#bus.addEventListener(this.#events.interfaceReset,        ({ detail }) => this.#reset());
 		this.#bus.addEventListener(this.#events.interfaceMoveTrack,    ({ detail }) => this.#moveTrack(detail));
 		this.#bus.addEventListener(this.#events.swClientInstall,       () => this.#reload());
-	}
 
-	#scheduleWorker() {
-		const create = () => this.#encoder;
-		if ('requestIdleCallback' in window) requestIdleCallback(create, { timeout: 3000 });
-		else setTimeout(create, 500);
+		defer(() => void this.#encoder);
+
 	}
 
 	get #encoder() {
 		return this.#worker ??= this.#createWorker();
 	}
 
-
 	async #createWorker() {
-		const worker = new Worker(new URL('./navigation_worker.js', import.meta.url));
+		const worker = new Worker(new URL('./navigation_worker.js', import.meta.url), { type: 'module' });
 		worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
 		worker.postMessage({ action: 'init', payload: { config: await this.#encoderConfig() } });
 		return worker;
@@ -54,36 +49,36 @@ export class Navigation {
 	async #encoderConfig() {
 		const config = this.#config;
 		const { instruments } = await config.instrumentsLibraryReady;
+		const instrumentsBase = Object.fromEntries(instruments.map(({ id, strokes }) => [id, strokes.length + 1]));
 
 		return Object.freeze({
-			allocation:        config.trackFormatAllocation,
-			outputDigits:      config.formatDigits,
-			resolution:        config.resolution,
-			emptyStroke:       config.emptyStroke,
-			tracksLength:      config.tracksLength,
-			tempoStep:         config.tempoStep,
-			defaultGain:       config.defaultGain,
-			defaultBars:       config.defaultBars,
-			defaultBeats:      config.defaultBeats,
-			defaultSteps:      config.defaultSteps,
-			defaultTempo:      config.defaultTempo,
-			defaultOrder:      config.defaultOrder,
-			defaultPhrase:     config.defaultPhrase,
-			defaultSetValue:   config.defaultSetValue,
-			defaultTitleValue: config.defaultTitleValue,
-			defaultInstrument: config.defaultInstrument,
-			defaultVolume:     config.defaultVolume,
-			setSearchParam:    config.setSearchParam,
-			tempoSearchParam:  config.tempoSearchParam,
-			titleSearchParam:  config.titleSearchParam,
-			volumeSearchParam: config.volumeSearchParam,
-			barsIndex:         config.barsIndex,
-			beatsIndex:        config.beatsIndex,
-			stepsIndex:        config.stepsIndex,
-			phraseIndex:       config.phraseIndex,
-			instrumentsBase:   Object.fromEntries(
-				instruments.map(({ id, strokes }) => [id, strokes.length + 1])
-			),
+			instrumentsBase,
+			formatDigits:          config.formatDigits,
+			resolution:            config.resolution,
+			emptyStroke:           config.emptyStroke,
+			tracksLength:          config.tracksLength,
+			tempoStep:             config.tempoStep,
+			defaultGain:           config.defaultGain,
+			defaultBars:           config.defaultBars,
+			defaultBeats:          config.defaultBeats,
+			defaultSteps:          config.defaultSteps,
+			defaultTempo:          config.defaultTempo,
+			defaultOrder:          config.defaultOrder,
+			defaultPhrase:         config.defaultPhrase,
+			defaultSetValue:       config.defaultSetValue,
+			defaultTitleValue:     config.defaultTitleValue,
+			defaultInstrument:     config.defaultInstrument,
+			defaultVolume:         config.defaultVolume,
+			setSearchParam:        config.setSearchParam,
+			tempoSearchParam:      config.tempoSearchParam,
+			titleSearchParam:      config.titleSearchParam,
+			volumeSearchParam:     config.volumeSearchParam,
+			barsIndex:             config.barsIndex,
+			beatsIndex:            config.beatsIndex,
+			stepsIndex:            config.stepsIndex,
+			phraseIndex:           config.phraseIndex,
+			trackFormatSeparator:  config.trackFormatSeparator,
+			trackFormatAllocation: config.trackFormatAllocation,
 		});
 	}
 
@@ -106,7 +101,6 @@ export class Navigation {
 	#dispatchDecoded(changes) {
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationDecoded, { detail: changes }));
 	}
-
 
 	#decodeAction(action) {
 		if (action === 'reset') {

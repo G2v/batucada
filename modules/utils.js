@@ -1,3 +1,11 @@
+export function defer(task, timeout = 3000) {
+	if (globalThis.scheduler?.postTask) {
+		scheduler.postTask(task, { priority: 'background' }).catch(reportError);
+	}
+	else if ('requestIdleCallback' in globalThis) requestIdleCallback(task, { timeout });
+	else setTimeout(task, 500);
+}
+
 export async function fetchFromCache(cacheName, filename, cacheResponse = false) {
 	const url    = new URL(filename, location.href).href;
 	const cache  = await caches.open(cacheName);

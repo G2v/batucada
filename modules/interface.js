@@ -57,11 +57,11 @@ export class Interface {
 		const { nodes, fragment } = buildTracks(config, this.trackTemplate);
 		Object.assign(this.#nodes, nodes);
 
-		document.title = this.#headTitlePrefix + this.untitled;
+		if (initial.title === undefined) document.title = this.#headTitlePrefix + this.untitled;
 		this.#apply(initial);
 		this.trackList.appendChild(fragment);
+		document.documentElement.style.removeProperty('--untitled');
 		document.documentElement.style.removeProperty('--tracks-count');
-
 		fillInstruments(config, this.#nodes);
 
 		this.#loadModules(params);
