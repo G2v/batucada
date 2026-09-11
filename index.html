@@ -240,14 +240,14 @@ table {
 
 caption {
 	margin: auto;
-	display: grid;
+	display: block;
+	padding: 0 .5em;
 	width: fit-content;
-	grid-template-columns: auto;
+	position: relative;
 	visibility: var(--untitled, visible);
 
 	h1 {
-		margin: 0 .5em;
-		grid-area: 1 / 1;
+		margin: 0;
 		font-size: inherit;
 		padding: .1em 1.7em .1em .6em;
 
@@ -263,8 +263,8 @@ caption {
 	}
 
 	.icon {
-		margin: 0 .7em;
-		grid-area: 1 / 1;
+		inset: 0 .7em;
+		position: absolute;
 		font-size: inherit;
 
 		&:not(:hover) {
@@ -272,10 +272,10 @@ caption {
 		}
 
 		&::before {
-			mask-image: var(--icon-unsaved);
 			width: 1.45em;
 			height: 1.45em;
 			inset: .08em 0 auto auto;
+			mask-image: var(--icon-unsaved);
 		}
 
 		main:has(#preset :checked) &::before {
