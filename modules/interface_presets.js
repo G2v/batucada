@@ -15,7 +15,6 @@ export default class InterfacePresets {
 	#presetEditDialog;
 	#presetEditForm;
 	#presetEditButton;
-	#presetsDataDate;
 	#appMenuButton;
 
 	constructor({ bus, parent, config }) {
@@ -29,7 +28,6 @@ export default class InterfacePresets {
 		this.#presetEditForm   = document.querySelector(selectors.presetEditForm);
 		this.#presetEditButton = document.querySelector(selectors.presetEditButton);
 		this.#presetsDialog    = document.querySelector(selectors.presetsDialog);
-		this.#presetsDataDate  = document.querySelector(selectors.presetsDataDate);
 		this.#appMenuButton    = document.querySelector(selectors.appMenuButton);
 
 		this.#presetsDialog.addEventListener('command',                                  (event) => this.#presetsDialogCommands(event));
@@ -131,9 +129,10 @@ export default class InterfacePresets {
 	}
 
 	#updatePresetsDate() {
-		this.#presetsDataDate.textContent = this.#ui.presetsDate?.toLocaleString('fr-FR', {
-			hour12: false
-		}) ?? '';
+		const time = this.#ui.presetsDate;
+		time.textContent = time.dateTime
+			? new Date(time.dateTime).toLocaleString('fr-FR', { hour12: false })
+			: '';
 	}
 
 	async #presetsExport() {

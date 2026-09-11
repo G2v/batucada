@@ -96,7 +96,7 @@ const selectors = Object.freeze({
 	restoreConfirmDialog:     '#instruments-restore',
 
 	presetsDialog:      '#presets',
-	presetsDataDate:    '#presets time',
+	presetsDate:        '#presets time',
 	presetEditDialog:   '#preset-edit',
 	presetEditForm:     '#preset-edit form',
 	presetDeleteDialog: '#presets-delete',
@@ -118,16 +118,18 @@ const trackFormatSeparator  = '-';
 const trackFormatAllocation = Object.freeze({ phrase: 6, bars: 8, beats: 4, steps: 5, reserved: 4 });
 const formatDigits          = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-
 const instrumentsLibraryReady = (async () => {
-	const url = new URL(core_config.instrumentsMetadataFile, location.href).href;
-	try {
-		const cache  = await caches.open(core_config.dataCache);
-		const cached = await cache.match(url);
-		if (cached) return cached.json();
+	const url     = new URL(core_config.instrumentsMetadataFile, location.href).href;
+	const custom  = caches?.open(core_config.dataCache).then(cache => cache.match(url)).catch(() => null);
+	const network = fetch(url);
+	const cached = await custom;
+	if (cached) {
+		network.catch(() => {});
+		return cached.json();
 	}
-	catch {}
-	return (await fetch(url)).json();
+	const response = await network;
+	if (!response.ok) throw new Error(`${url} ${response.status}`);
+	return response.json();
 })();
 
 instrumentsLibraryReady.catch(() => {});

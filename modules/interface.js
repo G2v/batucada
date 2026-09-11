@@ -1,4 +1,4 @@
-import { buildStyles, buildTracks, fillInstruments } from './build-dom.js';
+import { buildStyles, buildTracks, buildInstruments } from './build-dom.js';
 
 export class Interface {
 	static #modules = Object.freeze([
@@ -23,7 +23,6 @@ export class Interface {
 	#resolvers       = {};
 	#instances       = {};
 	#playing         = false;
-	#presetsDate     = null;
 	#headTitlePrefix = `${document.title} - `;
 
 	constructor({ bus, config, initial = {} }) {
@@ -52,17 +51,18 @@ export class Interface {
 	#build(params) {
 		const { config, initial } = params;
 
-		buildStyles(config);
+		buildStyles(config).catch(reportError);
 
 		const { nodes, fragment } = buildTracks(config, this.trackTemplate);
 		Object.assign(this.#nodes, nodes);
-
-		if (initial.title === undefined) document.title = this.#headTitlePrefix + this.untitled;
 		this.#apply(initial);
+
+		buildInstruments(config, nodes).catch(reportError);
+
 		this.trackList.appendChild(fragment);
+		if (initial.title === undefined) document.title = this.#headTitlePrefix + this.untitled;
 		document.documentElement.style.removeProperty('--untitled');
 		document.documentElement.style.removeProperty('--tracks-count');
-		fillInstruments(config, this.#nodes);
 
 		this.#loadModules(params);
 	}
@@ -113,11 +113,11 @@ export class Interface {
 	}
 
 	set #presets({ lastModified, values }) {
-		this.#presetsDate = lastModified;
 		const fragment = new DocumentFragment();
 		fragment.appendChild(this.presetsSelect.firstElementChild);
 		values.forEach(({ name, value }) => fragment.appendChild(new Option(name || this.untitled, value)));
 		this.presetsSelect.replaceChildren(fragment);
+		this.presetsDate.dateTime = lastModified?.toJSON() ?? '';
 	}
 
 	set #index(index) {
@@ -163,10 +163,8 @@ export class Interface {
 			 + (step.dataset.index  | 0);
 	}
 
-	getTrack(child)      { return child.closest(this.#selectors.track); }
-
-	getTrackIndex(track) { return track.dataset.index | 0; }
-
+	getTrack(child)           { return child.closest(this.#selectors.track); }
+	getTrackIndex(track)      { return track.dataset.index | 0; }
 	getTrackInstrument(track) { return track.dataset[this.#instrumentKey] | 0; }
 
 	startViewTransition(callback) {
@@ -196,11 +194,11 @@ export class Interface {
 	get startButton()   { return this.#nodes.startButton   ??= document.querySelector(this.#selectors.startButton); }
 	get trackList()     { return this.#nodes.trackList     ??= document.querySelector(this.#selectors.trackList); }
 	get trackTemplate() { return this.#nodes.trackTemplate ??= document.querySelector(this.#selectors.trackTemplate).content.querySelector(this.#selectors.track); }
+	get presetsDate()   { return this.#nodes.presetsDate   ??= document.querySelector(this.#selectors.presetsDate); }
 	get untitled()      { return this.#untitled            ??= document.querySelector(this.#selectors.untitledLabel).textContent; }
 
 	get swap()          { return this.#instances.swap; }
 	get playing()       { return this.#playing; }
 	get dialogs()       { return this.#instances.dialogs; }
-	get presetsDate()   { return this.#presetsDate; }
 	get tracksOrder()   { return [...this.trackList.children].map(track => track.dataset.index | 0); }
 }

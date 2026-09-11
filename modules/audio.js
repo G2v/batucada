@@ -12,21 +12,23 @@ export class Audio {
 	#bus;
 	#events;
 	#gains;
+	#worker;
 	#maxGain;
 	#gainNodes;
+	#dataCache;
+	#soundsFile;
 	#masterGain;
+	#emptyStroke;
 	#audioStream;
 	#audioContext;
-	#emptyStroke;
+	#workerReady;
 	#hiddenPlayDuration;
 
-	#worker;
-	#workerReady;
-	#configured       = false;
 	#wakeLock         = null;
 	#playTimer        = null;
 	#audioReady       = null;
 	#soundBytes       = null;
+	#configured       = false;
 	#instruments      = [];
 	#lastNoteTime     = 0;
 	#activeSources    = new Set();
@@ -35,6 +37,8 @@ export class Audio {
 		this.#bus                 = bus;
 		this.#events              = config.events;
 		this.#maxGain             = config.maxGain;
+		this.#dataCache           = config.dataCache;
+		this.#soundsFile          = config.instrumentsSoundsFile;
 		this.#emptyStroke         = config.emptyStroke;
 		this.#hiddenPlayDuration  = config.hiddenPlayDuration;
 		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain);
@@ -54,8 +58,7 @@ export class Audio {
 
 		this.#workerReady = this.#configureWorker(config, initial);
 
-		this.#soundBytes = this.#fetchInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
-
+		defer(() => this.#ensureSounds());
 		defer(() => this.#ensureAudio());
 		defer(() => this.#ensureAudioStream());
 	}
@@ -99,6 +102,10 @@ export class Audio {
 	#ensureAudio() {
 		this.#audioReady ??= this.#initAudio();
 		return this.#audioReady;
+	}
+
+	#ensureSounds() {
+		return this.#soundBytes ??= this.#fetchInstrumentSounds(this.#dataCache, this.#soundsFile);
 	}
 
 	async #initAudio() {

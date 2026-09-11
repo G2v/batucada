@@ -73,7 +73,7 @@ export function buildTracks(config, template) {
 	return { nodes, fragment };
 }
 
-export function fillInstruments(config, nodes) {
+export function buildInstruments(config, nodes) {
 	const instrumentKey = config.trackKeys.instrument;
 
 	return config.instrumentsLibraryReady.then(({ instruments }) => {
