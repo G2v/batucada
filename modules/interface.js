@@ -113,10 +113,8 @@ export class Interface {
 	}
 
 	set #presets({ lastModified, values }) {
-		const fragment = new DocumentFragment();
-		fragment.appendChild(this.presetsSelect.firstElementChild);
-		values.forEach(({ name, value }) => fragment.appendChild(new Option(name || this.untitled, value)));
-		this.presetsSelect.replaceChildren(fragment);
+		this.presetsSelect.options.length = 0;
+		this.presetsSelect.append(...values.map(({ name, value }) => new Option(name || this.untitled, value)));
 		this.presetsDate.dateTime = lastModified?.toJSON() ?? '';
 	}
 
