@@ -55,17 +55,13 @@ export async function downloadFile(filename, content) {
 }
 
 export function getFileContent() {
-	return new Promise((resolve, reject) => {
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = '.json';
-		input.addEventListener('cancel', () => {
-			reject(new DOMException('', 'AbortError'));
-		}, { once: true });
-		input.addEventListener('change', () => {
-			input.files[0].text().then(resolve, () => reject(new Error('read failed')));
-		}, { once: true });
-		input.click();
-	});
+	const { promise, resolve, reject } = Promise.withResolvers();
+	const input = document.createElement('input');
+	input.type = 'file';
+	input.accept = '.json';
+	input.addEventListener('cancel', () => reject(new DOMException('', 'AbortError')), { once: true });
+	input.addEventListener('change', () => input.files[0].text().then(resolve, () => reject(new Error('read failed'))), { once: true });
+	input.click();
+	return promise;
 }
 

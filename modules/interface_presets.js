@@ -51,12 +51,12 @@ export default class InterfacePresets {
 	}
 
 	#confirmDialogCommands(event) {
-		if (event.source.value === 'delete') {
-			new Promise((resolve, reject) => {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetsDelete, { detail: { resolve, reject } }));
-			}).catch(() => this.#ui.dialogs.showToast(event.source.dataset.failure));
-		}
+		if (event.source.value !== 'delete') return;
+		const { promise, resolve, reject } = Promise.withResolvers();
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetsDelete, { detail: { resolve, reject } }));
+		promise.catch(() => this.#ui.dialogs.showToast(event.source.dataset.failure));
 	}
+
 
 	#openEdit({ command }) {
 		if (command !== 'show-modal') return;
@@ -70,9 +70,11 @@ export default class InterfacePresets {
 
 	#cancelEdit(messages, invoker = null) {
 		return {
-			action: () => new Promise((resolve, reject) => {
+			action: () => {
+				const { promise, resolve, reject } = Promise.withResolvers();
 				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceEditCancel, { detail: { resolve, reject } }));
-			}),
+				return promise;
+			},
 			success: messages.cancelSuccess,
 			failure: messages.cancelFailure,
 			invoker,
@@ -101,9 +103,9 @@ export default class InterfacePresets {
 			const name = rawName.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
 			if (isNewName && !name) return this.reportNameValidity('empty');
 			actionButtons.forEach(button => button.disabled = true);
-			const request = await new Promise((resolve, reject) => {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceEditSave, { detail: { action, name, promise: { resolve, reject } } }));
-			});
+			const saved = Promise.withResolvers();
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceEditSave, { detail: { action, name, promise: saved } }));
+			const request = await saved.promise;
 			if (request === false) return;
 			this.#presetEditDialog.close();
 			await request.result;
@@ -155,9 +157,9 @@ export default class InterfacePresets {
 			this.#presetsDialog.close();
 			const data = JSON.parse(content);
 			if (!data || typeof data !== 'object') throw new Error();
-			const number = await new Promise((resolve, reject) => {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceImport, { detail: { data, promise: { resolve, reject } } }));
-			});
+			const imported = Promise.withResolvers();
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceImport, { detail: { data, promise: imported } }));
+			const number = await imported.promise;
 			const message = number === 0 ? messages.successZero
 				: number === 1 ? messages.successOne
 				: messages.successOther.replace('{{number}}', number);

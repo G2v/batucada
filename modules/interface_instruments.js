@@ -99,9 +99,9 @@ export default class InterfaceInstruments {
 		try {
 			const content = await getFileContent();
 			const data = JSON.parse(content);
-			if (!data || typeof data !== 'object')      throw new Error("Invalid file");
-			if (!data.name)                             throw new Error("Missing 'name' property");
-			if (!data.version)                          throw new Error("Missing 'version' property");
+			if (!data || typeof data !== 'object') throw new Error("Invalid file");
+			if (!data.name)                        throw new Error("Missing 'name' property");
+			if (!data.version)                     throw new Error("Missing 'version' property");
 			if (data.format !== InterfaceInstruments.#format) {
 				throw new Error(`Unsupported format: expected ${InterfaceInstruments.#format}`);
 			}
