@@ -13,22 +13,21 @@ export class Audio {
 	#events;
 	#gains;
 	#worker;
+	#sounds;
 	#maxGain;
 	#gainNodes;
 	#dataCache;
 	#soundsFile;
 	#masterGain;
+	#workerReady;
 	#emptyStroke;
 	#audioStream;
 	#audioContext;
-	#workerReady;
 	#hiddenPlayDuration;
 
 	#wakeLock         = null;
 	#playTimer        = null;
 	#audioReady       = null;
-	#soundBytes       = null;
-	#configured       = false;
 	#instruments      = [];
 	#lastNoteTime     = 0;
 	#activeSources    = new Set();
@@ -56,19 +55,20 @@ export class Audio {
 		this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 		this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
 
-		this.#workerReady = this.#configureWorker(config, initial);
+		this.#workerReady = this.#configureWorker(config);
+		this.#updateData(initial, true);
 
-		defer(() => this.#ensureSounds());
+		this.#sounds = this.#fetchInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
+
 		defer(() => this.#ensureAudio());
 		defer(() => this.#ensureAudioStream());
 	}
 
-	async #configureWorker(config, initial) {
+	async #configureWorker(config) {
 		const { instruments } = await config.instrumentsLibraryReady;
 		const instrumentsStrokes = Object.fromEntries(
 			instruments.map(({ id, strokes }) => [id, strokes.length])
 		);
-
 		this.#worker.postMessage({
 			action: 'config',
 			payload: {
@@ -89,23 +89,14 @@ export class Audio {
 				instrumentsStrokes,
 			},
 		});
-
-		this.#configured = true;
-		this.#updateData(initial, true);
 	}
 
 	#post(message) {
-		if (this.#configured) this.#worker.postMessage(message);
-		else this.#workerReady.then(() => this.#worker.postMessage(message));
+		this.#workerReady.then(() => this.#worker.postMessage(message));
 	}
 
 	#ensureAudio() {
-		this.#audioReady ??= this.#initAudio();
-		return this.#audioReady;
-	}
-
-	#ensureSounds() {
-		return this.#soundBytes ??= this.#fetchInstrumentSounds(this.#dataCache, this.#soundsFile);
+		return this.#audioReady ??= this.#initAudio();
 	}
 
 	async #initAudio() {
@@ -121,7 +112,7 @@ export class Audio {
 			return gainNode;
 		});
 
-		await this.#decodeInstrumentSounds();
+		await this.#decodeInstrumentSounds(await this.#sounds);
 	}
 
 	#ensureAudioStream() {
@@ -177,9 +168,9 @@ export class Audio {
 		return Object.entries(json).map(([id, sounds]) => [id, sounds.map(dataURIToBuffer)]);
 	}
 
-	async #decodeInstrumentSounds() {
+	async #decodeInstrumentSounds(sounds) {
 		const entries = await Promise.all(
-			(await this.#soundBytes).map(async ([id, buffers]) => [
+			sounds.map(async ([id, buffers]) => [
 				id,
 				await Promise.all(buffers.map((buffer) => this.#audioContext.decodeAudioData(buffer))),
 			])
