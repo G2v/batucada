@@ -7,16 +7,17 @@ export function defer(task, timeout = 3000) {
 }
 
 export async function fetchFromCache(cacheName, filename, cacheResponse = false) {
-	const url    = new URL(filename, location.href).href;
-	const cache  = await caches.open(cacheName);
-	const cached = await cache.match(url);
-	if (cached) return cached;
-	const networkResponse = await fetch(url);
+	const url     = new URL(filename, location.href).href;
+	const network = fetch(url);
+	const cached  = await caches.open(cacheName)
+		.then(cache => cache.match(url)).catch(() => null);
+	if (cached) { network.catch(() => {}); return cached; }
+	const networkResponse = await network;
 	if (!networkResponse.ok) return networkResponse;
 	const headers = new Headers(networkResponse.headers);
 	headers.delete('last-modified');
 	const response = new Response(networkResponse.body, { status: networkResponse.status, headers });
-	if (cacheResponse) cache.put(url, response.clone());
+	if (cacheResponse) cache.put(url, response.clone());           // ← garde une réf au cache
 	return response;
 }
 
