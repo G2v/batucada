@@ -85,9 +85,9 @@ const selectors = Object.freeze({
 	trackPositionText:   '#track-settings-title span',
 
 	aboutDialog:       '#about',
-	aboutContactLink:  '#about #contact',
-	aboutVersionText:  '#about #version',
-	aboutUpdateButton: '#about [value="update"]',
+	aboutContactLink:  '#contact a',
+	aboutVersionText:  '#version span',
+	aboutUpdateButton: '#version button',
 
 	instrumentsDialog:        '#instruments',
 	instrumentsLibraryName:   '#instruments p span',

@@ -1053,24 +1053,32 @@ dialog {
 
 #about {
 	section {
-		gap: .7em;
+		gap: 1em;
 		padding-top: .2em;
 		width: fit-content;
 	}
 
 	p {
 		line-height: 1;
-
-		&:has(#contact) {
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
 	}
 
-	button:not([value]) {
-		flex: 1;
-		max-width: 6em;
-		min-width: auto;
+	#contact {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	#version {
+		gap: .2em;
+		display: flex;
+
+		span {
+			flex: 1;
+		}
+
+		button {
+			height: 1.7em;
+			margin: -.25em 0 -1em;
+		}
 	}
 }
 
@@ -1501,11 +1509,13 @@ body > footer {
 				</header>
 				<section>
 					<p>Application : Batucada Sequencer</p>
-					<p>Contact : <a id="contact"></a></p>
-					<p>Version de l'application : <span id="version">-</span></p>
+					<p id="contact">Contact : <a></a></p>
+					<p id="version">Version : 
+						<span>-</span>
+						<button commandfor="about" command="close" value="update" hidden>Mettre à jour</button>
+					</p>
 				</section>
 				<footer>
-					<button commandfor="about" command="close" value="update" hidden>Mettre à jour l'application</button>
 					<button commandfor="about" command="close">Fermer</button>
 				</footer>
 			</div>
