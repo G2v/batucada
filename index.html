@@ -1069,14 +1069,12 @@ dialog {
 
 	#version {
 		gap: .2em;
-		display: flex;
-
-		span {
-			flex: 1;
-		}
+		display: grid;
+		grid-template-columns: auto auto 1fr;
 
 		button {
 			height: 1.7em;
+			justify-self: center;
 			margin: -.25em 0 -1em;
 		}
 	}
