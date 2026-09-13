@@ -50,7 +50,7 @@ export class Audio {
 		this.#bus.addEventListener(this.#events.interfaceUpdateData,     ({ detail }) => this.#updateData(detail));
 		this.#bus.addEventListener(this.#events.interfaceUserGesture,    () => this.#startAudio(), { once: true });
 		this.#bus.addEventListener(this.#events.interfacePresetSelected, () => this.#restart());
-		document.addEventListener('visibilitychange',         () => this.#handleVisibilityChange());
+		document.addEventListener('visibilitychange',                    () => this.#handleVisibilityChange());
 
 		this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 		this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
@@ -331,7 +331,7 @@ export class Audio {
 		const sound = new AudioBufferSourceNode(this.#audioContext, { buffer });
 		sound.connect(this.#gainNodes[gainIndex]);
 		this.#activeSources.add(sound);
-		sound.onended = () => this.#activeSources.delete(sound);
+		sound.addEventListener('ended', () => this.#activeSources.delete(sound), { once: true });
 		sound.start(time);
 	}
 

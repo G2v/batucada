@@ -3,7 +3,6 @@ import version from '../version.js';
 export default class InterfaceApp {
 	#bus;
 	#events;
-	#aboutDialog;
 	#aboutUpdateButton;
 
 	constructor({ bus, config }) {
@@ -12,7 +11,6 @@ export default class InterfaceApp {
 
 		const { selectors } = config;
 
-		this.#aboutDialog       = document.querySelector(selectors.aboutDialog);
 		this.#aboutUpdateButton = document.querySelector(selectors.aboutUpdateButton);
 
 		Object.assign(document.querySelector(selectors.aboutContactLink), {
@@ -20,8 +18,7 @@ export default class InterfaceApp {
 			textContent: config.email,
 		});
 		document.querySelector(selectors.aboutVersionText).textContent = version;
-
-		this.#aboutDialog.addEventListener('command', (event) => this.#aboutCommands(event));
+		document.querySelector(selectors.aboutDialog).addEventListener('command', (event) => this.#aboutCommands(event));
 	}
 
 	showUpdateButton() {

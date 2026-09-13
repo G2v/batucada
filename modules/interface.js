@@ -59,10 +59,10 @@ export class Interface {
 
 		buildInstruments(config, nodes).catch(reportError);
 
-		this.trackList.appendChild(fragment);
-		if (initial.title === undefined) document.title = this.#headTitlePrefix + this.untitled;
 		document.documentElement.style.removeProperty('--untitled');
 		document.documentElement.style.removeProperty('--tracks-count');
+		this.trackList.appendChild(fragment);
+		if (initial.title === undefined) document.title = this.#headTitlePrefix + this.untitled;
 
 		this.#loadModules(params);
 	}

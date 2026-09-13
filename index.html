@@ -1053,12 +1053,13 @@ dialog {
 
 #about {
 	section {
-		gap: .3em;
+		gap: .7em;
+		padding-top: .2em;
 		width: fit-content;
 	}
 
 	p {
-		line-height: inherit;
+		line-height: 1;
 
 		&:has(#contact) {
 			overflow: hidden;
@@ -1500,8 +1501,8 @@ body > footer {
 				</header>
 				<section>
 					<p>Application : Batucada Sequencer</p>
-					<p>Version de l'application : <span id="version">-</span></p>
 					<p>Contact : <a id="contact"></a></p>
+					<p>Version de l'application : <span id="version">-</span></p>
 				</section>
 				<footer>
 					<button commandfor="about" command="close" value="update" hidden>Mettre à jour l'application</button>
@@ -1526,9 +1527,9 @@ body > footer {
 			initial,
 		};
 
+		new Audio(params);
 		new Interface(params);
 		new Presets(params);
-		new Audio(params);
 		new Navigation(params);
 		new SwClient(params);
 	</script>
