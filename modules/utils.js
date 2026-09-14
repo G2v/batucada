@@ -17,7 +17,7 @@ export async function fetchFromCache(cacheName, filename, cacheResponse = false)
 	const headers = new Headers(networkResponse.headers);
 	headers.delete('last-modified');
 	const response = new Response(networkResponse.body, { status: networkResponse.status, headers });
-	if (cacheResponse) cache.put(url, response.clone());           // ← garde une réf au cache
+	if (cacheResponse) cache.put(url, response.clone());
 	return response;
 }
 

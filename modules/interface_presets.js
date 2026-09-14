@@ -141,10 +141,12 @@ export default class InterfacePresets {
 		const presets = [];
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceExport, { detail: presets }));
 		const content = JSON.stringify(presets, null, 2);
+		const dateTimeStr = this.#ui.presetsDate.dateTime;
 
 		let dateSuffix = '';
-		if (this.#ui.presetsDate) {
-			const localDate = new Date(this.#ui.presetsDate.getTime() - this.#ui.presetsDate.getTimezoneOffset() * 60000);
+		if (dateTimeStr) {
+			const date = new Date(dateTimeStr);
+			const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
 			dateSuffix += `_${localDate.toISOString().split('.')[0]}`;
 		}
 		const filename = `presets${dateSuffix}.json`;
