@@ -130,9 +130,11 @@ export class Navigation {
 	#handleWorkerMessage({ action, payload }) {
 		if (action !== 'encoded') return;
 		this.#searchParams = new URLSearchParams(payload);
+		const currentState = window.navigation.currentEntry?.getState() || {};
+		const isCurrentlyDirty = !!currentState.isDirty;
 		window.navigation.navigate(this.#url, {
-			history: 'replace',
-			state: { action: 'encoded', dispatch: true }
+			history: isCurrentlyDirty ? 'replace' : 'push',
+			state: { action: 'encoded', dispatch: true, isDirty: true },
 		});
 	}
 
@@ -180,8 +182,10 @@ export class Navigation {
 		const { setSearchParam, titleSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
+		const currentState = window.navigation.currentEntry?.getState() || {};
 		navigation.navigate(this.#url, {
-			state: { action: 'decode', dispatch: true }
+			history: currentState.isDirty ? 'replace' : 'push',
+			state: { action: 'decode', dispatch: true, isDirty: false },
 		});
 	}
 
@@ -205,9 +209,10 @@ export class Navigation {
 		this.#searchParams.delete(volumeSearchParam);
 		const newSearch = this.#searchParams.toString();
 		if (newSearch === oldSearch) return;
-
+		const currentState = window.navigation.currentEntry?.getState() || {};
 		navigation.navigate(this.#url, {
-			state: { action: 'reset', dispatch: false }
+			history: currentState.isDirty ? 'replace' : 'push',
+			state: { action: 'reset', dispatch: false, isDirty: false },
 		});
 	}
 
