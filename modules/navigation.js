@@ -20,9 +20,7 @@ export class Navigation {
 
 		history.scrollRestoration = 'manual';
 
-		const navigationReady = window.navigation ? Promise.resolve() : import('./polyfills/navigation.js');
-		navigationReady.then(() => navigation.addEventListener('navigate', event => this.#handleNavigation(event)));
-
+		navigation.addEventListener('navigate',                        event => this.#handleNavigation(event));
 		this.#bus.addEventListener(this.#events.audioState,            ({ detail }) => this.#updateState(detail));
 		this.#bus.addEventListener(this.#events.audioChanged,          ({ detail }) => this.#encodeURL(detail));
 		this.#bus.addEventListener(this.#events.presetsChanged,        ({ detail }) => this.#encodeURL(detail));
@@ -130,20 +128,16 @@ export class Navigation {
 	#handleWorkerMessage({ action, payload }) {
 		if (action !== 'encoded') return;
 		this.#searchParams = new URLSearchParams(payload);
-		const currentState = window.navigation.currentEntry?.getState() || {};
-		const isCurrentlyDirty = !!currentState.isDirty;
-		window.navigation.navigate(this.#url, {
-			history: isCurrentlyDirty ? 'replace' : 'push',
-			state: { action: 'encoded', dispatch: true, isDirty: true },
-		});
+		this.#navigate({ action: 'encoded', dispatch: true, isDirty: true });
 	}
 
 	#handleNavigation(event) {
 		const { destination, navigationType, canIntercept, hashChange, downloadRequest } = event;
 		const url = new URL(destination.url);
 		const state = destination.getState() || {};
+		const isTraverse = navigationType === 'traverse';
 
-		if (navigationType === 'traverse') {
+		if (isTraverse) {
 			const modal = { closed: false };
 			this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationCloseModal, { detail: modal }));
 			if (modal.closed) {
@@ -158,14 +152,13 @@ export class Navigation {
 			hashChange ||
 			downloadRequest) return;
 
-		const isTraverse = navigationType === 'traverse';
 		const action = isTraverse ? 'decodeAll' : state.action;
 		const shouldDispatch = isTraverse || !!state.dispatch;
 
 		event.intercept({
 			scroll: 'manual',
 			focusReset: 'manual',
-			handler: async () => {
+			handler: () => {
 				this.#searchParams = url.searchParams;
 				if (['reset', 'decode', 'decodeAll'].includes(action)) {
 					window.scrollTo(0, 0);
@@ -182,22 +175,18 @@ export class Navigation {
 		const { setSearchParam, titleSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
-		const currentState = window.navigation.currentEntry?.getState() || {};
-		navigation.navigate(this.#url, {
-			history: currentState.isDirty ? 'replace' : 'push',
-			state: { action: 'decode', dispatch: true, isDirty: false },
-		});
+		this.#navigate({ action: 'decode', dispatch: true, isDirty: false });
 	}
 
 	#encodeURL(values) {
 		this.#updateState(values);
-		queueMicrotask(() => this.#postMessage('encode', values));
+		this.#postMessage('encode', values);
 	}
 
 	#moveTrack(moved) {
 		const previousOrder = this.#state.order;
 		this.#state.order = moved.order;
-		queueMicrotask(() => this.#postMessage('move', { ...moved, previousOrder }));
+		this.#postMessage('move', { ...moved, previousOrder });
 	}
 
 	#reset() {
@@ -209,20 +198,23 @@ export class Navigation {
 		this.#searchParams.delete(volumeSearchParam);
 		const newSearch = this.#searchParams.toString();
 		if (newSearch === oldSearch) return;
-		const currentState = window.navigation.currentEntry?.getState() || {};
-		navigation.navigate(this.#url, {
-			history: currentState.isDirty ? 'replace' : 'push',
-			state: { action: 'reset', dispatch: false, isDirty: false },
-		});
+		this.#navigate({ action: 'reset', dispatch: false, isDirty: false });
+	}
+
+	#navigate(state) {
+		const { isDirty } = navigation.currentEntry?.getState() ?? {};
+		return navigation.navigate(this.#url, { history: isDirty ? 'replace' : 'push', state });
 	}
 
 	#postMessage(action, values) {
-		const payload = {
-			searchParams: this.#paramsAsObject(),
-			state: this.#state,
-			values,
-		};
-		this.#encoder.then(worker => worker.postMessage({ action, payload }));
+		queueMicrotask(() => {
+			const payload = {
+				searchParams: this.#paramsAsObject(),
+				state: structuredClone(this.#state),
+				values,
+			};
+			this.#encoder.then(worker => worker.postMessage({ action, payload }));
+		});
 	}
 
 	#paramsAsObject() {
