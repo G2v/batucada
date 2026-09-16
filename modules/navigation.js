@@ -128,7 +128,7 @@ export class Navigation {
 	#handleWorkerMessage({ action, payload }) {
 		if (action !== 'encoded') return;
 		this.#searchParams = new URLSearchParams(payload);
-		this.#navigate({ action: 'encoded', dispatch: true, isDirty: true });
+		this.#navigate({ action: 'encoded', dispatch: true, isUnsaved: true });
 	}
 
 	#handleNavigation(event) {
@@ -175,7 +175,7 @@ export class Navigation {
 		const { setSearchParam, titleSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
-		this.#navigate({ action: 'decode', dispatch: true, isDirty: false });
+		this.#navigate({ action: 'decode', dispatch: true, isUnsaved: false });
 	}
 
 	#encodeURL(values) {
@@ -191,19 +191,27 @@ export class Navigation {
 
 	#reset() {
 		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam } = this.#config;
-		const oldSearch = this.#searchParams.toString();
-		this.#searchParams.delete(setSearchParam);
-		this.#searchParams.delete(titleSearchParam);
-		this.#searchParams.delete(tempoSearchParam);
-		this.#searchParams.delete(volumeSearchParam);
-		const newSearch = this.#searchParams.toString();
-		if (newSearch === oldSearch) return;
-		this.#navigate({ action: 'reset', dispatch: false, isDirty: false });
+		for (const param of [setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam]) {
+			this.#searchParams.delete(param);
+		}
+		this.#navigate({ action: 'reset', dispatch: false, isUnsaved: false });
 	}
 
 	#navigate(state) {
-		const { isDirty } = navigation.currentEntry?.getState() ?? {};
-		return navigation.navigate(this.#url, { history: isDirty ? 'replace' : 'push', state });
+		const current   = navigation.currentEntry;
+		const nextUrl   = this.#url;
+		const isUnsaved = !!current?.getState()?.isUnsaved;
+
+		if (!state.isUnsaved) {
+			if (!isUnsaved && current?.url === nextUrl) return;
+			const previous = navigation.entries()[(current?.index ?? -1) - 1];
+			if (isUnsaved && previous?.url === nextUrl && !previous.getState()?.isUnsaved) {
+				navigation.back();
+				return;
+			}
+		}
+
+		navigation.navigate(nextUrl, { history: isUnsaved ? 'replace' : 'push', state});
 	}
 
 	#postMessage(action, values) {
@@ -222,9 +230,9 @@ export class Navigation {
 	}
 
 	get #url() {
-		return this.#searchParams.size > 0
-			? `?${this.#searchParams.toString()}`
-			: '.';
+		const url = new URL(location.pathname, location.origin);
+		url.search = this.#searchParams.toString();
+		return url.href;
 	}
 
 }

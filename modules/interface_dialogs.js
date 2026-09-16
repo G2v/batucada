@@ -21,15 +21,6 @@ export default class InterfaceDialogs {
 		this.#toastCancelButton.addEventListener('click',  (event) => this.#cancelToast());
 		this.#toast.addEventListener('animationend',       (event) => this.#toast.hidePopover());
 		this.#toast.addEventListener('toggle',             (event) => this.#clearCancel(event));
-
-		this.#toastPositioning();
-	}
-
-	async #toastPositioning() {
-		if (!CSS.supports('position-area', 'bottom')) {
-			const { applyPolyfill } = await import('./polyfills/anchor-positioning.js');
-			applyPolyfill(this.#toast, this.#ui.container);
-		}
 	}
 
 	#dismissModal({ target }) {
