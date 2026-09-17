@@ -120,11 +120,12 @@ const formatDigits          = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM
 
 const instrumentsLibraryReady = (async () => {
 	const url     = new URL(core_config.instrumentsMetadataFile, location.href).href;
-	const custom  = caches?.open(core_config.dataCache).then(cache => cache.match(url)).catch(() => null);
 	const network = fetch(url);
+	const custom  = caches?.match(url, { cacheName: core_config.dataCache }).catch(() => null);
+
 	const cached = await custom;
 	if (cached) {
-		network.catch(() => {});
+		network.then(response => response.body?.cancel()).catch(() => {});
 		return cached.json();
 	}
 	const response = await network;

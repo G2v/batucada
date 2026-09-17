@@ -6,17 +6,27 @@ export function defer(task, timeout = 3000) {
 	else setTimeout(task, 500);
 }
 
-export async function fetchFromCache(cacheName, filename, cacheResponse = false) {
-	const url    = new URL(filename, location.href).href;
-	const cache  = await caches.open(cacheName);
-	const cached = await cache.match(url);
-	if (cached) return cached;
-	const networkResponse = await fetch(url);
+export async function fetchFromCache(cacheName, filename, cacheResponse = false, eager = false) {
+	const url     = new URL(filename, location.href).href;
+	const network = eager ? fetch(url) : null;
+
+	const cached = await caches.match(url, { cacheName }).catch(() => null);
+	if (cached) {
+		network?.then(response => response.body?.cancel()).catch(() => {});
+		return cached;
+	}
+
+	const networkResponse = await (network ?? fetch(url));
 	if (!networkResponse.ok) return networkResponse;
+
 	const headers = new Headers(networkResponse.headers);
 	headers.delete('last-modified');
 	const response = new Response(networkResponse.body, { status: networkResponse.status, headers });
-	if (cacheResponse) cache.put(url, response.clone());
+
+	if (cacheResponse) {
+		const clone = response.clone();
+		caches.open(cacheName).then(cache => cache.put(url, clone)).catch(() => {});
+	}
 	return response;
 }
 

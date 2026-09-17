@@ -45,38 +45,37 @@ export class Navigation {
 	}
 
 	async #encoderConfig() {
-		const config = this.#config;
-		const { instruments } = await config.instrumentsLibraryReady;
+		const { instruments } = await this.#config.instrumentsLibraryReady;
 		const instrumentsBase = Object.fromEntries(instruments.map(({ id, strokes }) => [id, strokes.length + 1]));
 
 		return Object.freeze({
 			instrumentsBase,
-			formatDigits:          config.formatDigits,
-			resolution:            config.resolution,
-			emptyStroke:           config.emptyStroke,
-			tracksLength:          config.tracksLength,
-			tempoStep:             config.tempoStep,
-			defaultGain:           config.defaultGain,
-			defaultBars:           config.defaultBars,
-			defaultBeats:          config.defaultBeats,
-			defaultSteps:          config.defaultSteps,
-			defaultTempo:          config.defaultTempo,
-			defaultOrder:          config.defaultOrder,
-			defaultPhrase:         config.defaultPhrase,
-			defaultSetValue:       config.defaultSetValue,
-			defaultTitleValue:     config.defaultTitleValue,
-			defaultInstrument:     config.defaultInstrument,
-			defaultVolume:         config.defaultVolume,
-			setSearchParam:        config.setSearchParam,
-			tempoSearchParam:      config.tempoSearchParam,
-			titleSearchParam:      config.titleSearchParam,
-			volumeSearchParam:     config.volumeSearchParam,
-			barsIndex:             config.barsIndex,
-			beatsIndex:            config.beatsIndex,
-			stepsIndex:            config.stepsIndex,
-			phraseIndex:           config.phraseIndex,
-			trackFormatSeparator:  config.trackFormatSeparator,
-			trackFormatAllocation: config.trackFormatAllocation,
+			formatDigits:          this.#config.formatDigits,
+			resolution:            this.#config.resolution,
+			emptyStroke:           this.#config.emptyStroke,
+			tracksLength:          this.#config.tracksLength,
+			tempoStep:             this.#config.tempoStep,
+			defaultGain:           this.#config.defaultGain,
+			defaultBars:           this.#config.defaultBars,
+			defaultBeats:          this.#config.defaultBeats,
+			defaultSteps:          this.#config.defaultSteps,
+			defaultTempo:          this.#config.defaultTempo,
+			defaultOrder:          this.#config.defaultOrder,
+			defaultPhrase:         this.#config.defaultPhrase,
+			defaultSetValue:       this.#config.defaultSetValue,
+			defaultTitleValue:     this.#config.defaultTitleValue,
+			defaultInstrument:     this.#config.defaultInstrument,
+			defaultVolume:         this.#config.defaultVolume,
+			setSearchParam:        this.#config.setSearchParam,
+			tempoSearchParam:      this.#config.tempoSearchParam,
+			titleSearchParam:      this.#config.titleSearchParam,
+			volumeSearchParam:     this.#config.volumeSearchParam,
+			barsIndex:             this.#config.barsIndex,
+			beatsIndex:            this.#config.beatsIndex,
+			stepsIndex:            this.#config.stepsIndex,
+			phraseIndex:           this.#config.phraseIndex,
+			trackFormatSeparator:  this.#config.trackFormatSeparator,
+			trackFormatAllocation: this.#config.trackFormatAllocation,
 		});
 	}
 

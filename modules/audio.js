@@ -163,7 +163,7 @@ export class Audio {
 	}
 
 	async #fetchInstrumentSounds(cacheName, fileName) {
-		const response = await fetchFromCache(cacheName, fileName);
+		const response = await fetchFromCache(cacheName, fileName, false, true);
 		const json = await response.json();
 		return Object.entries(json).map(([id, sounds]) => [id, sounds.map(dataURIToBuffer)]);
 	}

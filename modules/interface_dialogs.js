@@ -15,12 +15,12 @@ export default class InterfaceDialogs {
 		this.#toastMessage      = document.querySelector(selectors.toastMessage);
 		this.#toastCancelButton = document.querySelector(selectors.toastCancelButton);
 
-		document.addEventListener('click',                 (event) => this.#dismissModal(event));
-		document.addEventListener('cancel',                (event) => InterfaceDialogs.#cancelModal(event), { capture: true });
-		document.addEventListener('toggle',                (event) => this.#setModal(event), { capture: true });
-		this.#toastCancelButton.addEventListener('click',  (event) => this.#cancelToast());
-		this.#toast.addEventListener('animationend',       (event) => this.#toast.hidePopover());
-		this.#toast.addEventListener('toggle',             (event) => this.#clearCancel(event));
+		document.addEventListener('click',                (event) => this.#dismissModal(event));
+		document.addEventListener('cancel',               (event) => InterfaceDialogs.#cancelModal(event), { capture: true });
+		document.addEventListener('toggle',               (event) => this.#setModal(event), { capture: true });
+		this.#toastCancelButton.addEventListener('click', (event) => this.#cancelToast());
+		this.#toast.addEventListener('animationend',      (event) => this.#toast.hidePopover());
+		this.#toast.addEventListener('toggle',            (event) => this.#clearCancel(event));
 	}
 
 	#dismissModal({ target }) {
