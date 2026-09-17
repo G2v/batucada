@@ -18,7 +18,7 @@ export class SwClient {
 	}
 
 	async #init() {
-		this.#registration = await navigator.serviceWorker.register('./sw.js', { type: 'module' });
+		this.#registration = await navigator.serviceWorker.register('./sw.js', { type: 'module', updateViaCache: 'none' });
 		this.#registration.addEventListener('updatefound', () => {
 			const newWorker = this.#registration.installing;
 			newWorker.addEventListener('statechange', () => {
@@ -43,7 +43,7 @@ export class SwClient {
 		this.#registration ??= await navigator.serviceWorker.ready;
 		this.#checkUpdate();
 		if (this.#hasUpdate) return;
-		this.#registration.active.postMessage({ action: 'findUpdate' });
+		this.#registration.update().catch(() => {});
 	}
 
 	#readMessage({ type }) {

@@ -44,14 +44,10 @@ const assets = [
 
 let skipWaitingCalled = false;
 
-self.addEventListener('message', async ({ data }) => {
+self.addEventListener('message', ({ data }) => {
 	if (data?.action === 'skipWaiting') {
 		skipWaitingCalled = true;
 		self.skipWaiting();
-	}
-	if (data?.action === 'findUpdate') {
-		await fetch('./version.js', { cache: 'reload' });
-		self.registration.update();
 	}
 });
 
