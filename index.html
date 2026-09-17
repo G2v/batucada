@@ -503,6 +503,16 @@ tbody {
 		&:not([value="0"]) {
 			--step-background: var(--color-stroke-set);
 
+		&[value="1"] { --current-icon: var(--icon-1, var(--icon-default)); }
+		&[value="2"] { --current-icon: var(--icon-2, var(--icon-default)); }
+		&[value="3"] { --current-icon: var(--icon-3, var(--icon-default)); }
+		&[value="4"] { --current-icon: var(--icon-4, var(--icon-default)); }
+		&[value="5"] { --current-icon: var(--icon-5, var(--icon-default)); }
+		&[value="6"] { --current-icon: var(--icon-6, var(--icon-default)); }
+		&[value="7"] { --current-icon: var(--icon-7, var(--icon-default)); }
+		&[value="8"] { --current-icon: var(--icon-8, var(--icon-default)); }
+		&[value="9"] { --current-icon: var(--icon-9, var(--icon-default)); }
+
 		&.played {
 			background-image: linear-gradient(var(--color-stroke-played), var(--color-stroke-played));
 		}

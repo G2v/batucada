@@ -16,28 +16,18 @@ function cleanTemplates(root) {
 	}
 }
 
-function instrumentRules(instruments, selectors) {
-	const [first, ...rest] = instruments;
-	let rules = `[data-instrument] { --icon-default: url('${first.strokes[0].icon}') }`;
-	let maxStrokes = 0;
-
-	for (const { id, strokes } of rest) {
-		maxStrokes = Math.max(maxStrokes, strokes.length);
-		const icons = strokes.map(({ icon }, j) => `--icon-${j + 1}: url('${icon}')`).join('; ');
-		rules += `[data-instrument="${id}"] { ${icons} }`;
-	}
-	for (let j = 1; j <= maxStrokes; j++) {
-		rules += `${selectors.stepButton}[value="${j}"] { --current-icon: var(--icon-${j}, var(--icon-default)) }`;
-	}
-	return rules;
-}
-
-export function buildStyles({ instrumentsLibraryReady, selectors }) {
+export function buildStyles({ instrumentsLibraryReady }) {
 	const stylesheet = new CSSStyleSheet();
 	document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
 
 	return instrumentsLibraryReady.then(({ instruments }) => {
-		stylesheet.replaceSync(instrumentRules(instruments, selectors));
+		const [first, ...rest] = instruments;
+		let rules = `[data-instrument] { --icon-default: url('${first.strokes[0].icon}') }`;
+		for (const { id, strokes } of rest) {
+			const icons = strokes.map(({ icon }, j) => `--icon-${j + 1}: url('${icon}')`).join('; ');
+			rules += `[data-instrument="${id}"] { ${icons} }`;
+		}
+		stylesheet.replaceSync(rules);
 	});
 }
 
