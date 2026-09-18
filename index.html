@@ -124,7 +124,7 @@
 html {
 	user-select: none;
 	scrollbar-gutter: stable;
-	overscroll-behavior:contain;
+	overscroll-behavior: contain;
 }
 
 body {
@@ -165,7 +165,7 @@ body {
 		font-weight: normal;
 	}
 
-	caption {
+	h1 {
 		font-size: 1.2em;
 	}
 
@@ -182,7 +182,7 @@ body {
 		--track-col-3-width: 23.3em;
 		--track-col-4-width: 5.8em;
 		font-size: clamp(.6em, 2.4svw, 1.2em);
-		caption {
+		h1 {
 			font-size: 1.4em;
 		}
 		h2 {
@@ -240,16 +240,30 @@ table {
 
 caption {
 	margin: auto;
-	display: block;
+	display: grid;
 	padding: 0 .5em;
 	width: fit-content;
-	position: relative;
+	align-items: center;
 	visibility: var(--untitled, visible);
+	grid-template-columns: minmax(0, auto) 2em;
+
+	&::after {
+		height: 2em;
+		content: '';
+		grid-area: 1 / 2;
+		mask-position: center;
+		background-color: currentColor;
+		mask-image: var(--icon-unsaved);
+	}
+
+	main:has(#preset :checked) &::after {
+		mask-image: var(--icon-saved);
+		background-color: var(--color-stroke-set);
+	}
 
 	h1 {
-		margin: 0;
-		font-size: inherit;
-		padding: .1em 1.7em .1em .6em;
+		grid-area: 1 / 1;
+		padding: .1em .1em .1em .4em;
 
 		#title:empty,
 		#title:not(:empty) + #untitled {
@@ -262,25 +276,13 @@ caption {
 
 	}
 
-	.icon {
-		inset: 0 .7em;
-		position: absolute;
-		font-size: inherit;
+	button {
+		align-self: stretch;
+		text-indent: -10000px;
+		grid-area: 1 / 1 / 2 / 3;
 
 		&:not(:hover) {
 			border-color:transparent;
-		}
-
-		&::before {
-			width: 1.45em;
-			height: 1.45em;
-			inset: .08em 0 auto auto;
-			mask-image: var(--icon-unsaved);
-		}
-
-		main:has(#preset :checked) &::before {
-			mask-image: var(--icon-saved);
-			background-color: var(--color-stroke-set);
 		}
 	}
 }
@@ -838,7 +840,7 @@ a {
 .icon {
 	overflow: hidden;
 	position: relative;
-	text-indent: -1000px;
+	text-indent: -10000px;
 
 	&::before {
 		inset: 0;
@@ -1261,7 +1263,7 @@ body > footer {
 		<table>
 			<caption>
 				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Nouveau morceau</span></h1>
-				<button class="icon" title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
+				<button title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
 			</caption>
 			<tbody>
 			</tbody>
