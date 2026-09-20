@@ -127,7 +127,7 @@ export class Navigation {
 	#handleWorkerMessage({ action, payload }) {
 		if (action !== 'encoded') return;
 		this.#searchParams = new URLSearchParams(payload);
-		this.#navigate({ action: 'encoded', dispatch: true, isUnsaved: true });
+		this.#navigate({ action: 'encoded', dispatch: true });
 	}
 
 	#handleNavigation(event) {
@@ -180,9 +180,8 @@ export class Navigation {
 	#presetsUpdated({ source, title }) {
 		if (title !== undefined) {
 			this.#encodeURL({ title });
-			return;
 		}
-		if (source === 'set' || source === 'unset') {
+		else if (source === 'set' || source === 'unset') {
 			const isUnsaved = source === 'unset';
 			const state = navigation.currentEntry?.getState() ?? {};
 			if (!!state.isUnsaved === isUnsaved) return;
@@ -213,10 +212,10 @@ export class Navigation {
 		const current   = navigation.currentEntry;
 		const nextUrl   = this.#url;
 		const isUnsaved = !!current?.getState()?.isUnsaved;
+		const previous  = navigation.entries()[(current?.index ?? -1) - 1];
 
-		if (!state.isUnsaved && !isUnsaved && current?.url === nextUrl) return;
+		if (!isUnsaved && current?.url === nextUrl) return;
 
-		const previous = navigation.entries()[(current?.index ?? -1) - 1];
 		if (isUnsaved && previous?.url === nextUrl && !previous.getState()?.isUnsaved) {
 			navigation.back();
 			return;
