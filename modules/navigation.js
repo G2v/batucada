@@ -8,6 +8,7 @@ export class Navigation {
 	#state;
 	#worker = null;
 	#searchParams;
+	#savedEncode = false;
 
 	constructor({ bus, config }) {
 		this.#bus          = bus;
@@ -23,14 +24,13 @@ export class Navigation {
 		navigation.addEventListener('navigate',                        event => this.#handleNavigation(event));
 		this.#bus.addEventListener(this.#events.audioState,            ({ detail }) => this.#updateState(detail));
 		this.#bus.addEventListener(this.#events.audioChanged,          ({ detail }) => this.#encodeURL(detail));
-		this.#bus.addEventListener(this.#events.presetsChanged,        ({ detail }) => this.#encodeURL(detail));
+		this.#bus.addEventListener(this.#events.presetsUpdateData,     ({ detail }) => this.#presetsUpdated(detail));
 		this.#bus.addEventListener(this.#events.presetsPresetSelected, ({ detail }) => this.#presetSelected(detail));
 		this.#bus.addEventListener(this.#events.interfaceReset,        ({ detail }) => this.#reset());
 		this.#bus.addEventListener(this.#events.interfaceMoveTrack,    ({ detail }) => this.#moveTrack(detail));
 		this.#bus.addEventListener(this.#events.swClientInstall,       () => this.#reload());
 
 		defer(() => void this.#encoder);
-
 	}
 
 	get #encoder() {
@@ -177,6 +177,19 @@ export class Navigation {
 		this.#navigate({ action: 'decode', dispatch: true, isUnsaved: false });
 	}
 
+	#presetsUpdated({ source, title }) {
+		if (title !== undefined) {
+			this.#encodeURL({ title });
+			return;
+		}
+		if (source === 'set' || source === 'unset') {
+			const isUnsaved = source === 'unset';
+			const state = navigation.currentEntry?.getState() ?? {};
+			if (!!state.isUnsaved === isUnsaved) return;
+			navigation.updateCurrentEntry({ state: { ...state, isUnsaved } });
+		}
+	}
+
 	#encodeURL(values) {
 		this.#updateState(values);
 		this.#postMessage('encode', values);
@@ -201,16 +214,15 @@ export class Navigation {
 		const nextUrl   = this.#url;
 		const isUnsaved = !!current?.getState()?.isUnsaved;
 
-		if (!state.isUnsaved) {
-			if (!isUnsaved && current?.url === nextUrl) return;
-			const previous = navigation.entries()[(current?.index ?? -1) - 1];
-			if (isUnsaved && previous?.url === nextUrl && !previous.getState()?.isUnsaved) {
-				navigation.back();
-				return;
-			}
+		if (!state.isUnsaved && !isUnsaved && current?.url === nextUrl) return;
+
+		const previous = navigation.entries()[(current?.index ?? -1) - 1];
+		if (isUnsaved && previous?.url === nextUrl && !previous.getState()?.isUnsaved) {
+			navigation.back();
+			return;
 		}
 
-		navigation.navigate(nextUrl, { history: isUnsaved ? 'replace' : 'push', state});
+		navigation.navigate(nextUrl, { history: isUnsaved ? 'replace' : 'push', state });
 	}
 
 	#postMessage(action, values) {

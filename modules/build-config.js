@@ -37,7 +37,6 @@ const events = Object.freeze({
 	navigationCloseModal: 'navigation:closeModal',
 
 	presetsUpdateData:     'presets:updateData',
-	presetsChanged:        'presets:changed',
 	presetsInvalidName:    'presets:invalidName',
 	presetsPresetSelected: 'presets:presetSelected',
 

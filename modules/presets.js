@@ -54,8 +54,8 @@ export class Presets {
 				this.#presetsDate  = lastModified ? new Date(lastModified) : null;
 				return response.json();
 			})
-			.then(presets => this.#updatePresets(presets))
-			.catch(() => { if (fallback !== null) this.#updatePresets(fallback); });
+			.then(presets => this.#updatePresets(presets, null, 'load'))
+			.catch(() => { if (fallback !== null) this.#updatePresets(fallback, null, 'load'); });
 	}
 
 	#syncPresets() {
@@ -76,7 +76,7 @@ export class Presets {
 		try {
 			await writeData(this.#cacheName, this.#presetsFile, [], false);
 			this.#presetsDate = null;
-			this.#updatePresets([], this.#defaultTitleValue);
+			this.#updatePresets([], this.#defaultTitleValue, 'clear');
 			resolve();
 		} catch {
 			reject();
@@ -97,14 +97,14 @@ export class Presets {
 			changes.index = this.#index;
 		}
 		if (
-			this.#params.has(this.#titleSearchParam) 
+			this.#params.has(this.#titleSearchParam)
 			&& this.#params.get(this.#titleSearchParam) !== this.#defaultTitleValue
 		) {
 			this.#params.delete(this.#titleSearchParam);
 			changes.title = this.#defaultTitleValue;
 		}
 		this.#params.delete(this.#setSearchParam);
-		this.#dispatchChanges(changes);
+		this.#dispatchChanges(changes, 'reset');
 	}
 
 	#updateParams(params) {
@@ -113,11 +113,11 @@ export class Presets {
 			|| this.#params.get(this.#titleSearchParam) !== params.get(this.#titleSearchParam)
 		) {
 			this.#params = params;
-			this.#updatePresets();
+			this.#updatePresets(null, null, 'navigate');
 		}
 	}
 
-	#updatePresets(presets = null, title = null) {
+	#updatePresets(presets = null, title = null, source = 'load') {
 		const changes = {};
 		if (presets !== null) {
 			this.#presets = presets;
@@ -128,11 +128,15 @@ export class Presets {
 		const targetTitle = title !== null ? title : titleValue;
 		const hasTitle    = targetTitle !== this.#defaultTitleValue;
 		const isEmpty     = setValue === this.#defaultSetValue && !hasTitle;
-		const index       = (this.#presets === null || isEmpty) 
+		const index       = (this.#presets === null || isEmpty)
 			? -1
-			: this.#presets.findIndex(({ value, name }) => 
+			: this.#presets.findIndex(({ value, name }) =>
 				value === setValue && (!hasTitle || name === targetTitle)
 			);
+
+		// une navigation décrit soit un preset retrouvé (set), soit une séquence libre (unset)
+		if (source === 'navigate') source = index !== -1 ? 'set' : 'unset';
+
 		//on passe toujours l'index si presets a été modifié
 		if ('presets' in changes || index !== this.#index) {
 			this.#index = index;
@@ -145,16 +149,13 @@ export class Presets {
 			this.#params.set(this.#titleSearchParam, title);
 			changes.title = title;
 		}
-		this.#dispatchChanges(changes);
+		this.#dispatchChanges(changes, source);
 	}
 
-	#dispatchChanges(changes) {
-		if (Object.keys(changes).length) {
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsUpdateData, { detail: changes }));
-			if ('title' in changes) {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsChanged, { detail: { title: changes.title } }));
-			}
-		}
+	#dispatchChanges(changes, source) {
+		const isNavigation = source === 'set' || source === 'unset';
+		if (!Object.keys(changes).length && !isNavigation) return;
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsUpdateData, { detail: { ...changes, source } }));
 	}
 
 	async #editSave({ action, name, promise }) {
@@ -208,7 +209,7 @@ export class Presets {
 		if (isNewName) data.sort((a, b) => a.name.localeCompare(b.name));
 
 		await this.#saveData(data);
-		this.#updatePresets(data, action === 'delete' ? this.#defaultTitleValue : name);
+		this.#updatePresets(data, action === 'delete' ? this.#defaultTitleValue : name, action);
 	}
 
 	#validateNewName(data, name) {
@@ -224,9 +225,9 @@ export class Presets {
 			if (data === undefined) throw new Error();
 			this.#lastAction = null;
 			await this.#saveData(data);
-			this.#updatePresets(data, title ?? null)
+			this.#updatePresets(data, title ?? null, 'cancel')
 			promise.resolve();
-		} 
+		}
 		catch (error) {
 			promise.reject(error);
 		}
@@ -283,7 +284,7 @@ export class Presets {
 			const newData = Array.from(dataMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 			await this.#saveData(newData);
 			this.#lastAction = { data: snapshotData };
-			this.#updatePresets(newData, null);
+			this.#updatePresets(newData, null, 'import');
 			promise.resolve(importedCount);
 		} catch (error) {
 			promise.reject(error);
