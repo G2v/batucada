@@ -40,7 +40,6 @@ const events = Object.freeze({
 	presetsInvalidName:    'presets:invalidName',
 	presetsPresetSelected: 'presets:presetSelected',
 
-	swClientInstall:    'sw-client:install',
 	swClientNewVersion: 'sw-client:newVersion',
 });
 

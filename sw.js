@@ -42,13 +42,8 @@ const assets = [
 	'./icons/favicon.svg',
 ];
 
-let skipWaitingCalled = false;
-
 self.addEventListener('message', ({ data }) => {
-	if (data?.action === 'skipWaiting') {
-		skipWaitingCalled = true;
-		self.skipWaiting();
-	}
+	if (data?.action === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('install', event => {
@@ -69,19 +64,12 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
 	event.waitUntil(
 		caches.keys()
-			.then(keys =>
-				Promise.all(
-					keys
-						.filter(key => key !== appCache && key !== dataCache)
-						.map(key => caches.delete(key))
-				)
-			)
-			.then(async () => {
-				await self.clients.claim();
-				const clientsList = await self.clients.matchAll({ type: 'window' });
-				const type = skipWaitingCalled ? 'update' : 'install';
-				clientsList.forEach(client => client.postMessage({ type }));
-			})
+			.then(keys => Promise.all(
+				keys
+					.filter(key => key !== appCache && key !== dataCache)
+					.map(key => caches.delete(key))
+			))
+			.then(() => self.clients.claim())
 	);
 });
 

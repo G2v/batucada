@@ -4,15 +4,21 @@ export class SwClient {
 	#bus;
 	#events;
 	#registration;
+	#updateRequested = false;
 
 	constructor({ bus, config }) {
 		if (!('serviceWorker' in navigator)) return;
 
 		this.#bus = bus;
 		this.#events = config.events;
-		navigator.serviceWorker.addEventListener('message', ({ data }) => this.#readMessage(data));
-		this.#bus.addEventListener(this.#events.interfaceInstall,     ({ detail }) => this.#install(detail));
-		this.#bus.addEventListener(this.#events.interfaceFindUpdate,  () => this.#findUpdate());
+
+		const hadController = Boolean(navigator.serviceWorker.controller);
+		navigator.serviceWorker.addEventListener('controllerchange', () => {
+			if (hadController || this.#updateRequested) location.reload();
+		});
+
+		this.#bus.addEventListener(this.#events.interfaceInstall,    () => this.#install());
+		this.#bus.addEventListener(this.#events.interfaceFindUpdate, () => this.#findUpdate());
 
 		defer(() => this.#init());
 	}
@@ -53,12 +59,10 @@ export class SwClient {
 	}
 
 	#install() {
+		this.#updateRequested = true;
 		const waiting = this.#registration?.waiting;
-		if (waiting) {
-			waiting.postMessage({ action: 'skipWaiting' });
-			return;
-		}
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.swClientInstall));
+		if (waiting) waiting.postMessage({ action: 'skipWaiting' });
+		else location.reload();
 	}
 
 }

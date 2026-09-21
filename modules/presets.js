@@ -154,8 +154,9 @@ export class Presets {
 
 	#dispatchChanges(changes, source) {
 		const isNavigation = source === 'set' || source === 'unset';
-		if (!Object.keys(changes).length && !isNavigation) return;
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsUpdateData, { detail: { ...changes, source } }));
+		if (isNavigation || Object.keys(changes).length) {
+			this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsUpdateData, { detail: { ...changes, source } }));
+		}
 	}
 
 	async #editSave({ action, name, promise }) {

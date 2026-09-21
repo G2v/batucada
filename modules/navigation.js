@@ -17,8 +17,6 @@ export class Navigation {
 		this.#state        = initialState(config);
 		this.#searchParams = new URLSearchParams(location.search);
 
-		this.#cleanUpdateSearchParam();
-
 		history.scrollRestoration = 'manual';
 
 		navigation.addEventListener('navigate',                        event => this.#handleNavigation(event));
@@ -28,7 +26,6 @@ export class Navigation {
 		this.#bus.addEventListener(this.#events.presetsPresetSelected, ({ detail }) => this.#presetSelected(detail));
 		this.#bus.addEventListener(this.#events.interfaceReset,        ({ detail }) => this.#reset());
 		this.#bus.addEventListener(this.#events.interfaceMoveTrack,    ({ detail }) => this.#moveTrack(detail));
-		this.#bus.addEventListener(this.#events.swClientInstall,       () => this.#reload());
 
 		defer(() => void this.#encoder);
 	}
@@ -96,24 +93,9 @@ export class Navigation {
 			this.#state = initialState(this.#config, this.#state.order);
 			return;
 		}
-		const changes = action === 'decodeAll'
-			? decodeAll(this.#config, this.#searchParams, this.#state)
-			: decode(this.#config, this.#searchParams, this.#state);
-
+		const decoder = action === 'decodeAll' ? decodeAll : decode;
+		const changes = decoder(this.#config, this.#searchParams, this.#state);
 		if (changes) this.#dispatchDecoded(changes);
-	}
-
-	#cleanUpdateSearchParam() {
-		if (this.#searchParams.has(this.#config.updateSearchParam)) {
-			this.#searchParams.delete(this.#config.updateSearchParam);
-			history.replaceState(null, '', this.#url);
-		}
-	}
-
-	#reload() {
-		const url = new URL(location.pathname, location.origin);
-		url.searchParams.set(this.#config.updateSearchParam, Date.now());
-		location.replace(url);
 	}
 
 	#handleWorkerMessage({ action, payload }) {
@@ -137,7 +119,7 @@ export class Navigation {
 			}
 		}
 
-		if (url.searchParams.has(this.#config.updateSearchParam) ||
+		if (navigationType === 'reload' ||
 			url.protocol === 'blob:' ||
 			!canIntercept ||
 			hashChange ||
