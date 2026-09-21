@@ -34,11 +34,11 @@ function asObject(searchParams) {
 		: searchParams;
 }
 
-export function initialState(config) {
+export function initialState(config, order = Array.from({ length: config.tracksLength }, (_, i) => i)) {
 	return {
 		tempo:   config.defaultTempo,
 		title:   config.defaultTitleValue,
-		order:   Array.from({ length: config.tracksLength }, (_, i) => i),
+		order,
 		sheet:   null,
 		tracks:  null,
 		volumes: null,
@@ -73,8 +73,7 @@ function decodeSet(config, state, encodedValues, changes) {
 	const allocationKeys = Object.keys(allocation);
 	const values         = encodedValues.split(trackFormatSeparator);
 
-	// Une URL malformée peut porter plus de segments que de pistes : on ignore
-	// le surplus plutôt que d'indexer `state.order` hors bornes.
+	// Une URL malformée peut porter plus de segments que de pistes : on les ignore
 	const limitTracks = isVirginTrack ? Math.min(values.length, tracksLength) : tracksLength;
 
 	for (let i = 0; i < limitTracks; i++) {

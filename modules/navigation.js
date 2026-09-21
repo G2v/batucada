@@ -3,11 +3,12 @@ import { decode, decodeAll, initialState } from './navigation_decode.js';
 
 export class Navigation {
 	#bus;
+	#state;
 	#events;
 	#config;
-	#state;
 	#worker = null;
 	#searchParams;
+	#savedEncode = false;
 
 	constructor({ bus, config }) {
 		this.#bus          = bus;
@@ -86,21 +87,13 @@ export class Navigation {
 		}
 	}
 
-	#resetState() {
-		this.#state.tempo   = this.#config.defaultTempo;
-		this.#state.title   = this.#config.defaultTitleValue;
-		this.#state.sheet   = null;
-		this.#state.tracks  = null;
-		this.#state.volumes = null;
-	}
-
 	#dispatchDecoded(changes) {
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationDecoded, { detail: changes }));
 	}
 
 	#decodeAction(action) {
 		if (action === 'reset') {
-			this.#resetState();
+			this.#state = initialState(this.#config, this.#state.order);
 			return;
 		}
 		const changes = action === 'decodeAll'
@@ -226,7 +219,7 @@ export class Navigation {
 	#postMessage(action, values) {
 		queueMicrotask(() => {
 			const payload = {
-				searchParams: Object.fromEntries(this.#searchParams.entries()),
+				searchParams: Object.fromEntries(this.#searchParams),
 				state: structuredClone(this.#state),
 				values,
 			};
