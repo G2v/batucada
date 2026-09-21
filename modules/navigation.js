@@ -227,16 +227,12 @@ export class Navigation {
 	#postMessage(action, values) {
 		queueMicrotask(() => {
 			const payload = {
-				searchParams: this.#paramsAsObject(),
+				searchParams: Object.fromEntries(this.#searchParams.entries()),
 				state: structuredClone(this.#state),
 				values,
 			};
 			this.#encoder.then(worker => worker.postMessage({ action, payload }));
 		});
-	}
-
-	#paramsAsObject() {
-		return Object.fromEntries(this.#searchParams.entries());
 	}
 
 	get #url() {
