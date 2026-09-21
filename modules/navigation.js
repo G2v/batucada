@@ -8,7 +8,6 @@ export class Navigation {
 	#state;
 	#worker = null;
 	#searchParams;
-	#savedEncode = false;
 
 	constructor({ bus, config }) {
 		this.#bus          = bus;
