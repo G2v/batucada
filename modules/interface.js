@@ -20,7 +20,6 @@ export class Interface {
 
 	#nodes           = {};
 	#ready           = {};
-	#resolvers       = {};
 	#instances       = {};
 	#playing         = false;
 	#headTitlePrefix = `${document.title} - `;
@@ -31,10 +30,6 @@ export class Interface {
 		this.#resolution         = config.resolution;
 		this.#instrumentKey      = config.trackKeys.instrument;
 		this.#trackProperties    = new Set(Object.values(config.trackKeys));
-
-		Interface.#modules.forEach(({ name }) => {
-			this.#ready[name] = new Promise(resolve => this.#resolvers[name] = resolve);
-		});
 
 		bus.addEventListener(events.audioStop,            ({ detail }) => this.#instances.animation?.stop());
 		bus.addEventListener(events.audioUpdateData,      ({ detail }) => this.#update(detail));
@@ -69,9 +64,8 @@ export class Interface {
 
 	#loadModules(params) {
 		Interface.#modules.forEach(({ name, path }) => {
-			import(path).then(module => {
+			this.#ready[name] = import(path).then(module => {
 				this.#instances[name] = new module.default({ ...params, parent: this });
-				this.#resolvers[name]();
 			});
 		});
 	}

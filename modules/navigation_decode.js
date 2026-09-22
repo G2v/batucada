@@ -143,14 +143,21 @@ function decodeSet(config, state, encodedValues, changes) {
 	if (tracksChanges.length) changes.tracks = tracksChanges;
 }
 
+function decodeTempo({ defaultTempo, tempoMin, tempoMax, tempoStep }, value) {
+	const tempo = Number(value);
+	if (!Number.isFinite(tempo)) return defaultTempo;
+	const snapped = tempoMin + Math.round((tempo - tempoMin) / tempoStep) * tempoStep;
+	return Math.min(tempoMax, Math.max(tempoMin, snapped));
+}
+
 function decodeVolumes(config, state, encodedValues, changes) {
-	const { formatDigits: digits, tracksLength, defaultGain, defaultVolume } = config;
-	const outputBase     = digits.length;
+	const { formatDigits: digits, tracksLength, defaultGain, defaultVolume, maxGain } = config;
 	const volumesChanges = [];
 
 	for (let index = 0; index < tracksLength; index++) {
 		const encodeVolume = (index < encodedValues.length) ? encodedValues[index] : defaultVolume;
-		const value        = Number(stringBaseConvert(encodeVolume, outputBase, 10, digits));
+		const decoded      = digits.indexOf(encodeVolume);
+		const value        = (decoded >= 0 && decoded <= maxGain) ? decoded : defaultGain;
 		const id           = state.order[index];
 		const currentValue = state.volumes?.[id] ?? defaultGain;
 		if (value !== currentValue) {
@@ -174,7 +181,7 @@ export function decode(config, searchParams, state) {
 
 	if (set    != null) decodeSet(config, state, set, changes);
 	if (volume != null) decodeVolumes(config, state, volume, changes);
-	if (tempo  != null) changes.tempo = tempo;
+	if (tempo  != null) changes.tempo = decodeTempo(config, tempo);
 	if (title  != null) changes.title = title;
 
 	return Object.keys(changes).length === 0 ? null : changes;

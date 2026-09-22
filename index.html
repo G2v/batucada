@@ -218,10 +218,6 @@ main {
 	background: var(--color-background-base);
 	box-shadow: 0 0 0 1px var(--color-shadow-medium), 0 0 .5em var(--color-shadow-medium);
 
-	&.swap .dropzone::after {
-		border-top: 1.5px dashed var(--color-border-light);
-	}
-
 	@media (min-width: 520px) {
 		border-radius: .5em;
 		padding-bottom: .3em;
@@ -294,6 +290,10 @@ tbody {
 	min-height: calc((1em + 1.65em * var(--grid-lines) + .3em * (var(--grid-lines) - 1)) * (var(--tracks-count) + 1));
 }
 
+main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
+	display: none;
+}
+
 .track {
 	display: grid;
 	position: relative;
@@ -327,25 +327,6 @@ tbody {
 		&[data-steps="6"] .grid [name="step"]:nth-child(n+6) {
 			display: none;
 		}
-
-	.dropzone {
-		z-index: 1;
-		grid-column: 1 / -1;
-
-		&::after {
-			content: '';
-			display: block;
-			margin: .4em 0 0 var(--main-margin);
-		}
-	}
-
-	&.over .dropzone::after {
-		height: .3em;
-		margin-top: .3em;
-		border-radius: 3px;
-		background: var(--color-background-base);
-		border: 1px solid var(--color-border-strong);
-	}
 
 	.instrument {
 		grid-row: 2;
@@ -422,7 +403,6 @@ tbody {
 			padding: 0;
 			min-width: 0;
 			outline: none;
-			outline-offset: 4px;
 		}
 	}
 
@@ -610,7 +590,7 @@ hr {
 	margin: .7em var(--main-margin);
 	background: var(--color-background-base);
 
-	&:before {
+	&::before {
 		z-index: -1;
 		content: '';
 		position: absolute;
@@ -743,6 +723,36 @@ hr {
 	justify-content: center;
 }
 
+.dropzone {
+	z-index: 1;
+	grid-column: 1 / -1;
+
+	&::after {
+		content: '';
+		display: block;
+		margin: .4em 0 0 var(--main-margin);
+	}
+
+	:where(main.swap) &::after {
+		border-top: 1.5px dashed var(--color-border-light);
+	}
+
+	&.over::after {
+		height: .3em;
+		margin-top: .3em;
+		border-radius: 3px;
+		background: var(--color-background-base);
+		border: 1px solid var(--color-border-strong);
+	}
+
+	tfoot & {
+		left: 0;
+		height: 1em;
+		position: absolute;
+		width: calc(var(--track-col-1-width) + var(--track-col-2-width) + var(--track-col-3-width) + var(--track-col-4-width));
+	}
+}
+
 #tempo,
 select,
 input:not([type]),
@@ -752,7 +762,6 @@ button {
 	color: inherit;
 	padding: 0 .5em;
 	appearance: none;
-	user-select: none;
 	border-radius: 4px;
 	box-sizing: border-box;
 	background: transparent no-repeat;
@@ -795,11 +804,6 @@ option {
 
 	&::checkmark {
 		display: none;
-	}
-
-	&[disabled] {
-		opacity: .6;
-		pointer-events: none;
 	}
 
 	&:checked {
@@ -859,6 +863,7 @@ dialog {
 	color: inherit;
 	max-width: 26em;
 	margin: 1em auto;
+	user-select: none;
 	border-radius: .5em;
 	box-sizing: border-box;
 	width: calc(100% - 2em);
@@ -1028,7 +1033,7 @@ dialog {
 }
 
 #app-menu {
-	div {
+	> div {
 		anchor-name: --app-menu;
 	}
 
@@ -1114,6 +1119,7 @@ dialog {
 		gap: 1em;
 		display: flex;
 		align-items: center;
+		animation: fade-out 1s forwards 8s;
 	}
 
 	p {
@@ -1126,10 +1132,6 @@ dialog {
 		padding: .2em .5em;
 		color: var(--color-text-main);
 		background-color: var(--color-background-light);
-	}
-
-	&:popover-open {
-		animation: fade-out 1s forwards 8s;
 	}
 
 	&:has(button[hidden]):popover-open {
@@ -1268,6 +1270,9 @@ body > footer {
 			</caption>
 			<tbody>
 			</tbody>
+			<tfoot aria-hidden="true">
+				<tr><td class="dropzone"></td></tr>
+			</tfoot>
 		</table>
 		<hr aria-hidden="true">
 		<section id="controls" aria-label="Boutons de contrôle" tabindex="-1">

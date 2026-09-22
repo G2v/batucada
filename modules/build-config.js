@@ -56,6 +56,7 @@ const selectors = Object.freeze({
 	container:       'main',
 	trackList:       'tbody',
 	trashZone:       '#trash',
+	endDropZone:     'tfoot .dropzone',
 	sequenceTitle:   '#title',
 	untitledLabel:   '#untitled',
 	trackTemplate:   'template',
@@ -149,7 +150,11 @@ const maxSteps      = Math.max(...stepsValues);
 
 const { bars, beats, steps, phrase, instrument } = trackTemplate.dataset;
 
-const defaultTempo      = query(selectors.tempoSlider).value | 0;
+const tempoSlider       = query(selectors.tempoSlider);
+const defaultTempo      = tempoSlider.value | 0;
+const tempoMin          = tempoSlider.min   | 0;
+const tempoMax          = tempoSlider.max   | 0;
+const tempoStep         = tempoSlider.step  | 0 || 1;
 const defaultGain       = volumeSlider.value | 0;
 const maxGain           = volumeSlider.max   | 0;
 const defaultBars       = bars       | 0;
@@ -172,10 +177,6 @@ export const config = Object.freeze({
 	events,
 	trackKeys,
 	selectors,
-	barsValues,
-	beatsValues,
-	stepsValues,
-	phraseValues,
 	instrumentsLibraryReady,
 	emptyStroke:           0,
 	resolution:            {
@@ -185,8 +186,10 @@ export const config = Object.freeze({
 		maxBars, maxBeats,
 	},
 	maxGain,
-	maxPhrase:             Math.max(...phraseValues),
 	defaultTempo,
+	tempoMin,
+	tempoMax,
+	tempoStep,
 	defaultGain,
 	defaultBars,
 	defaultBeats,

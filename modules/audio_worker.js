@@ -58,6 +58,8 @@ function init(payload) {
 }
 
 function start(time) {
+	// Déjà en cours de lecture : ne pas lancer une seconde boucle
+	if (timer !== null) return;
 	const startTime = time + startDelay;
 	beatCounter = 0;
 	phraseCounter = 1;
@@ -118,8 +120,10 @@ function scheduler(nextTickTime) {
 	}
 
 	else {
-		const nextPhrase = phraseCounter + 1;
-		const hasNextPhrase = tracks.some(track => track.active && track.phrase === nextPhrase);
+		const nextPhrase = tracks
+			.filter(track => track.active && track.phrase > phraseCounter)
+			.reduce((min, track) => Math.min(min, track.phrase), Infinity);
+		const hasNextPhrase = nextPhrase !== Infinity;
 		const hasLoop = tracks.some(track => track.active && track.phrase === 0);
 		if (phraseCounter !== 0 && hasNextPhrase) {
 			phraseCounter = nextPhrase;

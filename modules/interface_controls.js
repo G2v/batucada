@@ -1,4 +1,3 @@
-
 export default class InterfaceControls {
 	#ui;
 	#bus;
@@ -109,15 +108,14 @@ export default class InterfaceControls {
 		const hasChanges  = Object.keys(changes).length > 0;
 		const order = this.#ui.tracksOrder;
 		const currentPosition = order.indexOf(trackIndex);
-		const targetIndex = newPosition > -1 && newPosition !== currentPosition
-			? (newPosition > currentPosition
-				? order[newPosition + 1] ?? null
-				: order[newPosition] ?? null)
-			: null;
-		if (!hasChanges && targetIndex === null) return;
+		const isMoved = newPosition !== currentPosition;
+		const targetIndex = newPosition > currentPosition
+			? order[newPosition + 1] ?? null
+			: order[newPosition];
+		if (!hasChanges && !isMoved) return;
 
 		this.#ui.startViewTransition(() => {
-			if (targetIndex !== null) this.#ui.swap.moveTrack(trackIndex, targetIndex);
+			if (isMoved) this.#ui.swap.moveTrack(trackIndex, targetIndex);
 			if (hasChanges) Object.assign(values, changes);
 		});
 

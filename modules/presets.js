@@ -1,4 +1,4 @@
-import { fetchFromCache, writeData, downloadFile, getFileContent } from './utils.js';
+import { fetchFromCache, writeData } from './utils.js';
 
 export class Presets {
 	static #newNameActions = Object.freeze(['save', 'rename']);
@@ -44,7 +44,7 @@ export class Presets {
 		this.#bus.addEventListener(this.#events.interfacePresetSelected, ({ detail }) => this.#presetSelected(detail));
 		this.#bus.addEventListener(this.#events.interfacePresetsDelete,  ({ detail }) => this.#deleteData(detail));
 		this.#bus.addEventListener(this.#events.navigationChanged,       ({ detail }) => this.#updateParams(detail));
-		document.addEventListener('visibilitychange',          () => this.#syncPresets());
+		document.addEventListener('visibilitychange',                    () => this.#syncPresets());
 	}
 
 	#loadPresets(fallback = null) {
@@ -125,16 +125,11 @@ export class Presets {
 		}
 		const setValue    = this.#params.get(this.#setSearchParam)   || this.#defaultSetValue;
 		const titleValue  = this.#params.get(this.#titleSearchParam) || this.#defaultTitleValue;
-		const targetTitle = title !== null ? title : titleValue;
-		const hasTitle    = targetTitle !== this.#defaultTitleValue;
-		const isEmpty     = setValue === this.#defaultSetValue && !hasTitle;
-		const index       = (this.#presets === null || isEmpty)
+		const targetTitle = title ?? titleValue;
+		const index = (this.#presets === null || targetTitle === this.#defaultTitleValue)
 			? -1
-			: this.#presets.findIndex(({ value, name }) =>
-				value === setValue && (!hasTitle || name === targetTitle)
-			);
+			: this.#presets.findIndex(({ value, name }) => value === setValue && name === targetTitle);
 
-		// une navigation décrit soit un preset retrouvé (set), soit une séquence libre (unset)
 		if (source === 'navigate') source = index !== -1 ? 'set' : 'unset';
 
 		//on passe toujours l'index si presets a été modifié
@@ -142,13 +137,12 @@ export class Presets {
 			this.#index = index;
 			changes.index = index;
 		}
-		if (title === null) {
-			title = titleValue || this.#presets?.[this.#index]?.name || this.#defaultTitleValue;
-		}
-		if (title !== titleValue) {
+
+		if (title !== null && title !== titleValue) {
 			this.#params.set(this.#titleSearchParam, title);
 			changes.title = title;
 		}
+
 		this.#dispatchChanges(changes, source);
 	}
 
@@ -183,9 +177,9 @@ export class Presets {
 
 	async #applyModification(data, action, name) {
 		const isNewName = Presets.#newNameActions.includes(action);
-		const value = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
-		const indexName = action === 'rename' ? this.#params.get(this.#titleSearchParam) : name;
-		const index = data.findIndex(preset => preset.name === indexName);
+		const value     = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
+		const indexName = action === 'save' ? name : this.#params.get(this.#titleSearchParam);
+		const index     = data.findIndex(preset => preset.name === indexName);
 
 		this.#lastAction = {
 			data:  data.map(preset => ({ ...preset })),

@@ -1,13 +1,11 @@
 export default class InterfaceDialogs {
-	#ui;
 	#toast;
 	#toastMessage;
 	#toastCancelButton;
 	#modals = [];
 	#cancel = null;
 
-	constructor({ parent, config }) {
-		this.#ui = parent;
+	constructor({ config }) {
 
 		const { selectors } = config;
 
@@ -71,7 +69,6 @@ export default class InterfaceDialogs {
 	}
 
 	showToast(message, cancel = null) {
-		if (this.#cancel && !cancel) return;
 		this.#cancel = cancel;
 		this.#toastCancelButton.hidden = !cancel;
 		this.#toast.getAnimations().forEach(animation => animation.cancel() || animation.play());

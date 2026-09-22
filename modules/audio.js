@@ -16,8 +16,6 @@ export class Audio {
 	#sounds;
 	#maxGain;
 	#gainNodes;
-	#dataCache;
-	#soundsFile;
 	#masterGain;
 	#workerReady;
 	#emptyStroke;
@@ -36,8 +34,6 @@ export class Audio {
 		this.#bus                 = bus;
 		this.#events              = config.events;
 		this.#maxGain             = config.maxGain;
-		this.#dataCache           = config.dataCache;
-		this.#soundsFile          = config.instrumentsSoundsFile;
 		this.#emptyStroke         = config.emptyStroke;
 		this.#hiddenPlayDuration  = config.hiddenPlayDuration;
 		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain);
@@ -73,8 +69,6 @@ export class Audio {
 			action: 'config',
 			payload: {
 				tempo:         config.defaultTempo,
-				maxBars:       config.maxBars,
-				synchroBar:    config.defaultBars,
 				resolution:    config.resolution,
 				emptyStroke:   config.emptyStroke,
 				tracksLength:  config.tracksLength,

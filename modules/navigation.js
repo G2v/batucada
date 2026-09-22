@@ -8,7 +8,6 @@ export class Navigation {
 	#config;
 	#worker = null;
 	#searchParams;
-	#savedEncode = false;
 
 	constructor({ bus, config }) {
 		this.#bus          = bus;
@@ -51,13 +50,11 @@ export class Navigation {
 			resolution:            this.#config.resolution,
 			emptyStroke:           this.#config.emptyStroke,
 			tracksLength:          this.#config.tracksLength,
-			tempoStep:             this.#config.tempoStep,
 			defaultGain:           this.#config.defaultGain,
 			defaultBars:           this.#config.defaultBars,
 			defaultBeats:          this.#config.defaultBeats,
 			defaultSteps:          this.#config.defaultSteps,
 			defaultTempo:          this.#config.defaultTempo,
-			defaultOrder:          this.#config.defaultOrder,
 			defaultPhrase:         this.#config.defaultPhrase,
 			defaultSetValue:       this.#config.defaultSetValue,
 			defaultTitleValue:     this.#config.defaultTitleValue,
@@ -148,19 +145,18 @@ export class Navigation {
 		const { setSearchParam, titleSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
-		this.#navigate({ action: 'decode', dispatch: true, isUnsaved: false });
+		this.#navigate({ action: 'decode', dispatch: true });
 	}
 
 	#presetsUpdated({ source, title }) {
-		if (title !== undefined) {
-			this.#encodeURL({ title });
-		}
-		else if (source === 'set' || source === 'unset') {
-			const isUnsaved = source === 'unset';
-			const state = navigation.currentEntry?.getState() ?? {};
-			if (!!state.isUnsaved === isUnsaved) return;
-			navigation.updateCurrentEntry({ state: { ...state, isUnsaved } });
-		}
+		if (title !== undefined) this.#encodeURL({ title });
+		if (source === 'set' || source === 'unset') this.#updateEntry(source === 'unset');
+	}
+
+	#updateEntry(isUnsaved) {
+		const state = navigation.currentEntry?.getState() ?? {};
+		if (!!state.isUnsaved === isUnsaved) return;
+		navigation.updateCurrentEntry({ state: { ...state, isUnsaved } });
 	}
 
 	#encodeURL(values) {
@@ -179,7 +175,7 @@ export class Navigation {
 		for (const param of [setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam]) {
 			this.#searchParams.delete(param);
 		}
-		this.#navigate({ action: 'reset', dispatch: false, isUnsaved: false });
+		this.#navigate({ action: 'reset', dispatch: false });
 	}
 
 	#navigate(state) {

@@ -1,4 +1,3 @@
-
 export default class InterfaceSwap {
 	static #swapClass     = 'swap';
 	static #overClass     = 'over';
@@ -10,7 +9,7 @@ export default class InterfaceSwap {
 	#bus;
 	#events;
 	#trashZone;
-	#trashSelector;
+	#endDropZone;
 	#defaultInstrument;
 	#over = new Set();
 
@@ -18,8 +17,8 @@ export default class InterfaceSwap {
 		this.#ui                = parent;
 		this.#bus               = bus;
 		this.#events            = config.events;
-		this.#trashSelector     = config.selectors.trashZone;
-		this.#trashZone         = document.querySelector(this.#trashSelector);
+		this.#trashZone         = document.querySelector(config.selectors.trashZone);
+		this.#endDropZone       = document.querySelector(config.selectors.endDropZone);
 		this.#defaultInstrument = config.defaultInstrument;
 
 		this.#ui.container.addEventListener('dragstart', (event) => this.#handleDragStart(event));
@@ -51,10 +50,8 @@ export default class InterfaceSwap {
 	#handleDragEnter(event) {
 		this.#removeOver();
 		if (!this.#isDropZone(event.target)) return;
-		const target =
-			event.target.closest(this.#trashSelector) ||
-			this.#ui.getTrack(event.target);
-		if (!target || this.#over.has(target)) return;
+		const target = event.target;
+		if (this.#over.has(target)) return;
 		this.#over.add(target);
 		target.classList.add(InterfaceSwap.#overClass);
 	}
@@ -75,6 +72,11 @@ export default class InterfaceSwap {
 		const targetTrack = this.#ui.getTrack(event.target);
 		const targetIndex = targetTrack ? this.#ui.getTrackIndex(targetTrack) : null;
 		const sourceIndex = Number(event.dataTransfer.getData('text/plain'));
+
+		if (event.target === this.#endDropZone) {
+			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null));
+			return;
+		}
 
 		if (targetIndex !== null) {
 			const order = this.#ui.tracksOrder;
@@ -103,12 +105,12 @@ export default class InterfaceSwap {
 		this.#over.clear();
 	}
 
-	moveTrack(sourceIndex, targetIndex) {
+	moveTrack(sourceIndex, targetIndex, isTrashed = false) {
 		if (sourceIndex === targetIndex) return;
 		const draggedTrack = this.#ui.tracks[sourceIndex];
 		const targetTrack  = targetIndex !== null ? this.#ui.tracks[targetIndex] : null;
-		if (draggedTrack.nextElementSibling === targetTrack) return;
-		const trashed = targetIndex === null ? sourceIndex : null;
+		if (!isTrashed && draggedTrack.nextElementSibling === targetTrack) return;
+		const trashed = isTrashed ? sourceIndex : null;
 		draggedTrack.parentNode.insertBefore(draggedTrack, targetTrack);
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceMoveTrack, {
 			detail: { trashed, order: this.#ui.tracksOrder }
@@ -122,14 +124,14 @@ export default class InterfaceSwap {
 
 		if (isLastVisualTrack) {
 			const target = draggedTrack.nextElementSibling || draggedTrack;
-			this.moveTrack(sourceIndex, null);
+			this.moveTrack(sourceIndex, null, true);
 			target.classList.remove(InterfaceSwap.#resetedClass);
 			requestAnimationFrame(() => {
 				target.classList.add(InterfaceSwap.#resetedClass);
 				target.addEventListener('animationend', () => target.classList.remove(InterfaceSwap.#resetedClass), { once: true });
 			});
 		} else {
-			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null));
+			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null, true));
 		}
 	}
 }

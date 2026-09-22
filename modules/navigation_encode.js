@@ -37,9 +37,10 @@ export function encodeUrl(config, { values, state, searchParams }) {
 export function moveTrack(config, { values: { trashed, order, previousOrder }, searchParams }) {
 	const { setSearchParam, volumeSearchParam, defaultVolume, trackFormatSeparator } = config;
 
-	const setSource = (searchParams[setSearchParam] || '').split(trackFormatSeparator);
-	const volSource = (searchParams[volumeSearchParam] || '');
-	const setLength = trashed !== null ? setSource.length - 1 : setSource.length;
+	const setSource   = (searchParams[setSearchParam] || '').split(trackFormatSeparator);
+	const volSource   = (searchParams[volumeSearchParam] || '');
+	const lastEncoded = Number(trashed !== null && previousOrder.indexOf(trashed) < setSource.length);
+	const setLength   = setSource.length - lastEncoded;
 
 	const newSetArray = new Array(setLength);
 	const newVolArray = new Array(setLength);
@@ -153,7 +154,7 @@ function emptyTrack(config, index) {
 	};
 }
 
-export function pack(values, allocation) {
+function pack(values, allocation) {
 	const keys = Object.keys(allocation);
 	let packed = 0;
 	for (let i = keys.length - 1; i >= 0; i--) {

@@ -52,12 +52,6 @@ export class SwClient {
 		this.#registration.update().catch(() => {});
 	}
 
-	#readMessage({ type }) {
-		if (type === 'update') {
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.swClientInstall));
-		}
-	}
-
 	#install() {
 		this.#updateRequested = true;
 		const waiting = this.#registration?.waiting;
