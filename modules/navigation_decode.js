@@ -1,39 +1,3 @@
-function stringBaseConvert(string, fromBase, base, digits) {
-	base     = BigInt(base);
-	fromBase = BigInt(fromBase);
-	string   = string.toString();
-
-	let number = 0n;
-	for (let i = 0; i < string.length; i++) {
-		number = number * fromBase + BigInt(digits.indexOf(string[i]));
-	}
-
-	if (number === 0n) return '0';
-
-	let result = '';
-	while (number > 0n) {
-		result = digits[Number(number % base)] + result;
-		number /= base;
-	}
-	return result;
-}
-
-function unpack(value, allocation, keys) {
-	const result = {};
-	for (const key of keys) {
-		const base = allocation[key];
-		result[key] = value % base;
-		value = (value / base) | 0;
-	}
-	return result;
-}
-
-function asObject(searchParams) {
-	return searchParams instanceof URLSearchParams
-		? Object.fromEntries(searchParams.entries())
-		: searchParams;
-}
-
 export function initialState(config, order = Array.from({ length: config.tracksLength }, (_, i) => i)) {
 	return {
 		tempo:   config.defaultTempo,
@@ -45,16 +9,35 @@ export function initialState(config, order = Array.from({ length: config.tracksL
 	};
 }
 
-function emptyTrack(config, index) {
-	const { defaultBars, defaultBeats, defaultSteps, defaultPhrase, defaultInstrument, resolution } = config;
-	return {
-		bars:       defaultBars,
-		beats:      defaultBeats,
-		steps:      defaultSteps,
-		phrase:     defaultPhrase,
-		instrument: defaultInstrument,
-		sheetIndex: resolution.track * index,
-	};
+export function decode(config, searchParams, state) {
+	const params  = asObject(searchParams);
+	const changes = {};
+
+	const set    = params[config.setSearchParam];
+	const volume = params[config.volumeSearchParam];
+	const tempo  = params[config.tempoSearchParam];
+	const title  = params[config.titleSearchParam];
+
+	if (set    != null) decodeSet(config, state, set, changes);
+	if (volume != null) decodeVolumes(config, state, volume, changes);
+	if (tempo  != null) changes.tempo = decodeTempo(config, tempo);
+	if (title  != null) changes.title = title;
+
+	return Object.keys(changes).length === 0 ? null : changes;
+}
+
+export function decodeAll(config, searchParams, state) {
+	return decode(config, {
+		[config.setSearchParam]:    config.defaultSetValue,
+		[config.volumeSearchParam]: config.defaultVolume,
+		[config.tempoSearchParam]:  config.defaultTempo,
+		[config.titleSearchParam]:  config.defaultTitleValue,
+		...asObject(searchParams),
+	}, state);
+}
+
+export function decodeInitial(config, searchParams) {
+	return decode(config, searchParams, initialState(config)) ?? {};
 }
 
 function decodeSet(config, state, encodedValues, changes) {
@@ -69,11 +52,10 @@ function decodeSet(config, state, encodedValues, changes) {
 		resolution: { maxBars, maxBeats, bar, beat },
 	} = config;
 
-	const outputBase     = digits.length;
 	const allocationKeys = Object.keys(allocation);
 	const values         = encodedValues.split(trackFormatSeparator);
 
-	// Une URL malformÃ©e peut porter plus de segments que de pistes : on les ignore
+	// Une URL malformée peut porter plus de segments que de pistes : on les ignore
 	const limitTracks = isVirginTrack ? Math.min(values.length, tracksLength) : tracksLength;
 
 	for (let i = 0; i < limitTracks; i++) {
@@ -82,9 +64,9 @@ function decodeSet(config, state, encodedValues, changes) {
 		const track = state.tracks?.[id] || emptyTrack(config, id);
 		const data  = (values[i] || '').padEnd(3, defaultSetValue);
 
-		const instrument   = +stringBaseConvert(data.slice(0, 1), outputBase, 10, digits);
-		const base         = Math.min(+stringBaseConvert(data.slice(1, 2), outputBase, 10, digits) + 2, 10);
-		const packedValues = +stringBaseConvert(data.slice(2, 4), outputBase, 10, digits);
+		const instrument   = fromDigits(data.slice(0, 1), digits);
+		const base         = BigInt(Math.min(fromDigits(data.slice(1, 2), digits) + 2, 10));
+		const packedValues = fromDigits(data.slice(2, 4), digits);
 		const paramsValues = unpack(packedValues, allocation, allocationKeys);
 
 		const params = {
@@ -101,11 +83,11 @@ function decodeSet(config, state, encodedValues, changes) {
 			}
 		}
 
-		const sheetString = stringBaseConvert(data.slice(4), outputBase, base, digits);
+		// Chiffres lus du poids faible au poids fort : première case de la première mesure d'abord
+		let sheetNumber   = toBigInt(data.slice(4), digits);
 		const limitBars   = isVirginTrack ? params.bars  : maxBars;
 		const limitBeats  = isVirginTrack ? params.beats : maxBeats;
 		const limitSteps  = isVirginTrack ? params.steps : beat;
-		let charPointer   = sheetString.length - 1;
 
 		loop:
 		for (let barIndex = 0; barIndex < limitBars; barIndex++) {
@@ -117,13 +99,15 @@ function decodeSet(config, state, encodedValues, changes) {
 				const isBeatActive = isBarActive && beatIndex < params.beats;
 
 				for (let stepIndex = 0; stepIndex < limitSteps; stepIndex++) {
-					if (isVirginSheet && charPointer < 0) break loop;
+					if (isVirginSheet && sheetNumber === 0n) break loop;
 
 					const bufferIndex = beatOffset + stepIndex;
 
-					const value = (isBeatActive && stepIndex < params.steps && charPointer >= 0)
-						? Number(sheetString[charPointer--])
-						: 0;
+					let value = 0;
+					if (isBeatActive && stepIndex < params.steps && sheetNumber > 0n) {
+						value = Number(sheetNumber % base);
+						sheetNumber /= base;
+					}
 
 					const currentValue = state.sheet?.[bufferIndex] ?? 0;
 
@@ -170,33 +154,43 @@ function decodeVolumes(config, state, encodedValues, changes) {
 	}
 }
 
-export function decode(config, searchParams, state) {
-	const params  = asObject(searchParams);
-	const changes = {};
-
-	const set    = params[config.setSearchParam];
-	const volume = params[config.volumeSearchParam];
-	const tempo  = params[config.tempoSearchParam];
-	const title  = params[config.titleSearchParam];
-
-	if (set    != null) decodeSet(config, state, set, changes);
-	if (volume != null) decodeVolumes(config, state, volume, changes);
-	if (tempo  != null) changes.tempo = decodeTempo(config, tempo);
-	if (title  != null) changes.title = title;
-
-	return Object.keys(changes).length === 0 ? null : changes;
+function emptyTrack(config, index) {
+	const { defaultBars, defaultBeats, defaultSteps, defaultPhrase, defaultInstrument, resolution } = config;
+	return {
+		bars:       defaultBars,
+		beats:      defaultBeats,
+		steps:      defaultSteps,
+		phrase:     defaultPhrase,
+		instrument: defaultInstrument,
+		sheetIndex: resolution.track * index,
+	};
 }
 
-export function decodeAll(config, searchParams, state) {
-	return decode(config, {
-		[config.setSearchParam]:    config.defaultSetValue,
-		[config.volumeSearchParam]: config.defaultVolume,
-		[config.tempoSearchParam]:  config.defaultTempo,
-		[config.titleSearchParam]:  config.defaultTitleValue,
-		...asObject(searchParams),
-	}, state);
+function fromDigits(string, digits) {
+	let number = 0;
+	for (const char of string) number = number * digits.length + digits.indexOf(char);
+	return Math.max(number, 0);
 }
 
-export function decodeInitial(config, searchParams) {
-	return decode(config, searchParams, initialState(config)) ?? {};
+function toBigInt(string, digits) {
+	const base = BigInt(digits.length);
+	let number = 0n;
+	for (const char of string) number = number * base + BigInt(digits.indexOf(char));
+	return number > 0n ? number : 0n;
+}
+
+function unpack(value, allocation, keys) {
+	const result = {};
+	for (const key of keys) {
+		const base = allocation[key];
+		result[key] = value % base;
+		value = (value / base) | 0;
+	}
+	return result;
+}
+
+function asObject(searchParams) {
+	return searchParams instanceof URLSearchParams
+		? Object.fromEntries(searchParams.entries())
+		: searchParams;
 }

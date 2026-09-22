@@ -7,8 +7,6 @@ const decodeBase64 = Uint8Array.fromBase64
 const dataURIToBuffer = (dataURI) => decodeBase64(dataURI.slice(dataURI.indexOf(',') + 1)).buffer;
 
 export class Audio {
-	static #idleDelay   = 10;
-
 	#bus;
 	#events;
 	#gains;
@@ -23,11 +21,11 @@ export class Audio {
 	#audioContext;
 	#hiddenPlayDuration;
 
+	#playing          = false;
 	#wakeLock         = null;
 	#playTimer        = null;
 	#audioReady       = null;
 	#instruments      = [];
-	#lastNoteTime     = 0;
 	#activeSources    = new Set();
 
 	constructor({ bus, config, initial = {} }) {
@@ -157,7 +155,7 @@ export class Audio {
 	}
 
 	async #fetchInstrumentSounds(cacheName, fileName) {
-		const response = await fetchFromCache(cacheName, fileName, false, true);
+		const response = await fetchFromCache(cacheName, fileName);
 		const json = await response.json();
 		return Object.entries(json).map(([id, sounds]) => [id, sounds.map(dataURIToBuffer)]);
 	}
@@ -203,7 +201,8 @@ export class Audio {
 		await this.#startAudio();
 		this.#ensureAudioStream().play().catch(() => {});
 		this.#post({ action: 'start', payload: this.#audioContext.currentTime });
-		this.#wakeLockRequest();
+		this.#playing = true;
+		this.#handleVisibilityChange();
 	}
 
 	#startAudio() {
@@ -221,6 +220,7 @@ export class Audio {
 	}
 
 	#stopAudio() {
+		this.#playing = false;
 		clearTimeout(this.#playTimer);
 		this.#playTimer = null;
 		this.#wakeLockRelease();
@@ -241,7 +241,6 @@ export class Audio {
 	}
 
 	#playTicks(ticks) {
-		let hasStroke = false;
 		const animations = new Map();
 		const timeDelta = performance.now() - (this.#audioContext.currentTime * 1000);
 
@@ -252,7 +251,6 @@ export class Audio {
 			const trackIndex = ticks[i + 3];
 			const stepIndex  = ticks[i + 4];
 			if (stroke > this.#emptyStroke) {
-				hasStroke = true;
 				this.#playNote(instrument, trackIndex, stroke, time);
 			}
 			if (!animations.has(trackIndex)) {
@@ -263,9 +261,6 @@ export class Audio {
 				stepIndex,
 				stroke,
 			});
-		}
-		if (hasStroke) {
-			this.#lastNoteTime = this.#audioContext.currentTime;
 		}
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.audioPushAnimations, { detail: { animations } }));
 	}
@@ -305,11 +300,18 @@ export class Audio {
 	}
 
 	#handleVisibilityChange() {
-		if (!document.hidden && this.#playTimer) {
-			clearTimeout(this.#playTimer);
-			this.#playTimer = null;
+		clearTimeout(this.#playTimer);
+		this.#playTimer = null;
+		if (!this.#playing) return;
+
+		if (!document.hidden) {
 			this.#wakeLockRequest();
+			return;
 		}
+		this.#playTimer = setTimeout(() => {
+			this.#stop();
+			this.#audioContext.suspend();
+		}, this.#hiddenPlayDuration * 1000);
 	}
 
 	#handleAudioStateChange() {
@@ -345,34 +347,16 @@ export class Audio {
 	}
 
 	async #wakeLockRequest() {
-		clearTimeout(this.#playTimer);
-		this.#playTimer = null;
 		try {
-			this.#wakeLock = await navigator.wakeLock.request();
-			this.#wakeLock.onrelease = () => this.#setPlayTimer();
-		} catch {
-			this.#setPlayTimer();
-		}
-	}
-
-	#setPlayTimer() {
-		if (this.#audioContext.state !== 'running') return;
-		this.#playTimer = setTimeout(() => {
-			const isIdle = this.#audioContext.currentTime - this.#lastNoteTime > Audio.#idleDelay;
-			const delay = isIdle ? 0 : Math.max(0, this.#hiddenPlayDuration - Audio.#idleDelay) * 1000;
-			this.#playTimer = setTimeout(() => {
-				this.#stop();
-				this.#playTimer = null;
-				this.#audioContext.suspend();
-			}, delay);
-		}, Audio.#idleDelay * 1000);
+			const wakeLock = await navigator.wakeLock.request();
+			if (this.#playing && !document.hidden) this.#wakeLock = wakeLock;
+			else wakeLock.release();
+		} catch {}
 	}
 
 	#wakeLockRelease() {
-		if (this.#wakeLock !== null) {
-			this.#wakeLock.onrelease = null;
-			this.#wakeLock.release().then(() => this.#wakeLock = null);
-		}
+		this.#wakeLock?.release().catch(() => {});
+		this.#wakeLock = null;
 	}
 
 }

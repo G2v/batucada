@@ -31,13 +31,11 @@ const assets = [
 	'./modules/navigation.js',
 	'./modules/navigation_decode.js',
 	'./modules/navigation_encode.js',
-	'./modules/navigation_worker.js',
 	'./modules/presets.js',
 	'./modules/utils.js',
 	'./modules/sw-client.js',
 	'./icons/icon.svg',
 	'./icons/icon_512x512.png',
-	'./icons/icon_white-bg.svg',
 	'./icons/icon_white-bg_512x512.png',
 	'./icons/favicon.svg',
 ];
@@ -49,14 +47,8 @@ self.addEventListener('message', ({ data }) => {
 self.addEventListener('install', event => {
 	event.waitUntil(
 		caches.open(appCache).then(cache =>
-			Promise.all(
-				assets.map(path => {
-					const url = new URL(path, self.registration.scope);
-					const versionedUrl = new URL(url);
-					versionedUrl.searchParams.set('v', version);
-					return fetch(versionedUrl).then(response => cache.put(url.href, response));
-				})
-			)
+			// 'reload' contourne le cache HTTP ; addAll échoue si un fichier manque
+			cache.addAll(assets.map(path => new Request(new URL(path, self.registration.scope), { cache: 'reload' })))
 		)
 	);
 });
@@ -75,10 +67,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
 	if (event.request.method !== 'GET') return;
-	const url = new URL(event.request.url);
-	const canonical = url.search
-		? Object.assign(url, { search: '' }).href
-		: url.href;
+	const canonical = new URL(event.request.url);
+	canonical.search = '';
 	event.respondWith(
 		caches.match(event.request, { ignoreSearch: true, cacheName: appCache }).then(cached => {
 			const networkFirst = event.request.cache === 'no-cache';
@@ -87,7 +77,7 @@ self.addEventListener('fetch', event => {
 				.then(response => {
 					if (response.ok) {
 						const responseClone = response.clone();
-						caches.open(appCache).then(cache => cache.put(canonical, responseClone));
+						caches.open(appCache).then(cache => cache.put(canonical.href, responseClone));
 					}
 					return response;
 				})

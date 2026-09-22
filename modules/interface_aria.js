@@ -62,7 +62,6 @@ export default class InterfaceAria {
 			volumeValuetext: volume.dataset.templateAriaValuetext,
 		};
 
-		this.#ui.tempoSlider.removeAttribute('data-template');
 		this.#ui.tempoSlider.removeAttribute('data-template-aria-valuetext');
 
 		this.#volumeRatioPerCent = 100 / ((volume.max | 0) - (volume.min | 0));

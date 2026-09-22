@@ -6,17 +6,12 @@ export function defer(task, timeout = 3000) {
 	else setTimeout(task, 500);
 }
 
-export async function fetchFromCache(cacheName, filename, cacheResponse = false, eager = false) {
-	const url     = new URL(filename, location.href).href;
-	const network = eager ? fetch(url) : null;
-
+export async function fetchFromCache(cacheName, filename, cacheResponse = false) {
+	const url = new URL(filename, location.href).href;
 	const cached = await caches.match(url, { cacheName }).catch(() => null);
-	if (cached) {
-		network?.then(response => response.body?.cancel()).catch(() => {});
-		return cached;
-	}
+	if (cached) return cached;
 
-	const networkResponse = await (network ?? fetch(url));
+	const networkResponse = await fetch(url);
 	if (!networkResponse.ok) return networkResponse;
 
 	const headers = new Headers(networkResponse.headers);
@@ -74,4 +69,3 @@ export function getFileContent() {
 	input.click();
 	return promise;
 }
-

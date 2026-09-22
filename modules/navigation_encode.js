@@ -85,14 +85,10 @@ function encodeSet(config, { tracks, sheet, order }) {
 
 function encodeTrack(config, track) {
 	const {
-		formatDigits: digits, trackFormatAllocation: allocation, defaultSetValue,
+		formatDigits: digits, trackFormatAllocation: allocation,
 		stepsIndex, beatsIndex, barsIndex, phraseIndex, instrumentsBase,
 	} = config;
 	const outputBase = digits.length;
-
-	const baseValue  = (instrumentsBase[track.instrument] ?? 2) - 2;
-	const base       = stringBaseConvert(baseValue, 10, outputBase, digits);
-	const instrument = stringBaseConvert(track.instrument, 10, outputBase, digits);
 
 	const params = {
 		steps:    stepsIndex .indexOf(track.steps),
@@ -101,39 +97,41 @@ function encodeTrack(config, track) {
 		phrase:   phraseIndex.indexOf(track.phrase),
 		reserved: 0,
 	};
-	const packedParams = stringBaseConvert(pack(params, allocation), 10, outputBase, digits)
-		.padStart(2, defaultSetValue);
+	const packed = pack(params, allocation);
 
-	return instrument + base + packedParams;
+	return digits[track.instrument]
+		+ digits[(instrumentsBase[track.instrument] ?? 2) - 2]
+		+ digits[packed / outputBase | 0]
+		+ digits[packed % outputBase];
 }
 
 function encodeSheet(config, track, sheet) {
 	if (sheet === null) return '';
-	const { formatDigits: digits, defaultSetValue, instrumentsBase, resolution: { bar, beat } } = config;
-	const outputBase = digits.length;
-	const base       = instrumentsBase[track.instrument] || 2;
+	const { formatDigits: digits, instrumentsBase, resolution: { bar, beat } } = config;
+	const base = BigInt(instrumentsBase[track.instrument] || 2);
 
-	const sheetArray = [];
+	// La dernière case de la dernière mesure est le chiffre de poids fort
+	let number = 0n;
 	for (let barIndex = track.bars - 1; barIndex >= 0; barIndex--) {
 		const barOffset = track.sheetIndex + (barIndex * bar);
 		for (let beatIndex = track.beats - 1; beatIndex >= 0; beatIndex--) {
 			const beatOffset = barOffset + (beatIndex * beat);
-			sheetArray.push([...sheet.subarray(beatOffset, beatOffset + track.steps)].reverse().join(''));
+			for (let stepIndex = track.steps - 1; stepIndex >= 0; stepIndex--) {
+				number = number * base + BigInt(sheet[beatOffset + stepIndex]);
+			}
 		}
 	}
 
-	const encoded = stringBaseConvert(sheetArray.join(''), base, outputBase, digits);
-	return encoded === defaultSetValue ? '' : encoded;
+	return toDigits(number, digits);
 }
 
 function encodeVolumes(config, { volumes, order }) {
 	const { formatDigits: digits, defaultVolume } = config;
-	const outputBase = digits.length;
 	const parts = [];
 	let last = -1;
 
 	for (let i = 0; i < order.length; i++) {
-		const encoded = stringBaseConvert(volumes[order[i]], 10, outputBase, digits);
+		const encoded = digits[volumes[order[i]]];
 		parts.push(encoded);
 		if (encoded !== defaultVolume) last = i;
 	}
@@ -163,18 +161,8 @@ function pack(values, allocation) {
 	return packed;
 }
 
-export function stringBaseConvert(string, fromBase, base, digits) {
-	base     = BigInt(base);
-	fromBase = BigInt(fromBase);
-	string   = string.toString();
-
-	let number = 0n;
-	for (let i = 0; i < string.length; i++) {
-		number = number * fromBase + BigInt(digits.indexOf(string[i]));
-	}
-
-	if (number === 0n) return '0';
-
+function toDigits(number, digits) {
+	const base = BigInt(digits.length);
 	let result = '';
 	while (number > 0n) {
 		result = digits[Number(number % base)] + result;
