@@ -730,7 +730,7 @@ hr {
 	&::after {
 		content: '';
 		display: block;
-		margin: .4em 0 0 var(--main-margin);
+		margin: calc(.5em - .75px) 0 0 var(--main-margin);
 	}
 
 	:where(main.swap) &::after {
@@ -1527,7 +1527,7 @@ body > footer {
 					<p>Application : Batucada Sequencer</p>
 					<p id="contact">Contact : <a></a></p>
 					<p id="version">Version : 
-						<span>-</span>
+						<span></span>
 						<button commandfor="about" command="close" value="update" hidden>Mettre à jour</button>
 					</p>
 				</section>
