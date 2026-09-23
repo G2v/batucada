@@ -22,8 +22,8 @@ export class Audio {
 	#hiddenPlayDuration;
 
 	#playing          = false;
+	#hiddenSince      = null;
 	#wakeLock         = null;
-	#playTimer        = null;
 	#audioReady       = null;
 	#instruments      = [];
 	#activeSources    = new Set();
@@ -202,7 +202,9 @@ export class Audio {
 		this.#ensureAudioStream().play().catch(() => {});
 		this.#post({ action: 'start', payload: this.#audioContext.currentTime });
 		this.#playing = true;
-		this.#handleVisibilityChange();
+		this.#hiddenSince = document.hidden ? this.#audioContext.currentTime : null;
+		if (!document.hidden) this.#wakeLockRequest();
+
 	}
 
 	#startAudio() {
@@ -221,8 +223,7 @@ export class Audio {
 
 	#stopAudio() {
 		this.#playing = false;
-		clearTimeout(this.#playTimer);
-		this.#playTimer = null;
+		this.#hiddenSince = null;
 		this.#wakeLockRelease();
 		if (this.#audioStream) {
 			this.#audioStream.pause();
@@ -241,6 +242,7 @@ export class Audio {
 	}
 
 	#playTicks(ticks) {
+		if (this.#checkHiddenLimit()) return;
 		const animations = new Map();
 		const timeDelta = performance.now() - (this.#audioContext.currentTime * 1000);
 
@@ -300,22 +302,19 @@ export class Audio {
 	}
 
 	#handleVisibilityChange() {
-		clearTimeout(this.#playTimer);
-		this.#playTimer = null;
-		if (!this.#playing) return;
+		this.#hiddenSince = (this.#playing && document.hidden) ? this.#audioContext.currentTime : null;
+		if (this.#playing && !document.hidden) this.#wakeLockRequest();
+	}
 
-		if (!document.hidden) {
-			this.#wakeLockRequest();
-			return;
-		}
-		this.#playTimer = setTimeout(() => {
-			this.#stop();
-			this.#audioContext.suspend();
-		}, this.#hiddenPlayDuration * 1000);
+	#checkHiddenLimit() {
+		if (this.#hiddenSince === null || this.#audioContext.currentTime - this.#hiddenSince < this.#hiddenPlayDuration) return false;
+		this.#stop();
+		this.#audioContext.suspend();
+		return true;
 	}
 
 	#handleAudioStateChange() {
-		if (this.#audioContext.state !== 'running' && this.#playTimer !== null) {
+		if (this.#audioContext.state !== 'running' && this.#hiddenSince !== null) {
 			this.#stop();
 		}
 	}
