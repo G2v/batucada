@@ -3,17 +3,19 @@
 	"short_name": "Batucada",
 	"start_url": "./",
 	"display": "standalone",
-	"background_color": "#cbd2dc",
+	"background_color": "#1f252e",
 	"icons": [
 		{
 			"src": "./icons/icon.svg",
 			"sizes": "any",
-			"type": "image/svg+xml"
+			"type": "image/svg+xml",
+			"purpose": "maskable"
 		},
 		{
 			"src": "./icons/icon_512x512.png",
 			"sizes": "512x512",
-			"type": "image/png"
+			"type": "image/png",
+			"purpose": "maskable"
 		}
 	],
 	"share_target": {
@@ -26,4 +28,3 @@
 		}
 	}
 }
-
