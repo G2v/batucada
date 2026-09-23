@@ -16,7 +16,6 @@ export default class InterfaceControls {
 	#trackSettingsDialog;
 	#trackPositionText;
 	#positionSelect;
-	#systemColor;
 	#controlsSection;
 	#defaultInstrument;
 
@@ -25,7 +24,6 @@ export default class InterfaceControls {
 		this.#events            = config.events;
 		this.#ui                = parent;
 		this.#names             = config.names;
-		this.#systemColor       = matchMedia('(prefers-color-scheme: dark)');
 		this.#defaultInstrument = config.defaultInstrument;
 
 		const { selectors } = config;
@@ -53,7 +51,6 @@ export default class InterfaceControls {
 		this.#ui.container.addEventListener('change',            (event) => this.#handleChange(event));
 		this.#trackSettingsDialog.addEventListener('submit',     (event) => this.#setTrack());
 		this.#trackSettingsDialog.addEventListener('command',    (event) => this.#showTrackSettings(event));
-		this.#systemColor.addEventListener('change',             (event) => this.#setTheme(event));
 		this.#initMediaSession();
 
 		if (!document.startViewTransition) {
@@ -234,24 +231,9 @@ export default class InterfaceControls {
 	}
 
 	#changeTheme() {
-		const theme = !document.documentElement.classList.contains('dark');
-		if (theme === this.#systemColor.matches) {
-			delete localStorage.theme;
-		} else {
-			localStorage.theme = theme ? 'dark' : 'light';
-		}
-		InterfaceControls.#applyTheme(theme);
-	}
-
-	#setTheme({ matches }) {
-		if (localStorage.theme !== undefined) return;
-		InterfaceControls.#applyTheme(matches);
-	}
-
-	static #applyTheme(theme) {
-		document.startViewTransition(() => {
-			document.documentElement.classList.toggle('dark', theme);
-		});
+		const isDark = !document.documentElement.classList.contains('dark');
+		localStorage.theme = isDark ? 'dark' : 'light';
+		document.startViewTransition(window.applyTheme);
 	}
 
 	#skipContent(event) {
