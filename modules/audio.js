@@ -22,9 +22,9 @@ export class Audio {
 	#hiddenPlayDuration;
 
 	#playing          = false;
-	#hiddenSince      = null;
 	#wakeLock         = null;
 	#audioReady       = null;
+	#hiddenTimer      = null;
 	#instruments      = [];
 	#activeSources    = new Set();
 
@@ -45,6 +45,7 @@ export class Audio {
 		this.#bus.addEventListener(this.#events.interfaceUserGesture,    () => this.#startAudio(), { once: true });
 		this.#bus.addEventListener(this.#events.interfacePresetSelected, () => this.#restart());
 		document.addEventListener('visibilitychange',                    () => this.#handleVisibilityChange());
+		document.addEventListener('freeze',                              () => this.#playing && this.#stopHiddenPlay());
 
 		this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 		this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
@@ -202,9 +203,7 @@ export class Audio {
 		this.#ensureAudioStream().play().catch(() => {});
 		this.#post({ action: 'start', payload: this.#audioContext.currentTime });
 		this.#playing = true;
-		this.#hiddenSince = document.hidden ? this.#audioContext.currentTime : null;
-		if (!document.hidden) this.#wakeLockRequest();
-
+		this.#handleVisibilityChange();
 	}
 
 	#startAudio() {
@@ -223,7 +222,8 @@ export class Audio {
 
 	#stopAudio() {
 		this.#playing = false;
-		this.#hiddenSince = null;
+		clearTimeout(this.#hiddenTimer);
+		this.#hiddenTimer = null;
 		this.#wakeLockRelease();
 		if (this.#audioStream) {
 			this.#audioStream.pause();
@@ -242,7 +242,8 @@ export class Audio {
 	}
 
 	#playTicks(ticks) {
-		if (this.#checkHiddenLimit()) return;
+		// Paquet arrivé après un arrêt : ne pas relancer les animations
+		if (!this.#playing) return;
 		const animations = new Map();
 		const timeDelta = performance.now() - (this.#audioContext.currentTime * 1000);
 
@@ -302,19 +303,21 @@ export class Audio {
 	}
 
 	#handleVisibilityChange() {
-		this.#hiddenSince = (this.#playing && document.hidden) ? this.#audioContext.currentTime : null;
-		if (this.#playing && !document.hidden) this.#wakeLockRequest();
+		clearTimeout(this.#hiddenTimer);
+		this.#hiddenTimer = null;
+		if (!this.#playing) return;
+
+		if (document.hidden) this.#hiddenTimer = setTimeout(() => this.#stopHiddenPlay(), this.#hiddenPlayDuration * 1000);
+		else this.#wakeLockRequest();
 	}
 
-	#checkHiddenLimit() {
-		if (this.#hiddenSince === null || this.#audioContext.currentTime - this.#hiddenSince < this.#hiddenPlayDuration) return false;
+	#stopHiddenPlay() {
 		this.#stop();
 		this.#audioContext.suspend();
-		return true;
 	}
 
 	#handleAudioStateChange() {
-		if (this.#audioContext.state !== 'running' && this.#hiddenSince !== null) {
+		if (this.#audioContext.state !== 'running' && this.#hiddenTimer !== null) {
 			this.#stop();
 		}
 	}
@@ -348,6 +351,7 @@ export class Audio {
 	async #wakeLockRequest() {
 		try {
 			const wakeLock = await navigator.wakeLock.request();
+			// La lecture a pu s'arrêter pendant la demande
 			if (this.#playing && !document.hidden) this.#wakeLock = wakeLock;
 			else wakeLock.release();
 		} catch {}

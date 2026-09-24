@@ -58,7 +58,6 @@ function init(payload) {
 }
 
 function start(time) {
-	// Déjà en cours de lecture : ne pas lancer une seconde boucle
 	if (timer !== null) return;
 	const startTime = time + startDelay;
 	beatCounter = 0;

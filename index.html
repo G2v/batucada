@@ -9,13 +9,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
 {
-	const theme = matchMedia('(prefers-color-scheme: dark)');
+	const osTheme = matchMedia('(prefers-color-scheme: dark)');
 	window.applyTheme = () => {
-		if (localStorage.theme === (theme.matches ? 'dark' : 'light')) delete localStorage.theme;
-		document.documentElement.classList.toggle('dark', localStorage.theme ? localStorage.theme === 'dark' : theme.matches);
+		if (localStorage.theme === (osTheme.matches ? 'dark' : 'light')) delete localStorage.theme;
+		document.documentElement.classList.toggle('dark', localStorage.theme ? localStorage.theme === 'dark' : osTheme.matches);
 	};
 	applyTheme();
-	theme.addEventListener('change', applyTheme);
+	osTheme.addEventListener('change', applyTheme);
 
 	const params = new URLSearchParams(location.search);
 	const tracks = params.get('set')?.split('-').filter(s => s && s[0] !== '0').length;
@@ -32,69 +32,69 @@
 	--color-secondary: hsl(130 100% 50%);
 
 	--color-background-body: light-dark(
-		hsl(from var(--color-primary) h s 83%), 
+		hsl(from var(--color-primary) h s 83%),
 		hsl(from var(--color-primary) h s 0%)
 	);
 	--color-background-base: light-dark(
-		hsl(from var(--color-primary) h s 100%), 
+		hsl(from var(--color-primary) h s 100%),
 		hsl(from var(--color-primary) h s 15%)
 	);
 	--color-background-light: light-dark(
-		hsl(from var(--color-primary) h s 92%), 
+		hsl(from var(--color-primary) h s 92%),
 		hsl(from var(--color-primary) h s 23%)
 	);
 	--color-background-strong: light-dark(
-		hsl(from var(--color-primary) h s 83%), 
+		hsl(from var(--color-primary) h s 83%),
 		hsl(from var(--color-primary) h s 30%)
 	);
 	--color-background-contrast: light-dark(
-		hsl(from var(--color-primary) h s 20%), 
+		hsl(from var(--color-primary) h s 20%),
 		hsl(from var(--color-primary) h s 90%)
 	);
 	--color-text-main: light-dark(
-		hsl(from var(--color-primary) h s 0%), 
+		hsl(from var(--color-primary) h s 0%),
 		hsl(from var(--color-primary) h s 90%)
 	);
 	--color-text-faded: light-dark(
-		hsl(from var(--color-primary) h s 20%), 
+		hsl(from var(--color-primary) h s 20%),
 		hsl(from var(--color-primary) h s 70%)
 	);
 	--color-text-muted: light-dark(
-		hsl(from var(--color-primary) h s 70%), 
+		hsl(from var(--color-primary) h s 70%),
 		hsl(from var(--color-primary) h s 65%)
 	);
 	--color-text-contrast: light-dark(
-		hsl(from var(--color-primary) h s 100%), 
+		hsl(from var(--color-primary) h s 100%),
 		hsl(from var(--color-primary) h s 0%)
 	);
 	--color-stroke-set: light-dark(
-		hsl(from var(--color-primary) h 100% 43%), 
+		hsl(from var(--color-primary) h 100% 43%),
 		hsl(from var(--color-primary) h 100% 60%)
 	);
 	--color-stroke-played: hsl(from var(--color-primary) h s 100% / .4);
 	--color-stroke-current: light-dark(
-		hsl(from var(--color-secondary) h 100% 25%), 
+		hsl(from var(--color-secondary) h 100% 25%),
 		hsl(from var(--color-secondary) h 100% 40%)
 	);
 	--color-step-current: light-dark(
-		hsl(from var(--color-secondary) h 30% 70%), 
+		hsl(from var(--color-secondary) h 30% 70%),
 		hsl(from var(--color-secondary) h 30% 40%)
 	);
 	--color-border-light: light-dark(
-		hsl(from var(--color-primary) h s 50%), 
+		hsl(from var(--color-primary) h s 50%),
 		hsl(from var(--color-primary) h s 70%)
 	);
 	--color-border-strong: light-dark(
-		hsl(from var(--color-primary) h s 20%), 
+		hsl(from var(--color-primary) h s 20%),
 		hsl(from var(--color-primary) h s 100%)
 	);
 
 	--color-shadow-light: light-dark(
-		hsl(from var(--color-primary) h 50% 10% / .1), 
+		hsl(from var(--color-primary) h 50% 10% / .1),
 		hsl(from var(--color-primary) h 50% 10% / .4)
 	);
 	--color-shadow-medium: light-dark(
-		hsl(from var(--color-primary) h 50% 10% / .2), 
+		hsl(from var(--color-primary) h 50% 10% / .2),
 		hsl(from var(--color-primary) h 50% 10% / .6)
 	);
 	--color-shadow-strong: hsl(from var(--color-primary) h 50% 10% / .4);
