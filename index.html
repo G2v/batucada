@@ -183,8 +183,8 @@ body {
 		--grid-lines: 1;
 		--track-col-1-width: 8.1em;
 		--track-col-2-width: 2.5em;
-		--track-col-3-width: 23.3em;
-		--track-col-4-width: 5.8em;
+		--track-col-3-width: 23.1em;
+		--track-col-4-width: 6em;
 		font-size: clamp(.6em, 2.4svw, 1.2em);
 		h1 {
 			font-size: 1.4em;
@@ -256,9 +256,14 @@ caption {
 		mask-image: var(--icon-unsaved);
 	}
 
-	main:has(#preset :checked) &::after {
-		mask-image: var(--icon-saved);
-		background-color: var(--color-stroke-set);
+	main:has(#preset :checked) & {
+		&::after {
+			mask-image: var(--icon-saved);
+			background-color: var(--color-stroke-set);
+		}
+
+		#saved { display: block; }
+		#unsaved { display: none; }
 	}
 
 	h1 {
@@ -273,7 +278,15 @@ caption {
 		#title:empty + #untitled {
 			display: block;
 		}
+	}
 
+	& > span {
+		font-size:0;
+	}
+
+	#saved,
+	&:has(#title:empty) #unsaved {
+		display: none;
 	}
 
 	button {
@@ -380,11 +393,12 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		display: flex;
 		grid-area: 4 / 2;
 		margin-left: .5em;
-		align-items: center;
+		justify-content: right;
 
 		label {
 			width: 100%;
 			display: flex;
+			max-width: 5.3em;
 			border-radius: 1px;
 			align-items: center;
 
@@ -1193,16 +1207,16 @@ body > footer {
 
 	:root.dark & {
 		&::before { mask-image: var(--icon-lightmode); }
-		.state-dark { display: none; }
-		.state-light { display: block; }
+		#dark { display: none; }
+		#light { display: block; }
 	}
 
-	.state-light {
+	#light {
 		display: none;
 	}
 
-	.state-dark,
-	.state-light {
+	#dark,
+	#light {
 		pointer-events: none;
 	}
 }
@@ -1271,6 +1285,7 @@ body > footer {
 		<table>
 			<caption>
 				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Nouveau morceau</span></h1>
+				<span id="saved">Morceau enregistré</span><span id="unsaved">Morceau non enregistré</span>
 				<button title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
 			</caption>
 			<tbody>
@@ -1302,8 +1317,8 @@ body > footer {
 	<footer>
 		<button commandfor="app-menu" command="show-modal" aria-label="Menu de l'application">Application</button>
 		<button id="theme">
-			<span class="state-light">Mode clair</span>
-			<span class="state-dark">Mode sombre</span>
+			<span id="light">Mode clair</span>
+			<span id="dark">Mode sombre</span>
 		</button>
 	</footer>
 	<datalist id="volume">
@@ -1312,7 +1327,7 @@ body > footer {
 	<template>
 		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
 			<td class="dropzone" aria-hidden="true"></td>
-			<th class="instrument" scope="row" draggable="true" aria-label="Piste sans instrument" data-template data-template-aria-label-empty="Piste sans instrument" data-template-aria-label-filled="Piste {{instrument}}">
+			<th class="instrument" scope="row" draggable="true" aria-label="Piste sans instrument" data-template data-template-aria-label-empty="Piste sans instrument{{phrase}}" data-template-aria-label-filled="Piste {{instrument}}{{phrase}}" data-template-aria-label-phrase=", {{name}}">
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
 				<span aria-hidden="true">+ Instrument</span>
 				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label-empty="Ajouter un instrument" data-template-aria-label-filled="Modifier l'instrument" autocomplete="off">

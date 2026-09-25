@@ -221,8 +221,7 @@ export default class InterfaceControls {
 
 	#inputTempo(target) {
 		this.#ui.tempoValue.textContent = target.value;
-		const value = Number(target.value);
-		const detail = { tempo: value };
+		const detail = { tempo: Number(target.value) };
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail }));
 	}
 

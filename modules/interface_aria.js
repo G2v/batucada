@@ -2,6 +2,8 @@ export default class InterfaceAria {
 	static #bpmToken         = 'bpm';
 	static #volumeToken      = 'volume';
 	static #strokeToken      = 'stroke';
+	static #nameToken        = 'name';
+	static #phraseToken      = 'phrase';
 	static #instrumentToken  = 'instrument';
 	static #scopeRowSelector = '[scope="row"]';
 	static #toolbarSelector  = '[role="toolbar"]';
@@ -14,8 +16,11 @@ export default class InterfaceAria {
 	#resolution;
 	#emptyStroke;
 	#strokeNames;
+	#phraseSelect;
 	#instrumentNames;
+	#trackPhrases;
 	#trackInstruments;
+	#defaultPhrase;
 	#defaultInstrument;
 	#volumeRatioPerCent;
 
@@ -30,6 +35,7 @@ export default class InterfaceAria {
 		this.#names             = config.names;
 		this.#resolution        = config.resolution;
 		this.#emptyStroke       = config.emptyStroke;
+		this.#defaultPhrase     = config.defaultPhrase;
 		this.#defaultInstrument = config.defaultInstrument;
 		this.#init(config);
 		bus.addEventListener(this.#events.audioStop,           () => this.#playing = false);
@@ -52,6 +58,8 @@ export default class InterfaceAria {
 		const volume     = track.querySelector(selectors.volumeSlider);
 		const instrument = track.querySelector(selectors.instrumentSelect);
 
+		this.#phraseSelect     = document.querySelector(selectors.phraseSelect);
+		this.#trackPhrases     = new Array(tracksLength).fill(this.#defaultPhrase);
 		this.#trackInstruments = new Array(tracksLength).fill(this.#defaultInstrument);
 
 		this.#templates = {
@@ -83,6 +91,7 @@ export default class InterfaceAria {
 		return {
 			empty:  element.dataset.templateAriaLabelEmpty,
 			filled: element.dataset.templateAriaLabelFilled,
+			phrase: element.dataset.templateAriaLabelPhrase,
 		};
 	}
 
@@ -92,6 +101,15 @@ export default class InterfaceAria {
 			result = result.replace(`{{${token}}}`, value);
 		}
 		return result;
+	}
+
+	#hasInstrument(instrument) {
+		return instrument !== this.#defaultInstrument && Object.hasOwn(this.#instrumentNames, instrument);
+	}
+
+	#phraseName(phrase) {
+		return phrase !== this.#defaultPhrase
+			&& this.#phraseSelect.querySelector(`[value="${phrase}"]`)?.textContent;
 	}
 
 	#strokeName(instrument, value) {
@@ -110,6 +128,21 @@ export default class InterfaceAria {
 		step.ariaLabel   = stroke
 			? InterfaceAria.#format(template.filled, { [InterfaceAria.#strokeToken]: stroke })
 			: template.empty;
+	}
+
+	// Le gabarit de la ligne porte l'assemblage complet ; {{phrase}} reste vide pour la phrase par défaut
+	#labelTrack(trackIndex) {
+		const instrument    = this.#trackInstruments[trackIndex];
+		const phraseName    = this.#phraseName(this.#trackPhrases[trackIndex]);
+		const hasInstrument = this.#hasInstrument(instrument);
+		const { empty, filled, phrase } = this.#templates.rowLabel;
+
+		this.#rowNodes[trackIndex].ariaLabel = InterfaceAria.#format(hasInstrument ? filled : empty, {
+			[InterfaceAria.#instrumentToken]: hasInstrument ? this.#instrumentNames[instrument].toLowerCase() : '',
+			[InterfaceAria.#phraseToken]:     phraseName
+				? InterfaceAria.#format(phrase, { [InterfaceAria.#nameToken]: phraseName.toLowerCase() })
+				: '',
+		});
 	}
 
 	#relabelSteps(trackIndex, instrument) {
@@ -242,21 +275,19 @@ export default class InterfaceAria {
 
 	set #tracks(values) {
 		for (const { id, changes } of values) {
-			if ('instrument' in changes) {
-				const { instrument } = changes;
-				this.#trackInstruments[id] = instrument;
-				const hasInstrument = instrument !== this.#defaultInstrument && Object.hasOwn(this.#instrumentNames, instrument);
-				const token = hasInstrument
-					? { [InterfaceAria.#instrumentToken]: this.#instrumentNames[instrument].toLowerCase() }
-					: null;
-				const { empty, filled } = this.#templates.rowLabel;
+			const { instrument, phrase } = changes;
 
-				this.#rowNodes[id].ariaLabel = token ? InterfaceAria.#format(filled, token) : empty;
-				this.#ui.instruments[id].ariaLabel = hasInstrument
+			if (phrase !== undefined) this.#trackPhrases[id] = phrase;
+
+			if (instrument !== undefined) {
+				this.#trackInstruments[id] = instrument;
+				this.#ui.instruments[id].ariaLabel = this.#hasInstrument(instrument)
 					? this.#templates.instrumentLabel.filled
 					: this.#templates.instrumentLabel.empty;
 				this.#relabelSteps(id, instrument);
 			}
+
+			if (instrument !== undefined || phrase !== undefined) this.#labelTrack(id);
 			if (InterfaceAria.#keys.some(key => key in changes)) this.#resetTabIndex(id);
 		}
 	}
