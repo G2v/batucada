@@ -139,7 +139,7 @@ export class Navigation {
 		if (!isUnsaved && current?.url === nextUrl) return;
 
 		if (isUnsaved && previous?.url === nextUrl && !previous.getState()?.isUnsaved) {
-			navigation.back({ info: { keepScroll: true } });
+			navigation.back({ info: { keepScroll: state.action === 'encoded' } });
 			return;
 		}
 
