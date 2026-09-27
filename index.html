@@ -26,7 +26,26 @@
 <style>
 :root {
 	color-scheme: light;
+	--grid-lines: 2;
 	--tracks-count : 0;
+	--font-size: 4.92svw;
+	--body-margin: 0px;
+	--main-margin: .7em;
+	--track-col-1-width: 2.7em;
+	--track-col-2-width: 5em;
+	--track-col-3-width: 11.9em;
+	--track-col-4-width: 0px;
+
+	@media (min-width: 520px) {
+		--grid-lines: 1;
+		--font-size: clamp(.6rem, 2.4svw, 1.2rem);
+		--body-margin: .5em;
+		--main-margin: 1em;
+		--track-col-1-width: 8.1em;
+		--track-col-2-width: 2.5em;
+		--track-col-3-width: 23.1em;
+		--track-col-4-width: 6em;
+	}
 
 	--color-primary:   hsl(215 20% 50%);
 	--color-secondary: hsl(130 100% 50%);
@@ -118,6 +137,8 @@
 	--icon-back:       url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m29 21h-15m5 5l-5-5l5-5" fill="none" stroke-width="2" stroke="black" stroke-linecap="round"/></svg>');
 	--icon-darkmode:   url('data:image/svg+xml,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m12 2a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" stroke="black" stroke-width="2" fill="none"/></svg>');
 	--icon-lightmode:  url('data:image/svg+xml,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="black" stroke-width="2"><circle cx="12" cy="11" r="4"/><path d="M12 1v2m0 16v2M4.9 3.9l1.4 1.4m11.3 11.3 1.4 1.4M2 11h2m16 0h2M6.3 16.7l-1.4 1.4M19.1 3.9l-1.4 1.4" stroke-linecap="round"/></svg>');
+
+	scroll-padding-bottom: calc(2.5rem * var(--grid-lines) + (.7 * (var(--grid-lines) - 1) + 1.2) * var(--font-size));
 }
 
 :root.dark {
@@ -132,20 +153,13 @@ html {
 }
 
 body {
-	--grid-lines: 2;
-	--body-margin: 0px;
-	--main-margin: .7em;
-	--track-col-1-width: 2.7em;
-	--track-col-2-width: 5em;
-	--track-col-3-width: 11.9em;
-	--track-col-4-width: 0px;
 	display: grid;
 	margin: 0 0 3.2em;
 	padding: var(--body-margin);
 	padding-bottom: 0;
 	justify-content: center;
 	color: var(--color-text-main);
-	font: 400 4.92svw/1.4 sans-serif;
+	font: 400 var(--font-size)/1.4 sans-serif;
 	grid-template-columns: minmax(0, 780px);
 	background: var(--color-background-body);
 
@@ -178,14 +192,6 @@ body {
 	}
 
 	@media (min-width: 520px) {
-		--body-margin: .5em;
-		--main-margin: 1em;
-		--grid-lines: 1;
-		--track-col-1-width: 8.1em;
-		--track-col-2-width: 2.5em;
-		--track-col-3-width: 23.1em;
-		--track-col-4-width: 6em;
-		font-size: clamp(.6em, 2.4svw, 1.2em);
 		h1 {
 			font-size: 1.4em;
 		}
@@ -197,7 +203,7 @@ body {
 
 #skip {
 	z-index: 2;
-	height: 3em;
+	height: 2.3em;
 	display: flex;
 	outline: none;
 	position: absolute;
@@ -398,14 +404,11 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		label {
 			width: 100%;
 			display: flex;
+			padding: 0 .3em;
 			max-width: 5.3em;
-			border-radius: 1px;
+			border-radius: 4px;
 			align-items: center;
-
-			&:has(:focus-visible) {
-				outline-offset: 2px;
-				outline: 2px solid CanvasText;
-			}
+			margin-right: -.3em;
 		}
 
 		.icon {
@@ -556,12 +559,6 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		}
 	}
 
-	select,
-	input,
-	button {
-		scroll-margin-bottom: calc(2.5rem * var(--grid-lines) + .7em * (var(--grid-lines) - 1) + 1.65em);
-	}
-
 	@media (min-width: 520px) {
 		grid-template-rows: 1em 1.65em 1fr;
 
@@ -691,10 +688,6 @@ hr {
 			line-height: 2.5rem;
 		}
 
-		&:has(:focus-visible) {
-			outline-offset: -1px;
-			outline: 2px solid CanvasText;
-		}
 	}
 
 	@media (min-width: 520px) {
@@ -856,7 +849,9 @@ a {
 	color: var(--color-stroke-set);
 }
 
-*:focus-visible {
+*:focus-visible,
+#tempo:has(:focus-visible),
+.volume label:has(:focus-visible) {
 	outline-offset: -1px;
 	outline: 2px solid CanvasText;
 }
