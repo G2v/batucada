@@ -83,8 +83,8 @@ export class Navigation {
 			handler: () => {
 				this.#searchParams = url.searchParams;
 				if (['reset', 'decode', 'decodeAll'].includes(action)) {
-					if (!keepScroll) window.scrollTo(0, 0);
 					this.#decodeAction(action);
+					if (!keepScroll) requestAnimationFrame(() => window.scrollTo(0, 0));
 				}
 				if (shouldDispatch) {
 					this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationChanged, { detail: new Map(this.#searchParams) }));
