@@ -12,18 +12,18 @@ export default class InterfaceControls {
 	#skipButton;
 	#themeButton;
 	#resetButton;
-	#presetsMenuButton;
-	#trackSettingsDialog;
-	#trackPositionText;
 	#positionSelect;
+	#presetsMenuButton;
+	#trackPositionText;
+	#trackSettingsDialog;
 	#controlsSection;
 	#defaultInstrument;
 
 	constructor({ bus, parent, config }) {
-		this.#bus               = bus;
-		this.#events            = config.events;
 		this.#ui                = parent;
+		this.#bus               = bus;
 		this.#names             = config.names;
+		this.#events            = config.events;
 		this.#defaultInstrument = config.defaultInstrument;
 
 		const { selectors } = config;
@@ -52,17 +52,6 @@ export default class InterfaceControls {
 		this.#trackSettingsDialog.addEventListener('submit',     (event) => this.#setTrack());
 		this.#trackSettingsDialog.addEventListener('command',    (event) => this.#showTrackSettings(event));
 		this.#initMediaSession();
-
-		if (!document.startViewTransition) {
-			document.startViewTransition = (callback) => {
-				callback();
-				return { finished: Promise.resolve() };
-			};
-		}
-
-		if (!('command' in HTMLButtonElement.prototype)) {
-			import('./polyfills/invoker.js');
-		}
 	}
 
 	#initMediaSession() {
@@ -175,22 +164,18 @@ export default class InterfaceControls {
 	#showTrackSettings({ command, source }) {
 		if (command !== 'show-modal') return;
 		const track = this.#ui.getTrack(source);
-		const index = this.#ui.getTrackIndex(track);
 		const { bars, beats, steps, phrase } = track.dataset;
-
-		const order    = this.#ui.tracksOrder;
-		const position = order.indexOf(index);
+		const index       = this.#ui.getTrackIndex(track);
+		const order       = this.#ui.tracksOrder;
+		const position    = order.indexOf(index);
 		const isLastTrack = this.#ui.getTrackInstrument(track) === this.#defaultInstrument;
+		const firstEmpty  = order.findIndex(trackIndex => this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex]) === this.#defaultInstrument);
+		const filledCount = firstEmpty === -1 ? order.length : firstEmpty;
 
-		let option = this.#positionSelect.firstElementChild;
-		let stop = false;
-		while (option) {
-			const trackIndex = order[option.value];
-			if (trackIndex === undefined) break;
-			const instrument = this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex]);
-			stop = stop || instrument === this.#defaultInstrument;
-			option.hidden = isLastTrack ? (option.value | 0) !== position : stop;
-			option = option.nextElementSibling;
+		for (const option of this.#positionSelect.options) {
+			const value = option.value | 0;
+			if (value < 0) continue;
+			option.hidden = isLastTrack ? value !== position : value >= filledCount;
 		}
 
 		this.#track = track;

@@ -28,9 +28,9 @@
 	color-scheme: light;
 	--grid-lines: 2;
 	--tracks-count : 0;
-	--font-size: 4.92svw;
 	--body-margin: 0px;
 	--main-margin: .7em;
+	--font-size: 4.92svw;
 	--track-col-1-width: 2.7em;
 	--track-col-2-width: 5em;
 	--track-col-3-width: 11.9em;
@@ -263,7 +263,7 @@ caption {
 		mask-image: var(--icon-unsaved);
 	}
 
-	main:has(#preset :checked) & {
+	main:has(> #controls > #preset > select > option:checked) & {
 		&::after {
 			mask-image: var(--icon-saved);
 			background-color: var(--color-stroke-set);
@@ -452,7 +452,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		border-radius: .1em;
 		contain: layout style;
 
-		&:has([name="step"]:focus-visible) {
+		&:focus-within:has([name="step"]:focus-visible) {
 			outline-offset: .2em;
 			outline: .1em dashed currentColor;
 		}
@@ -1113,7 +1113,7 @@ dialog {
 	}
 }
 
-#presets p:has(time:not(:empty)) span {
+#presets time:not(:empty) + span {
 	display: none;
 }
 
