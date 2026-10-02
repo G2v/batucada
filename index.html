@@ -897,8 +897,8 @@ dialog {
 
 	& > div {
 		gap: 1em;
-		padding: 1em;
 		display: flex;
+		padding: 1em 1em 1.5em;
 		flex-direction: column;
 	}
 
@@ -937,7 +937,7 @@ dialog {
 		}
 
 		section {
-			gap: .5em;
+			gap: 1em;
 			margin: auto;
 			display: flex;
 			flex-direction: column;
@@ -990,7 +990,7 @@ dialog {
 	footer {
 		gap: 1em;
 		display: flex;
-		padding-top: .5em;
+		margin: .5em 0 -.5em;
 		justify-content: space-around;
 	}
 
@@ -1008,16 +1008,35 @@ dialog {
 
 #track-settings {
 	form {
+		gap: 1em;
 		margin: auto;
-		gap: .5em 1em;
 		display: grid;
 		align-items: center;
 		grid-template-columns: auto 5.5em;
 	}
 
+	label {
+		display: grid;
+		align-items: center;
+		grid-column: span 2;
+		grid-template-columns: subgrid;
+	}
+
 	select {
 		height: 1.6em;
 		font-size: .9em;
+	}
+
+	@media (min-width: 520px) {
+		form {
+			gap: .7em 1.5em;
+			grid-template-columns: repeat(3, 1fr);
+		}
+
+		label {
+			grid-column: auto;
+			grid-template-columns: none;
+		}
 	}
 }
 
@@ -1061,14 +1080,16 @@ dialog {
 		flex-direction: column;
 		border-top: 1px solid var(--color-border-light);
 
+		li {
+			border-bottom: 1px solid var(--color-border-light);
+		}
+
 		button {
 			width: 100%;
 			border: none;
 			display: flex;
-			border-radius: 0;
 			align-items: center;
 			justify-content: space-between;
-			border-bottom: 1px solid var(--color-border-light);
 
 			&::after {
 				content: '';
@@ -1258,7 +1279,7 @@ body > footer {
 		mask-image: var(--icon-volume2);
 	}
 
-	#app-menu menu button:hover {
+	#app-menu li:hover button {
 		color: CanvasText;
 		&::after {
 			transform: translateX(.5em)
@@ -1284,8 +1305,7 @@ body > footer {
 				<span id="saved">Morceau enregistré</span><span id="unsaved">Morceau non enregistré</span>
 				<button title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
 			</caption>
-			<tbody>
-			</tbody>
+			<tbody></tbody>
 			<tfoot aria-hidden="true">
 				<tr><td class="dropzone"></td></tr>
 			</tfoot>
@@ -1370,43 +1390,47 @@ body > footer {
 				<h2 id="track-settings-title">Réglages de la piste <span>1</span></h2>
 			</header>
 			<form id="track-settings-form" method="dialog" autocomplete="off">
-				<label for="bars">Mesures</label>
-				<select id="bars" name="bars">
-					<option value="1" selected>1</option>
-					<option value="2">2</option>
-					<option value="3">3</option>
-					<option value="4">4</option>
-					<option value="6">6</option>
-					<option value="8">8</option>
-				</select>
-				<label for="beats">Temps</label>
-				<select id="beats" name="beats">
-					<option value="4" selected>4</option>
-					<option value="6">6</option>
-				</select>
-				<label for="steps">Subdivisions</label>
-				<select id="steps" name="steps">
-					<option value="3">3</option>
-					<option value="4" selected>4</option>
-					<option value="6">6</option>
-					<option value="8">8</option>
-				</select>
-				<label for="phrase">Phrase</label>
-				<select id="phrase" name="phrase">
-					<option value="1">Intro 1</option>
-					<option value="2">Intro 2</option>
-					<option value="3">Intro 3</option>
-					<option value="0" selected>Tourne</option>
-				</select>
-				<label for="position">Position</label>
-				<select id="position">
-					<option value="0">1</option>
-					<option value="-1">Supprimer</option>
-				</select>
+				<label>Mesures
+					<select name="bars">
+						<option value="1" selected>1</option>
+						<option value="2">2</option>
+						<option value="3">3</option>
+						<option value="4">4</option>
+						<option value="6">6</option>
+						<option value="8">8</option>
+					</select>
+				</label>
+				<label>Temps
+					<select id="beats" name="beats">
+						<option value="4" selected>4</option>
+						<option value="6">6</option>
+					</select>
+				</label>
+				<label>Subdivisions
+					<select name="steps">
+						<option value="3">3</option>
+						<option value="4" selected>4</option>
+						<option value="6">6</option>
+						<option value="8">8</option>
+					</select>
+				</label>
+				<label>Phrase
+					<select name="phrase">
+						<option value="1">Intro 1</option>
+						<option value="2">Intro 2</option>
+						<option value="3">Intro 3</option>
+						<option value="0" selected>Tourne</option>
+					</select>
+				</label>
+				<label>Position
+					<select name="position">
+						<option value="0">1</option>
+						<option value="-1">Supprimer</option>
+					</select>
+				</label>
 			</form>
 			<footer>
 				<button form="track-settings-form">Appliquer</button>
-				<button commandfor="track-settings" command="close">Annuler</button>
 			</footer>
 		</div>
 	</dialog>
@@ -1438,9 +1462,6 @@ body > footer {
 					data-cancel-success="L'opération a été annulée."
 					data-cancel-failure="⚠️ L'opération ne peut être annulée.">Supprimer le morceau</button>
 			</form>
-			<footer>
-				<button commandfor="preset-edit" command="close">Annuler</button>
-			</footer>
 		</div>
 	</dialog>
 	<dialog id="app-menu" aria-labelledby="app-title" data-dismiss>
@@ -1452,11 +1473,8 @@ body > footer {
 			<menu>
 				<li><button commandfor="presets" command="show-modal">Gérer les morceaux</button></li>
 				<li><button commandfor="instruments" command="show-modal">Gérer les instruments</button></li>
-				<li><button commandfor="about" command="show-modal">À propos…</button></li>
+				<li><button commandfor="about" command="show-modal">À propos</button></li>
 			</menu>
-			<footer>
-				<button commandfor="app-menu" command="close">Fermer</button>
-			</footer>
 		</div>
 		<dialog id="presets" aria-labelledby="presets-title" class="nested" data-dismiss>
 			<div>
@@ -1488,9 +1506,6 @@ body > footer {
 						</div>
 					</dialog>
 				</section>
-				<footer>
-					<button commandfor="presets" command="close">Fermer</button>
-				</footer>
 			</div>
 		</dialog>
 		<dialog id="instruments" aria-labelledby="instruments-title" class="nested" data-dismiss>
@@ -1527,9 +1542,6 @@ body > footer {
 						</div>
 					</dialog>
 				</section>
-				<footer>
-					<button commandfor="instruments" command="close">Fermer</button>
-				</footer>
 			</div>
 		</dialog>
 		<dialog id="about" aria-labelledby="about-title" class="nested" data-dismiss>
@@ -1537,7 +1549,7 @@ body > footer {
 				<header>
 					<button commandfor="about" command="close" class="icon" value="back">Retour</button>
 					<button commandfor="about" command="close" class="icon">Fermer</button>
-					<h2 id="about-title">À propos…</h2>
+					<h2 id="about-title">À propos</h2>
 				</header>
 				<section>
 					<p>Application : Batucada Sequencer</p>
@@ -1547,9 +1559,6 @@ body > footer {
 						<button commandfor="about" command="close" value="update" hidden>Mettre à jour</button>
 					</p>
 				</section>
-				<footer>
-					<button commandfor="about" command="close">Fermer</button>
-				</footer>
 			</div>
 		</dialog>
 	</dialog>
