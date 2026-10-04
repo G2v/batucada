@@ -13,6 +13,7 @@ export default class InterfaceControls {
 	#themeButton;
 	#resetButton;
 	#positionSelect;
+	#deleteCheckbox;
 	#presetsMenuButton;
 	#trackPositionText;
 	#trackSettingsDialog;
@@ -40,6 +41,7 @@ export default class InterfaceControls {
 		this.#trackSettingsDialog = document.querySelector(selectors.trackSettingsDialog);
 		this.#trackPositionText   = document.querySelector(selectors.trackPositionText);
 		this.#positionSelect      = document.querySelector(selectors.positionSelect);
+		this.#deleteCheckbox      = document.querySelector(selectors.deleteCheckbox);
 		this.#controlsSection     = document.querySelector(selectors.controlsSection);
 
 		const options = Array.from({ length: config.tracksLength - 1 }, (_, i) => new Option(i + 2, i + 1));
@@ -73,13 +75,13 @@ export default class InterfaceControls {
 
 	#setTrack() {
 		const trackIndex = this.#ui.getTrackIndex(this.#track);
-		const newPosition = parseInt(this.#positionSelect.value);
 
-		if (newPosition === -1) {
+		if (this.#deleteCheckbox.checked) {
 			this.#ui.swap.trashTrack(trackIndex);
 			return;
 		}
 
+		const newPosition = parseInt(this.#positionSelect.value);
 		const values = this.#track.dataset;
 		const fields = {
 			bars:   this.#barsSelect.value,
@@ -174,17 +176,17 @@ export default class InterfaceControls {
 
 		for (const option of this.#positionSelect.options) {
 			const value = option.value | 0;
-			if (value < 0) continue;
 			option.hidden = isLastTrack ? value !== position : value >= filledCount;
 		}
 
-		this.#track = track;
+		this.#track                         = track;
 		this.#trackPositionText.textContent = position + 1;
-		this.#positionSelect.selectedIndex  = position;
-		this.#barsSelect.value   = bars;
-		this.#beatsSelect.value  = beats;
-		this.#stepsSelect.value  = steps;
-		this.#phraseSelect.value = phrase;
+		this.#barsSelect.value              = bars;
+		this.#beatsSelect.value             = beats;
+		this.#stepsSelect.value             = steps;
+		this.#phraseSelect.value            = phrase;
+		this.#positionSelect.value          = position;
+		this.#deleteCheckbox.checked        = false;
 	}
 
 	#inputInstrument(target) {

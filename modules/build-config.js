@@ -74,14 +74,15 @@ const selectors = Object.freeze({
 	presetEditButton:  '[commandfor="preset-edit"]',
 	presetsMenuButton: '#preset > button',
 
-	barsSelect:       '[name="bars"]',
-	beatsSelect:      '[name="beats"]',
-	stepsSelect:      '[name="steps"]',
-	phraseSelect:     '[name="phrase"]',
-	positionSelect:   '[name="position"]',
-
 	trackSettingsDialog: '#track-settings',
 	trackPositionText:   '#track-settings-title span',
+
+	barsSelect:       '#track-settings [name="bars"]',
+	beatsSelect:      '#track-settings [name="beats"]',
+	stepsSelect:      '#track-settings [name="steps"]',
+	phraseSelect:     '#track-settings [name="phrase"]',
+	positionSelect:   '#track-settings [name="position"]',
+	deleteCheckbox:   '#track-settings [name="delete"]',
 
 	aboutDialog:       '#about',
 	aboutContactLink:  '#contact a',

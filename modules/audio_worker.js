@@ -301,9 +301,6 @@ function updateVolumes(values) {
 function pushChanges(changes, messages) {
 	if (!changes || Object.keys(changes).length === 0) return;
 	messages.push({ action: 'updateData', payload: changes });
-	if (changes.volumes) {
-		messages.push({ action: 'updateGains', payload: changes.volumes });
-	}
 }
 
 function updateNextTrack(index, instrument, volumeChange) {

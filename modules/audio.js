@@ -6,13 +6,28 @@ const decodeBase64 = Uint8Array.fromBase64
 
 const dataURIToBuffer = (dataURI) => decodeBase64(dataURI.slice(dataURI.indexOf(',') + 1)).buffer;
 
+const toMono = (buffer) => {
+	const { numberOfChannels: count, length, sampleRate } = buffer;
+	if (count === 1) return buffer;
+	const mono = new AudioBuffer({ length, sampleRate });
+	const data = mono.getChannelData(0);
+	for (let c = 0; c < count; c++) {
+		const channel = buffer.getChannelData(c);
+		for (let i = 0; i < length; i++) data[i] += channel[i] / count;
+	}
+	return mono;
+};
+
 export class Audio {
+	static #detuneRange = 10;
+
 	#bus;
 	#events;
 	#gains;
 	#worker;
 	#sounds;
 	#maxGain;
+	#panNodes;
 	#gainNodes;
 	#masterGain;
 	#workerReady;
@@ -27,6 +42,8 @@ export class Audio {
 	#hiddenTimer      = null;
 	#instruments      = [];
 	#activeSources    = new Set();
+	#panByInstrument  = {};
+	#trackInstruments;
 
 	constructor({ bus, config, initial = {} }) {
 		this.#bus                 = bus;
@@ -34,7 +51,8 @@ export class Audio {
 		this.#maxGain             = config.maxGain;
 		this.#emptyStroke         = config.emptyStroke;
 		this.#hiddenPlayDuration  = config.hiddenPlayDuration;
-		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain);
+		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain * Math.SQRT2);
+		this.#trackInstruments    = new Array(config.tracksLength).fill(config.defaultInstrument);
 
 		this.#bus.addEventListener(this.#events.navigationDecoded,       ({ detail }) => this.#updateData(detail, true));
 		this.#bus.addEventListener(this.#events.interfaceReset,          () => this.#reset());
@@ -64,6 +82,10 @@ export class Audio {
 		const instrumentsStrokes = Object.fromEntries(
 			instruments.map(({ id, strokes }) => [id, strokes.length])
 		);
+		this.#panByInstrument = Object.fromEntries(
+			instruments.map(({ id, pan = 0 }) => [id, pan])
+		);
+		this.#trackInstruments.forEach((_, id) => this.#updatePan(id));
 		this.#worker.postMessage({
 			action: 'config',
 			payload: {
@@ -99,9 +121,10 @@ export class Audio {
 		this.#masterGain = new GainNode(this.#audioContext);
 		this.#masterGain.connect(this.#audioContext.destination);
 
-		this.#gainNodes = this.#gains.map((gain) => {
+		this.#panNodes  = this.#trackInstruments.map((_, id) => new StereoPannerNode(this.#audioContext, { pan: this.#panOf(id) }));
+		this.#gainNodes = this.#gains.map((gain, index) => {
 			const gainNode = new GainNode(this.#audioContext, { gain });
-			gainNode.connect(this.#masterGain);
+			gainNode.connect(this.#panNodes[index]).connect(this.#masterGain);
 			return gainNode;
 		});
 
@@ -165,7 +188,7 @@ export class Audio {
 		const entries = await Promise.all(
 			sounds.map(async ([id, buffers]) => [
 				id,
-				await Promise.all(buffers.map((buffer) => this.#audioContext.decodeAudioData(buffer))),
+				await Promise.all(buffers.map(async (buffer) => toMono(await this.#audioContext.decodeAudioData(buffer)))),
 			])
 		);
 		this.#instruments = Object.fromEntries(entries);
@@ -180,10 +203,8 @@ export class Audio {
 				this.#stopAudio();
 			}
 			else if (action === 'updateData') {
+				this.#updateChannels(payload);
 				this.#bus.dispatchEvent(new CustomEvent(this.#events.audioUpdateData, { detail: payload }));
-			}
-			else if (action === 'updateGains') {
-				this.#updateGains(payload);
 			}
 			else if (action === 'playNote') {
 				const { instrument, gainIndex, stroke } = payload;
@@ -291,15 +312,28 @@ export class Audio {
 		const payload = { tempo, sheet, tracks, volumes };
 		payload.sendState = sendState === true;
 		this.#post({ action: 'updateData', payload });
-
-		if (volumes) this.#updateGains(volumes);
+		this.#updateChannels(changes);
 	}
 
-	#updateGains(gains) {
-		for (const { id, value } of gains) {
-			this.#gains[id] = value / this.#maxGain;
+	#updateChannels({ volumes = [], tracks = [] }) {
+		for (const { id, value } of volumes) {
+			this.#gains[id] = value / this.#maxGain * Math.SQRT2;
 			if (this.#gainNodes) this.#gainNodes[id].gain.value = this.#gains[id];
 		}
+		for (const { id, changes: { instrument } } of tracks) {
+			if (instrument === undefined) continue;
+			this.#trackInstruments[id] = instrument;
+			this.#updatePan(id);
+		}
+	}
+
+	// La stéréo d'une piste est celle de son instrument (champ « pan » des métadonnées)
+	#panOf(id) {
+		return this.#panByInstrument[this.#trackInstruments[id]] ?? 0;
+	}
+
+	#updatePan(id) {
+		if (this.#panNodes) this.#panNodes[id].pan.value = this.#panOf(id);
 	}
 
 	#handleVisibilityChange() {
@@ -326,7 +360,8 @@ export class Audio {
 		const buffers = this.#instruments[instrument] || this.#instruments[0];
 		if (!buffers) return;
 		const buffer = buffers[stroke - 1] || buffers[0];
-		const sound = new AudioBufferSourceNode(this.#audioContext, { buffer });
+		const detune = (Math.random() * 2 - 1) * Audio.#detuneRange;
+		const sound  = new AudioBufferSourceNode(this.#audioContext, { buffer, detune });
 		sound.connect(this.#gainNodes[gainIndex]);
 		this.#activeSources.add(sound);
 		sound.addEventListener('ended', () => this.#activeSources.delete(sound), { once: true });

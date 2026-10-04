@@ -968,6 +968,7 @@ dialog {
 			width: 2.5em;
 			height: 2.5em;
 			position: absolute;
+			outline-offset: -.2em;
 			transform: translateX(0);
 			transition: transform .1s ease-out;
 
@@ -1027,14 +1028,22 @@ dialog {
 		font-size: .9em;
 	}
 
+	[type="checkbox"] {
+		margin: 0;
+		width: 1.2em;
+		height: 1.2em;
+	}
+
 	@media (min-width: 520px) {
 		form {
 			gap: .7em 1.5em;
+			align-items: stretch;
 			grid-template-columns: repeat(3, 1fr);
 		}
 
 		label {
 			grid-column: auto;
+			grid-template-rows: auto 1fr;
 			grid-template-columns: none;
 		}
 	}
@@ -1341,7 +1350,7 @@ body > footer {
 		<option value="30"></option>
 	</datalist>
 	<template>
-		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
+		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0" data-pan="0">
 			<td class="dropzone" aria-hidden="true"></td>
 			<th class="instrument" scope="row" draggable="true" aria-label="Piste sans instrument" data-template data-template-aria-label-empty="Piste sans instrument{{phrase}}" data-template-aria-label-filled="Piste {{instrument}}{{phrase}}" data-template-aria-label-phrase=", {{name}}">
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
@@ -1425,8 +1434,10 @@ body > footer {
 				<label>Position
 					<select name="position">
 						<option value="0">1</option>
-						<option value="-1">Supprimer</option>
 					</select>
+				</label>
+				<label>Supprimer
+					<input type="checkbox" name="delete">
 				</label>
 			</form>
 			<footer>
@@ -1441,7 +1452,7 @@ body > footer {
 				<h2 id="preset-edit-title">Gérer le morceau</h2>
 			</header>
 			<form method="dialog">
-				<label>Titre : <input name="name" placeholder="Titre du morceau" autocomplete="off"
+				<label>Titre <input name="name" placeholder="Titre du morceau" autocomplete="off"
 					data-invalid-empty="Le titre doit contenir au moins un caractère."
 					data-invalid-duplicated="Ce titre existe déjà."></label>
 				<button name="save"

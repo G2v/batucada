@@ -110,7 +110,6 @@ function encodeSheet(config, track, sheet) {
 	const { formatDigits: digits, instrumentsBase, resolution: { bar, beat } } = config;
 	const base = BigInt(instrumentsBase[track.instrument] || 2);
 
-	// La dernière case de la dernière mesure est le chiffre de poids fort
 	let number = 0n;
 	for (let barIndex = track.bars - 1; barIndex >= 0; barIndex--) {
 		const barOffset = track.sheetIndex + (barIndex * bar);

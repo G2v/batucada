@@ -47,9 +47,9 @@ function decodeSet(config, state, encodedValues, changes) {
 	const isVirginSheet = !state.sheet;
 	const {
 		formatDigits: digits, trackFormatSeparator, trackFormatAllocation: allocation,
-		defaultSetValue, barsIndex, beatsIndex, stepsIndex, phraseIndex, tracksLength,
+		defaultSetValue, barsIndex, beatsIndex, stepsIndex, phraseIndex,
 		defaultBars, defaultBeats, defaultSteps, defaultPhrase,
-		resolution: { maxBars, maxBeats, bar, beat },
+		tracksLength, resolution: { maxBars, maxBeats, bar, beat },
 	} = config;
 
 	const allocationKeys = Object.keys(allocation);
@@ -83,7 +83,6 @@ function decodeSet(config, state, encodedValues, changes) {
 			}
 		}
 
-		// Chiffres lus du poids faible au poids fort : première case de la première mesure d'abord
 		let sheetNumber   = toBigInt(data.slice(4), digits);
 		const limitBars   = isVirginTrack ? params.bars  : maxBars;
 		const limitBeats  = isVirginTrack ? params.beats : maxBeats;

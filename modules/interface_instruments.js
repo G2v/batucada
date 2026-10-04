@@ -116,6 +116,7 @@ export default class InterfaceInstruments {
 				if (item.id > InterfaceInstruments.#maxInstruments)            throw new Error(`Instrument ${index}: id greater than ${InterfaceInstruments.#maxInstruments}`);
 				if (ids.has(item.id))                                          throw new Error(`Instrument ${index}: duplicated id`);
 				if (!item.name)                                                throw new Error(`Instrument ${index}: missing name`);
+				if ('pan' in item && !InterfaceInstruments.#isPan(item.pan))   throw new Error(`Instrument ${index}: pan must be a number between -1 and 1`);
 				if (!Array.isArray(item.strokes) || item.strokes.length === 0) throw new Error(`Instrument ${index}: invalid strokes`);
 				if (item.strokes.length > InterfaceInstruments.#maxStrokes)    throw new Error(`Instrument ${index}: more than ${InterfaceInstruments.#maxStrokes} strokes`);
 				ids.add(item.id);
@@ -175,6 +176,10 @@ export default class InterfaceInstruments {
 		} catch {
 			throw new Error('Invalide Audio');
 		}
+	}
+
+	static #isPan(value) {
+		return typeof value === 'number' && Math.abs(value) <= 1;
 	}
 
 	static #validateIcon(dataUrl) {
