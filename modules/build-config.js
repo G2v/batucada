@@ -1,5 +1,4 @@
 import core_config from '../config/core.js';
-import app_config  from '../config/app.js';
 
 const names = Object.freeze({
 	step:       'step',
@@ -16,7 +15,6 @@ const events = Object.freeze({
 	audioPushAnimations: 'audio:pushAnimations',
 
 	interfaceReset:       'interface:reset',
-	interfaceChange:      'interface:change',
 	interfaceSetStroke:   'interface:setStroke',
 	interfaceMoveTrack:   'interface:moveTrack',
 	interfaceUpdateData:  'interface:updateData',
@@ -24,13 +22,14 @@ const events = Object.freeze({
 	interfaceInstall:     'interface:install',
 	interfaceFindUpdate:  'interface:findUpdate',
 
-	interfacePresetSelected: 'interface:presetSelected',
-	interfacePresetsDelete:  'interface:presetsDelete',
-	interfaceEditSave:       'interface:editSave',
-	interfaceEditCancel:     'interface:editCancel',
 	interfaceShare:          'interface:share',
 	interfaceExport:         'interface:export',
 	interfaceImport:         'interface:import',
+	interfaceEditSave:       'interface:editSave',
+	interfaceEditCancel:     'interface:editCancel',
+	interfacePreferences:    'interface:preferences',
+	interfacePresetsDelete:  'interface:presetsDelete',
+	interfacePresetSelected: 'interface:presetSelected',
 
 	navigationDecoded:    'navigation:decoded',
 	navigationChanged:    'navigation:changed',
@@ -88,6 +87,8 @@ const selectors = Object.freeze({
 	aboutContactLink:  '#contact a',
 	aboutVersionText:  '#version span',
 	aboutUpdateButton: '#version button',
+
+	preferencesForm: '#preferences form',
 
 	instrumentsDialog:        '#instruments',
 	instrumentsLibraryName:   '#instruments p span',
@@ -171,8 +172,14 @@ const indexFrom = (values, defaultValue) => Object.freeze(
 
 const defaultVolume = formatDigits[defaultGain];
 
+const defaultPreferences = Object.freeze(Object.fromEntries(
+	Array.from(query(selectors.preferencesForm).elements, ({ name, options }) => {
+		const { value } = Array.from(options).find(option => option.defaultSelected) ?? options[0];
+		return [name, Number.isNaN(Number(value)) ? value : Number(value)];
+	})
+));
+
 export const config = Object.freeze({
-	...app_config,
 	...core_config,
 	names,
 	events,
@@ -196,8 +203,9 @@ export const config = Object.freeze({
 	defaultBeats,
 	defaultSteps,
 	defaultPhrase,
-	defaultInstrument,
 	defaultVolume,
+	defaultInstrument,
+	defaultPreferences,
 	barsIndex:             indexFrom(barsValues,   defaultBars),
 	beatsIndex:            indexFrom(beatsValues,  defaultBeats),
 	stepsIndex:            indexFrom(stepsValues,  defaultSteps),

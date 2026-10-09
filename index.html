@@ -17,6 +17,8 @@
 	applyTheme();
 	osTheme.addEventListener('change', applyTheme);
 
+	if (!location.search && localStorage.lastSequence) history.replaceState(null, '', localStorage.lastSequence);
+
 	const params = new URLSearchParams(location.search);
 	const tracks = params.get('set')?.split('-').filter(s => s && s[0] !== '0').length;
 	if (tracks) document.documentElement.style.setProperty('--tracks-count', tracks);
@@ -324,7 +326,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 	contain: layout style;
 	grid-template-rows: 1em 1.65em .3em 1.65em 1fr;
 	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
-	
+
 	[data-transitioning] & {
 		view-transition-name: match-element;
 	}
@@ -785,6 +787,7 @@ input {
 	accent-color: var(--color-stroke-set);
 }
 
+label:has(:disabled),
 button:disabled {
 	opacity: .6;
 }
@@ -1030,8 +1033,20 @@ dialog {
 
 	[type="checkbox"] {
 		margin: 0;
-		width: 1.2em;
-		height: 1.2em;
+		width: 1.4em;
+		height: 1.4em;
+	}
+
+	footer button span + span {
+		display: none;
+	}
+
+	&:has([name="delete"]:checked) footer button span {
+		display: none;
+
+		& + span {
+			display: inline;
+		}
 	}
 
 	@media (min-width: 520px) {
@@ -1087,10 +1102,13 @@ dialog {
 		list-style: none;
 		width: fit-content;
 		flex-direction: column;
-		border-top: 1px solid var(--color-border-light);
 
 		li {
 			border-bottom: 1px solid var(--color-border-light);
+		}
+
+		li:last-of-type {
+			border-bottom: none;
 		}
 
 		button {
@@ -1111,6 +1129,33 @@ dialog {
 				transition: transform .05s ease-out;
 			}
 		}
+	}
+}
+
+#preferences {
+	form {
+		margin: auto;
+		gap: .2em 1em;
+		display: grid;
+		line-height: 1.1;
+		grid-auto-rows: minmax(2lh, 1fr);
+		grid-template-columns: min-content 5.3em;
+
+		@media (min-width: 520px) {
+			grid-template-columns: auto 5.3em;
+		}
+	}
+
+	label {
+		display: grid;
+		align-items: center;
+		grid-column: span 2;
+		grid-template-columns: subgrid;
+	}
+
+	select {
+		height: 1.6em;
+		font-size: .9em;
 	}
 }
 
@@ -1248,9 +1293,9 @@ body > footer {
 }
 
 @media (pointer: fine) and (hover: hover) {
-	select:hover,
 	#tempo:hover,
 	input:not([type]):hover,
+	select:not(:disabled):hover,
 	button:not([name="step"]):not(:disabled):hover {
 		border-color: var(--color-border-strong);
 	}
@@ -1362,7 +1407,7 @@ body > footer {
 				</select>
 			</th>
 			<td class="settings">
-				<button class="icon" title="Réglages de la piste" commandfor="track-settings" command="show-modal">Réglages de la piste</button>
+				<button class="icon" title="Gérer la piste" commandfor="track-settings" command="show-modal">Gérer la piste</button>
 			</td>
 			<td class="sheet" role="toolbar" aria-label="Partition">
 				<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
@@ -1396,7 +1441,7 @@ body > footer {
 		<div>
 			<header>
 				<button commandfor="track-settings" command="close" class="icon">Fermer</button>
-				<h2 id="track-settings-title">Réglages de la piste <span>1</span></h2>
+				<h2 id="track-settings-title">Gérer la piste <span>1</span></h2>
 			</header>
 			<form id="track-settings-form" method="dialog" autocomplete="off">
 				<label>Mesures
@@ -1441,7 +1486,10 @@ body > footer {
 				</label>
 			</form>
 			<footer>
-				<button form="track-settings-form">Appliquer</button>
+				<button form="track-settings-form">
+					<span>Appliquer</span>
+					<span>Supprimer la piste</span>
+				</button>
 			</footer>
 		</div>
 	</dialog>
@@ -1452,7 +1500,7 @@ body > footer {
 				<h2 id="preset-edit-title">Gérer le morceau</h2>
 			</header>
 			<form method="dialog">
-				<label>Titre <input name="name" placeholder="Titre du morceau" autocomplete="off"
+				<label>Titre <input name="name" placeholder="Titre du morceau" autocomplete="off" autocapitalize="sentences"
 					data-invalid-empty="Le titre doit contenir au moins un caractère."
 					data-invalid-duplicated="Ce titre existe déjà."></label>
 				<button name="save"
@@ -1482,11 +1530,43 @@ body > footer {
 				<h2 id="app-title">Batucada Sequencer</h2>
 			</header>
 			<menu>
+				<li><button commandfor="preferences" command="show-modal">Préférences</button></li>
 				<li><button commandfor="presets" command="show-modal">Gérer les morceaux</button></li>
 				<li><button commandfor="instruments" command="show-modal">Gérer les instruments</button></li>
 				<li><button commandfor="about" command="show-modal">À propos</button></li>
 			</menu>
 		</div>
+		<dialog id="preferences" aria-labelledby="preferences-title" class="nested" data-dismiss>
+			<div>
+				<header>
+					<button commandfor="preferences" command="close" class="icon" value="back">Retour</button>
+					<button commandfor="preferences" command="close" class="icon">Fermer</button>
+					<h2 id="presets-title">Préférences</h2>
+				</header>
+				<form id="preferences-form" autocomplete="off">
+					<label>Son&nbsp;à&nbsp;la&nbsp;saisie
+						<select name="strokePreview">
+							<option value="1" selected>Activé</option>
+							<option value="0">Désactivé</option>
+						</select>
+					</label>
+					<label>Audio
+						<select name="audio">
+							<option value="stereo" selected>Stéréo</option>
+							<option value="mono">Mono</option>
+						</select>
+					</label>
+					<label>Lecture en arrière&#8209;plan
+						<select name="hiddenPlayDuration">
+							<option value="300">5 min</option>
+							<option value="600" selected>10 min</option>
+							<option value="1800">30 min</option>
+							<option value="3600">1 heure</option>
+						</select>
+					</label>
+				</form>
+			</div>
+		</dialog>
 		<dialog id="presets" aria-labelledby="presets-title" class="nested" data-dismiss>
 			<div>
 				<header>

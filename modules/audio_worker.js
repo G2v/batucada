@@ -19,15 +19,15 @@ self.onmessage = ({ data }) => {
 	const { action, payload } = data;
 
 	switch (action) {
-		case 'config':        init(payload); break;
-		case 'start':         start(payload); break;
-		case 'stop':          stop(); break;
-		case 'restart':       restart(); break;
-		case 'reset':         reset(messages); break;
-		case 'change':        pushMessage('changed', [payload], messages, transferables); break;
-		case 'setStroke':     setStroke(payload, messages, transferables); break;
-		case 'updateData':    updateData(payload, messages, transferables); break;
-		case 'moveTrack':     moveTrack(payload, messages); break;
+		case 'config':     init(payload); break;
+		case 'start':      start(payload); break;
+		case 'stop':       stop(); break;
+		case 'restart':    restart(); break;
+		case 'reset':      reset(messages); break;
+		case 'change':     pushMessage('changed', [payload], messages, transferables); break;
+		case 'setStroke':  setStroke(payload, messages, transferables); break;
+		case 'updateData': updateData(payload, messages, transferables); break;
+		case 'moveTrack':  moveTrack(payload, messages); break;
 	}
 
 	if (messages.length) {
@@ -78,7 +78,7 @@ function stop() {
 
 function scheduler(nextTickTime) {
 	let noteCount = 0;
-	const secondsPerBar = 60 / tempo;
+	const secondsPerBeat = 60 / tempo;
 	const ticksBuffer = new Float64Array(tracks.length * config.resolution.beat * 5);
 
 	const currentPhraseBeats = tracks
@@ -95,7 +95,7 @@ function scheduler(nextTickTime) {
 		const barCount = Math.floor((beatCounter % totalBeats) / beats);
 		const beatIndex = (barCount * config.resolution.maxBeats) + (beatCounter % beats);
 		const beatOffset = sheetIndex + (beatIndex * config.resolution.beat);
-		const secondsPerStep = secondsPerBar / steps;
+		const secondsPerStep = secondsPerBeat / steps;
 
 		for (let stepOffset = 0; stepOffset < steps; stepOffset++) {
 			const stepIndex = beatOffset + stepOffset;
@@ -113,9 +113,7 @@ function scheduler(nextTickTime) {
 		const ticks = ticksBuffer.subarray(0, noteCount * 5);
 		self.postMessage([{ action: 'ticks', payload: ticks }], [ticks.buffer]);
 		beatCounter++;
-		const targetTime = nextTickTime + secondsPerBar;
-		const delay = targetTime * 1000 - workerSyncDelta - performance.now() - (lookAhead * 1000);
-		timer = setTimeout(() => scheduler(targetTime), Math.max(0, delay));
+		scheduleNext(nextTickTime + secondsPerBeat);
 	}
 
 	else {
@@ -137,6 +135,11 @@ function scheduler(nextTickTime) {
 		beatCounter = 0;
 		scheduler(nextTickTime);
 	}
+}
+
+function scheduleNext(targetTime) {
+	const delay = targetTime * 1000 - workerSyncDelta - performance.now() - (lookAhead * 1000);
+	timer = setTimeout(() => scheduler(targetTime), Math.max(0, delay));
 }
 
 function setStroke({ sheet: change }, messages, transferables) {

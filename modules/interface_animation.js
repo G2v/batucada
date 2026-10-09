@@ -5,14 +5,18 @@ export default class InterfaceAnimation {
 	#ui;
 	#queueLimit;
 	#emptyStroke;
+	#trackLength;
 	#playedSteps    = new Map();
 	#lastPlayed     = new Map();
 	#animationQueue = new Map();
 
-	constructor({ parent, config }) {
+	constructor({ bus, parent, config }) {
 		this.#ui          = parent;
 		this.#queueLimit  = config.resolution.beat * 3;
 		this.#emptyStroke = config.emptyStroke;
+		this.#trackLength = config.resolution.track;
+
+		bus.addEventListener(config.events.navigationDecoded, () => this.#newSequence());
 	}
 
 	start({ animations }) {
@@ -104,6 +108,27 @@ export default class InterfaceAnimation {
 		}
 		requestAnimationFrame(this.#loop);
 	};
+
+	#newSequence() {
+		if (!this.#ui.playing) return;
+		for (const playedIndexes of this.#playedSteps.values()) {
+			this.#clearPlayed(playedIndexes);
+		}
+		for (const [trackIndex, track] of this.#ui.tracks.entries()) {
+			if (track.dataset.phrase === '0') continue;
+			this.#animationQueue.get(trackIndex)?.[0].step?.classList.remove(InterfaceAnimation.#currentClass);
+			this.#animationQueue.delete(trackIndex);
+			const playedIndexes = this.#playedSteps.get(trackIndex) ?? [];
+			this.#playedSteps.set(trackIndex, playedIndexes);
+			for (let stepIndex = trackIndex * this.#trackLength, end = stepIndex + this.#trackLength; stepIndex < end; stepIndex++) {
+				const step = this.#ui.steps[stepIndex];
+				if (step.value > this.#emptyStroke) {
+					step.classList.add(InterfaceAnimation.#playedClass);
+					playedIndexes.push(stepIndex);
+				}
+			}
+		}
+	}
 
 	#clearPlayed(playedIndexes) {
 		for (let i = 0; i < playedIndexes.length; i++) {

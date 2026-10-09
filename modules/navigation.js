@@ -10,17 +10,19 @@ export class Navigation {
 	#instrumentsBase;
 
 	constructor({ bus, config }) {
-		this.#bus          = bus;
-		this.#config       = config;
-		this.#events       = config.events;
-		this.#state        = initialState(config);
-		this.#searchParams = new URLSearchParams(location.search);
+		this.#bus             = bus;
+		this.#config          = config;
+		this.#events          = config.events;
+		this.#state           = initialState(config);
+		this.#searchParams    = new URLSearchParams(location.search);
 		this.#instrumentsBase = config.instrumentsLibraryReady.then(({ instruments }) =>
 			Object.fromEntries(instruments.map(({ id, strokes }) => [id, strokes.length + 1]))
 		);
 
 		history.scrollRestoration = 'manual';
+		this.#saveLastSequence();
 
+		navigation.addEventListener('currententrychange',              () => this.#saveLastSequence());
 		navigation.addEventListener('navigate',                        event => this.#handleNavigation(event));
 		this.#bus.addEventListener(this.#events.audioState,            ({ detail }) => this.#updateState(detail));
 		this.#bus.addEventListener(this.#events.audioChanged,          ({ detail }) => this.#encodeURL(detail));
@@ -28,6 +30,11 @@ export class Navigation {
 		this.#bus.addEventListener(this.#events.presetsPresetSelected, ({ detail }) => this.#presetSelected(detail));
 		this.#bus.addEventListener(this.#events.interfaceReset,        ({ detail }) => this.#reset());
 		this.#bus.addEventListener(this.#events.interfaceMoveTrack,    ({ detail }) => this.#moveTrack(detail));
+	}
+
+	#saveLastSequence() {
+		if (location.search) localStorage.lastSequence = location.search;
+		else delete localStorage.lastSequence;
 	}
 
 	#updateState(values) {
@@ -113,7 +120,9 @@ export class Navigation {
 
 	#encodeURL(values) {
 		this.#updateState(values);
-		this.#encode(encodeUrl, values);
+		// Tempo et volumes ne créent pas d'entrée dans l'historique : ils remplacent l'entrée courante
+		const replace = Object.keys(values).every(key => key === 'tempo' || key === 'volumes');
+		this.#encode(encodeUrl, values, replace);
 	}
 
 	#moveTrack(moved) {
@@ -130,13 +139,18 @@ export class Navigation {
 		this.#navigate({ action: 'reset', dispatch: false });
 	}
 
-	#navigate(state) {
+	#navigate(state, replace = false) {
 		const current   = navigation.currentEntry;
 		const nextUrl   = this.#url;
 		const isUnsaved = !!current?.getState()?.isUnsaved;
 		const previous  = navigation.entries()[(current?.index ?? -1) - 1];
 
-		if (!isUnsaved && current?.url === nextUrl) return;
+		if ((replace || !isUnsaved) && current?.url === nextUrl) return;
+
+		if (replace) {
+			navigation.navigate(nextUrl, { history: 'replace', state: { ...current?.getState(), ...state } });
+			return;
+		}
 
 		if (isUnsaved && previous?.url === nextUrl && !previous.getState()?.isUnsaved) {
 			navigation.back({ info: { keepScroll: state.action === 'encoded' } });
@@ -146,7 +160,7 @@ export class Navigation {
 		navigation.navigate(nextUrl, { history: isUnsaved ? 'replace' : 'push', state });
 	}
 
-	async #encode(encoder, values) {
+	async #encode(encoder, values, replace = false) {
 		const instrumentsBase = await this.#instrumentsBase;
 		const searchParams = encoder({ ...this.#config, instrumentsBase }, {
 			searchParams: Object.fromEntries(this.#searchParams),
@@ -155,7 +169,7 @@ export class Navigation {
 		});
 		if (!searchParams) return;
 		this.#searchParams = new URLSearchParams(searchParams);
-		this.#navigate({ action: 'encoded', dispatch: true });
+		this.#navigate({ action: 'encoded', dispatch: true }, replace);
 	}
 
 	get #url() {

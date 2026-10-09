@@ -22,6 +22,7 @@ export class Audio {
 	static #detuneRange = 10;
 
 	#bus;
+	#mono;
 	#events;
 	#gains;
 	#worker;
@@ -34,6 +35,7 @@ export class Audio {
 	#emptyStroke;
 	#audioStream;
 	#audioContext;
+	#strokePreview;
 	#hiddenPlayDuration;
 
 	#playing          = false;
@@ -50,9 +52,11 @@ export class Audio {
 		this.#events              = config.events;
 		this.#maxGain             = config.maxGain;
 		this.#emptyStroke         = config.emptyStroke;
-		this.#hiddenPlayDuration  = config.hiddenPlayDuration;
 		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain * Math.SQRT2);
 		this.#trackInstruments    = new Array(config.tracksLength).fill(config.defaultInstrument);
+
+		// Lu ici et non via l'événement : interface_app.js est chargé en différé
+		this.#applyPreferences({ ...config.defaultPreferences, ...JSON.parse(localStorage.preferences ?? '{}') });
 
 		this.#bus.addEventListener(this.#events.navigationDecoded,       ({ detail }) => this.#updateData(detail, true));
 		this.#bus.addEventListener(this.#events.interfaceReset,          () => this.#reset());
@@ -62,6 +66,7 @@ export class Audio {
 		this.#bus.addEventListener(this.#events.interfaceUpdateData,     ({ detail }) => this.#updateData(detail));
 		this.#bus.addEventListener(this.#events.interfaceUserGesture,    () => this.#startAudio(), { once: true });
 		this.#bus.addEventListener(this.#events.interfacePresetSelected, () => this.#restart());
+		this.#bus.addEventListener(this.#events.interfacePreferences,    ({ detail }) => this.#applyPreferences(detail));
 		document.addEventListener('visibilitychange',                    () => this.#handleVisibilityChange());
 		document.addEventListener('freeze',                              () => this.#playing && this.#stopHiddenPlay());
 
@@ -207,6 +212,7 @@ export class Audio {
 				this.#bus.dispatchEvent(new CustomEvent(this.#events.audioUpdateData, { detail: payload }));
 			}
 			else if (action === 'playNote') {
+				if (!this.#strokePreview) return;
 				const { instrument, gainIndex, stroke } = payload;
 				this.#playNote(instrument, gainIndex, stroke);
 			}
@@ -266,7 +272,7 @@ export class Audio {
 		// Paquet arrivé après un arrêt : ne pas relancer les animations
 		if (!this.#playing) return;
 		const animations = new Map();
-		const timeDelta = performance.now() - (this.#audioContext.currentTime * 1000);
+		const timeDelta = this.#audibleTimeDelta();
 
 		for (let i = 0; i < ticks.length; i += 5) {
 			const time       = ticks[i];
@@ -287,6 +293,13 @@ export class Audio {
 			});
 		}
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.audioPushAnimations, { detail: { animations } }));
+	}
+
+	#audibleTimeDelta() {
+		const { contextTime, performanceTime } = this.#audioContext.getOutputTimestamp();
+		if (performanceTime > 0) return performanceTime - contextTime * 1000;
+		const { currentTime, baseLatency = 0, outputLatency = 0 } = this.#audioContext;
+		return performance.now() - (currentTime - baseLatency - outputLatency) * 1000;
 	}
 
 	async #setStroke(payload) {
@@ -327,9 +340,16 @@ export class Audio {
 		}
 	}
 
-	// La stéréo d'une piste est celle de son instrument (champ « pan » des métadonnées)
+	#applyPreferences({ audio, strokePreview, hiddenPlayDuration }) {
+		this.#mono               = audio === 'mono';
+		this.#strokePreview      = strokePreview;
+		this.#hiddenPlayDuration = hiddenPlayDuration;
+		this.#trackInstruments.forEach((_, id) => this.#updatePan(id));
+	}
+
+	// La stéréo d'une piste est celle de son instrument (champ « pan » des métadonnées), centrée en mono
 	#panOf(id) {
-		return this.#panByInstrument[this.#trackInstruments[id]] ?? 0;
+		return this.#mono ? 0 : this.#panByInstrument[this.#trackInstruments[id]] ?? 0;
 	}
 
 	#updatePan(id) {

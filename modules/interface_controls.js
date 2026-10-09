@@ -51,6 +51,7 @@ export default class InterfaceControls {
 		document.addEventListener('click',                       (event) => this.#userGesture(), { once: true });
 		this.#ui.container.addEventListener('input',             (event) => this.#handleInput(event));
 		this.#ui.container.addEventListener('change',            (event) => this.#handleChange(event));
+		this.#deleteCheckbox.addEventListener('change',          () => this.#toggleFields());
 		this.#trackSettingsDialog.addEventListener('submit',     (event) => this.#setTrack());
 		this.#trackSettingsDialog.addEventListener('command',    (event) => this.#showTrackSettings(event));
 		this.#initMediaSession();
@@ -187,6 +188,14 @@ export default class InterfaceControls {
 		this.#phraseSelect.value            = phrase;
 		this.#positionSelect.value          = position;
 		this.#deleteCheckbox.checked        = false;
+		this.#toggleFields();
+	}
+
+	#toggleFields() {
+		const disabled = this.#deleteCheckbox.checked;
+		for (const select of [this.#barsSelect, this.#beatsSelect, this.#stepsSelect, this.#phraseSelect, this.#positionSelect]) {
+			select.disabled = disabled;
+		}
 	}
 
 	#inputInstrument(target) {

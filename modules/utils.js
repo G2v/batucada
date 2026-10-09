@@ -6,6 +6,15 @@ export function defer(task, timeout = 3000) {
 	else setTimeout(task, 500);
 }
 
+export function readPreferences(defaults) {
+	try { return { ...defaults, ...JSON.parse(localStorage.preferences ?? '{}') }; }
+	catch { return { ...defaults }; }
+}
+
+export function writePreferences(preferences) {
+	try { localStorage.preferences = JSON.stringify(preferences); } catch {}
+}
+
 export async function fetchFromCache(cacheName, filename, cacheResponse = false) {
 	const url = new URL(filename, location.href).href;
 	const cached = await caches.match(url, { cacheName }).catch(() => null);
