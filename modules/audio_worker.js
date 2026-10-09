@@ -191,6 +191,8 @@ function updateData(changes, messages, transferables) {
 	} = changes;
 
 	if (tempoValue    !== undefined) tempo = tempoValue;
+	if (sendState && tempoValue    !== undefined) items.add('tempo');
+	if (sendState && volumesValues !== undefined) items.add('volumes');
 	if (sheetValues   !== undefined) updateSheet(sheetValues, items);
 	if (tracksValues  !== undefined) updateTracks(tracksValues, items, collateralItems, messages);
 	if (volumesValues !== undefined) updateVolumes(volumesValues); 

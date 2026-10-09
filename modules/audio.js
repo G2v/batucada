@@ -55,7 +55,6 @@ export class Audio {
 		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain * Math.SQRT2);
 		this.#trackInstruments    = new Array(config.tracksLength).fill(config.defaultInstrument);
 
-		// Lu ici et non via l'événement : interface_app.js est chargé en différé
 		this.#applyPreferences({ ...config.defaultPreferences, ...JSON.parse(localStorage.preferences ?? '{}') });
 
 		this.#bus.addEventListener(this.#events.navigationDecoded,       ({ detail }) => this.#updateData(detail, true));

@@ -103,10 +103,12 @@ export class Navigation {
 	}
 
 	#presetSelected({ name, value }) {
-		const { setSearchParam, titleSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
+		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
-		this.#navigate({ action: 'decode', dispatch: true });
+		this.#searchParams.delete(tempoSearchParam);
+		this.#searchParams.delete(volumeSearchParam);
+		this.#navigate({ action: 'decodeAll', dispatch: true });
 	}
 
 	#presetsUpdated({ source, title, index }) {
