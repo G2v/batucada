@@ -55,6 +55,7 @@ export class Audio {
 		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain * Math.SQRT2);
 		this.#trackInstruments    = new Array(config.tracksLength).fill(config.defaultInstrument);
 
+		// Lu ici et non via l'événement : interface_app.js est chargé en différé
 		this.#applyPreferences({ ...config.defaultPreferences, ...JSON.parse(localStorage.preferences ?? '{}') });
 
 		this.#bus.addEventListener(this.#events.navigationDecoded,       ({ detail }) => this.#updateData(detail, true));
@@ -119,7 +120,7 @@ export class Audio {
 	}
 
 	async #initAudio() {
-		this.#audioContext = new AudioContext();
+		this.#audioContext = new AudioContext({ latencyHint: 'playback' });
 		this.#audioContext.addEventListener('statechange', () => this.#handleAudioStateChange());
 
 		this.#masterGain = new GainNode(this.#audioContext);
@@ -346,7 +347,6 @@ export class Audio {
 		this.#trackInstruments.forEach((_, id) => this.#updatePan(id));
 	}
 
-	// La stéréo d'une piste est celle de son instrument (champ « pan » des métadonnées), centrée en mono
 	#panOf(id) {
 		return this.#mono ? 0 : this.#panByInstrument[this.#trackInstruments[id]] ?? 0;
 	}
