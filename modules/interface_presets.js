@@ -18,9 +18,9 @@ export default class InterfacePresets {
 	#appMenuButton;
 
 	constructor({ bus, parent, config }) {
-		this.#bus = bus;
+		this.#ui     = parent;
+		this.#bus    = bus;
 		this.#events = config.events;
-		this.#ui  = parent;
 
 		const { selectors } = config;
 
@@ -38,6 +38,7 @@ export default class InterfacePresets {
 	}
 
 	#presetSelected(event) {
+		this.#ui.animation?.clear();
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetSelected, { detail: event.target.selectedIndex }));
 	}
 

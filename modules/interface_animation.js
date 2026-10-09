@@ -5,18 +5,14 @@ export default class InterfaceAnimation {
 	#ui;
 	#queueLimit;
 	#emptyStroke;
-	#trackLength;
 	#playedSteps    = new Map();
 	#lastPlayed     = new Map();
 	#animationQueue = new Map();
 
-	constructor({ bus, parent, config }) {
+	constructor({ parent, config }) {
 		this.#ui          = parent;
 		this.#queueLimit  = config.resolution.beat * 3;
 		this.#emptyStroke = config.emptyStroke;
-		this.#trackLength = config.resolution.track;
-
-		bus.addEventListener(config.events.navigationDecoded, () => this.#newSequence());
 	}
 
 	start({ animations }) {
@@ -52,6 +48,11 @@ export default class InterfaceAnimation {
 
 	stop() {
 		this.#ui.playing = false;
+		delete this.#ui.container.dataset.playing;
+		this.clear();
+	}
+
+	clear() {
 		for (const steps of this.#animationQueue.values()) {
 			steps[0]?.step?.classList.remove(InterfaceAnimation.#currentClass);
 		}
@@ -104,31 +105,11 @@ export default class InterfaceAnimation {
 			this.#lastPlayed.set(trackIndex, nextStepIndex);
 
 			steps[nextIndex].step?.classList.add(currentClass);
+			this.#ui.container.dataset.playing = this.#ui.tracks[trackIndex].dataset.phrase;
 			steps.splice(0, nextIndex);
 		}
 		requestAnimationFrame(this.#loop);
 	};
-
-	#newSequence() {
-		if (!this.#ui.playing) return;
-		for (const playedIndexes of this.#playedSteps.values()) {
-			this.#clearPlayed(playedIndexes);
-		}
-		for (const [trackIndex, track] of this.#ui.tracks.entries()) {
-			if (track.dataset.phrase === '0') continue;
-			this.#animationQueue.get(trackIndex)?.[0].step?.classList.remove(InterfaceAnimation.#currentClass);
-			this.#animationQueue.delete(trackIndex);
-			const playedIndexes = this.#playedSteps.get(trackIndex) ?? [];
-			this.#playedSteps.set(trackIndex, playedIndexes);
-			for (let stepIndex = trackIndex * this.#trackLength, end = stepIndex + this.#trackLength; stepIndex < end; stepIndex++) {
-				const step = this.#ui.steps[stepIndex];
-				if (step.value > this.#emptyStroke) {
-					step.classList.add(InterfaceAnimation.#playedClass);
-					playedIndexes.push(stepIndex);
-				}
-			}
-		}
-	}
 
 	#clearPlayed(playedIndexes) {
 		for (let i = 0; i < playedIndexes.length; i++) {

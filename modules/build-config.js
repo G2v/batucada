@@ -15,6 +15,7 @@ const events = Object.freeze({
 	audioPushAnimations: 'audio:pushAnimations',
 
 	interfaceReset:       'interface:reset',
+	interfaceChange:      'interface:change',
 	interfaceSetStroke:   'interface:setStroke',
 	interfaceMoveTrack:   'interface:moveTrack',
 	interfaceUpdateData:  'interface:updateData',

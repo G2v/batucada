@@ -192,5 +192,6 @@ export class Interface {
 	get swap()          { return this.#instances.swap; }
 	get playing()       { return this.#playing; }
 	get dialogs()       { return this.#instances.dialogs; }
+	get animation()     { return this.#instances.animation; }
 	get tracksOrder()   { return [...this.trackList.children].map(track => track.dataset.index | 0); }
 }
