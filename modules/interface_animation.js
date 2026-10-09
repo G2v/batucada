@@ -16,17 +16,18 @@ export default class InterfaceAnimation {
 	}
 
 	start({ animations }) {
-		//Supprime les pistes qui ne sont plus actives
-		for (const [trackIndex, steps] of this.#animationQueue.entries()) {
-			if (!animations.has(trackIndex)) {
-				this.#animationQueue.delete(trackIndex);
-				this.#lastPlayed.delete(trackIndex);
-				steps[0]?.step?.classList.remove(InterfaceAnimation.#currentClass);
-			}
+		const endTime = animations.size
+			? Math.min(...Array.from(animations.values(), items => items[0].time))
+			: performance.now();
+		for (const [trackIndex, steps] of this.#animationQueue) {
+			if (animations.has(trackIndex) || steps.at(-1).end) continue;
+			steps.push({ step: null, time: endTime, end: true });
 		}
 		//Ajout des animations à la pile animationQueue
 		for (const [trackIndex, items] of animations) {
 			let steps = this.#animationQueue.get(trackIndex);
+			// La piste rejoue avant la fin prévue : on retire le repère de fin
+			if (steps?.at(-1).end) steps.pop();
 			// step fictif pour gérer la première animation
 			if (!steps) {
 				steps = [{ step: null, stepIndex: -1, time: 0 }];
@@ -95,6 +96,13 @@ export default class InterfaceAnimation {
 					step.classList.add(playedClass);
 					playedIndexes.push(stepIndex);
 				}
+			}
+
+			// Repère de fin atteint : toutes les cases de la piste sont passées (et marquées), on la retire
+			if (steps[nextIndex].end) {
+				this.#animationQueue.delete(trackIndex);
+				this.#lastPlayed.delete(trackIndex);
+				continue;
 			}
 
 			const nextStepIndex = steps[nextIndex].stepIndex;
