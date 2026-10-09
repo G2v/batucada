@@ -1,4 +1,4 @@
-import { downloadFile, getFileContent } from './utils.js';
+import { downloadFile, getFileContent, normalizeName } from './utils.js';
 
 export default class InterfacePresets {
 	static #newNameActions   = Object.freeze(['save', 'rename']);
@@ -100,8 +100,7 @@ export default class InterfacePresets {
 			}
 			event.preventDefault();
 			const isNewName = InterfacePresets.#newNameActions.includes(action);
-			const rawName = this.#presetEditForm.elements.name.value;
-			const name = rawName.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
+			const name = normalizeName(this.#presetEditForm.elements.name.value);
 			if (isNewName && !name) return this.reportNameValidity('empty');
 			actionButtons.forEach(button => button.disabled = true);
 			const saved = Promise.withResolvers();
@@ -148,7 +147,8 @@ export default class InterfacePresets {
 		if (dateTimeStr) {
 			const date = new Date(dateTimeStr);
 			const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-			dateSuffix += `_${localDate.toISOString().split('.')[0]}`;
+			// Sans « : », refusé dans les noms de fichiers sous Windows et Android
+			dateSuffix = `_${localDate.toISOString().slice(0, 19).replace('T', '_').replaceAll(':', '-')}`;
 		}
 		const filename = `presets${dateSuffix}.json`;
 		if (await downloadFile(filename, content)) this.#presetsDialog.close();

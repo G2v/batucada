@@ -2,6 +2,8 @@ import { encodeUrl, moveTrack } from './navigation_encode.js';
 import { decode, decodeAll, initialState } from './navigation_decode.js';
 
 export class Navigation {
+	static #entrySources = new Set(['save', 'import', 'cancel', 'clear']);
+
 	#bus;
 	#state;
 	#events;
@@ -107,9 +109,10 @@ export class Navigation {
 		this.#navigate({ action: 'decode', dispatch: true });
 	}
 
-	#presetsUpdated({ source, title }) {
+	#presetsUpdated({ source, title, index }) {
 		if (title !== undefined) this.#encodeURL({ title });
 		if (source === 'set' || source === 'unset') this.#updateEntry(source === 'unset');
+		else if (title === undefined && index !== undefined && Navigation.#entrySources.has(source)) this.#updateEntry(index === -1);
 	}
 
 	#updateEntry(isUnsaved) {
@@ -120,7 +123,6 @@ export class Navigation {
 
 	#encodeURL(values) {
 		this.#updateState(values);
-		// Tempo et volumes ne créent pas d'entrée dans l'historique : ils remplacent l'entrée courante
 		const replace = Object.keys(values).every(key => key === 'tempo' || key === 'volumes');
 		this.#encode(encodeUrl, values, replace);
 	}

@@ -6,13 +6,8 @@ export function defer(task, timeout = 3000) {
 	else setTimeout(task, 500);
 }
 
-export function readPreferences(defaults) {
-	try { return { ...defaults, ...JSON.parse(localStorage.preferences ?? '{}') }; }
-	catch { return { ...defaults }; }
-}
-
-export function writePreferences(preferences) {
-	try { localStorage.preferences = JSON.stringify(preferences); } catch {}
+export function normalizeName(name) {
+	return String(name).replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
 }
 
 export async function fetchFromCache(cacheName, filename, cacheResponse = false) {

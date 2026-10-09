@@ -1,4 +1,4 @@
-import { fetchFromCache, writeData } from './utils.js';
+import { fetchFromCache, writeData, normalizeName } from './utils.js';
 
 export class Presets {
 	static #newNameActions = Object.freeze(['save', 'rename']);
@@ -15,10 +15,12 @@ export class Presets {
 	#volumeSearchParam;
 	#defaultSetValue;
 	#defaultTitleValue;
+	#digits;
+	#separator;
 	#index              = -1;
 	#presets            = null;
 	#lastAction         = null;
-	#isPersistedStorage = null;
+	#persistRequested   = false;
 
 	constructor({ bus, config }) {
 		this.#bus               = bus;
@@ -32,6 +34,8 @@ export class Presets {
 		this.#volumeSearchParam = config.volumeSearchParam;
 		this.#defaultSetValue   = config.defaultSetValue;
 		this.#defaultTitleValue = config.defaultTitleValue;
+		this.#digits            = config.formatDigits;
+		this.#separator         = config.trackFormatSeparator;
 
 		this.#loadPresets([]);
 
@@ -64,8 +68,9 @@ export class Presets {
 	}
 
 	async #saveData(data) {
-		if (this.#isPersistedStorage === null) {
-			this.#isPersistedStorage = await navigator.storage.persist();
+		if (!this.#persistRequested) {
+			this.#persistRequested = true;
+			navigator.storage?.persist?.().catch(() => {});
 		}
 		const response     = await writeData(this.#cacheName, this.#presetsFile, data);
 		const lastModified = response.headers.get('last-modified');
@@ -175,16 +180,14 @@ export class Presets {
 		}
 	}
 
-	async #applyModification(data, action, name) {
+	async #applyModification(currentData, action, name) {
+		// Copie : en cas d'échec d'écriture, la liste en mémoire reste celle affichée
+		const data      = currentData.map(preset => ({ ...preset }));
 		const isNewName = Presets.#newNameActions.includes(action);
 		const value     = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
 		const indexName = action === 'save' ? name : this.#params.get(this.#titleSearchParam);
 		const index     = data.findIndex(preset => preset.name === indexName);
-
-		this.#lastAction = {
-			data:  data.map(preset => ({ ...preset })),
-			title: this.#params.get(this.#titleSearchParam) || this.#defaultTitleValue,
-		};
+		const title     = this.#params.get(this.#titleSearchParam) || this.#defaultTitleValue;
 
 		switch (action) {
 			case 'save':
@@ -204,7 +207,13 @@ export class Presets {
 		if (isNewName) data.sort((a, b) => a.name.localeCompare(b.name));
 
 		await this.#saveData(data);
+		this.#lastAction = { data: currentData, title };
 		this.#updatePresets(data, action === 'delete' ? this.#defaultTitleValue : name, action);
+	}
+
+	#isValidValue(value) {
+		return typeof value === 'string' && value.length > 0
+			&& [...value].every(char => char === this.#separator || this.#digits.includes(char));
 	}
 
 	#validateNewName(data, name) {
@@ -234,51 +243,40 @@ export class Presets {
 
 	async #presetsImport({ data, promise }) {
 		try {
+			if (!Array.isArray(data)) throw new Error();
 			const currentData = this.#presets;
-			const snapshotData = currentData.map(preset => ({ ...preset }));
-			const dataMap = new Map(currentData.map(preset => [preset.name, preset]));
-			const validData = data?.filter(item =>
-				typeof item?.name === 'string' && item.name.trim().length > 0 &&
-				typeof item?.value === 'string'
-			) || [];
-
-			if (validData.length === 0) throw new Error();
-
+			const newData     = currentData.map(preset => ({ ...preset }));
+			const values      = new Map(currentData.map(({ name, value }) => [name, value]));
+			const known       = new Set(currentData.map(({ name, value }) => `${name}\n${value}`));
+			let validCount    = 0;
 			let importedCount = 0;
 
-			for (const item of validData) {
-				const originalName = item.name.trim();
-				const value = item.value;
-				const existing = currentData.some(preset => preset.name === originalName && preset.value === value);
-				if (existing) continue;
-				const match = originalName.match(/^(.*) \(\d+\)$/);
-				const baseName = match ? match[1] : originalName;
+			for (const item of data) {
+				// Noms normalisés comme à l'enregistrement : pas de doublons visuellement identiques
+				const originalName = typeof item?.name === 'string' ? normalizeName(item.name) : '';
+				const value        = item?.value;
+				if (!originalName || !this.#isValidValue(value)) continue;
+				validCount++;
+				if (known.has(`${originalName}\n${value}`)) continue;
 
+				const baseName = originalName.match(/^(.*) \(\d+\)$/)?.[1] ?? originalName;
 				let name = originalName;
-
-				if (dataMap.has(name)) {
-					let suffix = 1;
+				for (let suffix = 1; values.has(name) && values.get(name) !== value; suffix++) {
 					name = `${baseName} (${suffix})`;
-					while (dataMap.has(name)) {
-						if (dataMap.get(name).value === value) break;
-						suffix++;
-						name = `${baseName} (${suffix})`;
-					}
 				}
+				if (values.has(name)) continue;
 
-				if (dataMap.has(name) && dataMap.get(name).value === value) {
-					continue;
-				}
-
-				const newItem = { name, value };
-				dataMap.set(name, newItem);
-				currentData.push(newItem);
+				values.set(name, value);
+				known.add(`${name}\n${value}`);
+				newData.push({ name, value });
 				importedCount++;
 			}
 
-			const newData = Array.from(dataMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+			if (validCount === 0) throw new Error();
+
+			newData.sort((a, b) => a.name.localeCompare(b.name));
 			await this.#saveData(newData);
-			this.#lastAction = { data: snapshotData };
+			this.#lastAction = { data: currentData };
 			this.#updatePresets(newData, null, 'import');
 			promise.resolve(importedCount);
 		} catch (error) {

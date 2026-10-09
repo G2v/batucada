@@ -330,7 +330,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 	[data-transitioning] & {
 		view-transition-name: match-element;
 	}
-	
+
 	&.reseted {
 		animation: reseted 250ms ease-out forwards;
 	}
@@ -496,6 +496,11 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		}
 	}
 
+	[name="step"].played,
+	main[data-playing="0"] &:not([data-phrase="0"]) {
+		--played: var(--color-stroke-played);
+	}
+
 	[name="step"] {
 		padding: 0;
 		z-index: 1;
@@ -509,6 +514,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 
 		&:not([value="0"]) {
 			--step-background: var(--color-stroke-set);
+			background-image: linear-gradient(var(--played), var(--played));
 
 			&[value="1"] { --current-icon: var(--icon-1, var(--icon-default)); }
 			&[value="2"] { --current-icon: var(--icon-2, var(--icon-default)); }
@@ -520,14 +526,9 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 			&[value="8"] { --current-icon: var(--icon-8, var(--icon-default)); }
 			&[value="9"] { --current-icon: var(--icon-9, var(--icon-default)); }
 
-			&.played,
-			main[data-playing="0"] .track:not([data-phrase="0"]) & {
-				background-image: linear-gradient(var(--color-stroke-played), var(--color-stroke-played));
-			}
-
 			&::before {
 				content: '';
-				inset: .3em .1em; 
+				inset: .3em .1em;
 				position: absolute;
 				mask-position: center;
 				mask-repeat: no-repeat;
@@ -959,7 +960,7 @@ dialog {
 		position-anchor: --nested;
 
 		p + p {
-			font-size: .9em; 
+			font-size: .9em;
 		}
 	}
 
@@ -1646,7 +1647,7 @@ body > footer {
 				<section>
 					<p>Application : Batucada Sequencer</p>
 					<p id="contact">Contact : <a></a></p>
-					<p id="version">Version : 
+					<p id="version">Version :
 						<span></span>
 						<button commandfor="about" command="close" value="update" hidden>Mettre à jour</button>
 					</p>
