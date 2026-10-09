@@ -1,3 +1,3 @@
 export default {
-	email:              'batucada.sequencer@gmail.com',
+	email: 'batucada.sequencer@gmail.com',
 }
