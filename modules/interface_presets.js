@@ -67,8 +67,8 @@ export default class InterfacePresets {
 		const known = Array.from(this.#ui.presetsSelect.options).some(option => option.text === title);
 		elements.name.value = title;
 		elements.name.setCustomValidity('');
-		elements.copy.disabled = !known;
-		elements.delete.disabled = !known;
+		elements.copy.hidden   = !known;
+		elements.delete.hidden = !known;
 	}
 
 	#cancelEdit(messages, invoker = null) {
