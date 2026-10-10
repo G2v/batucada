@@ -118,6 +118,10 @@ export class Navigation {
 	}
 
 	#updateEntry(isUnsaved) {
+		if (navigation.transition) {
+			navigation.transition.finished.then(() => this.#updateEntry(isUnsaved), () => {});
+			return;
+		}
 		const state = navigation.currentEntry?.getState() ?? {};
 		if (!!state.isUnsaved === isUnsaved) return;
 		navigation.updateCurrentEntry({ state: { ...state, isUnsaved } });

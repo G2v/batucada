@@ -1,11 +1,13 @@
 import { fetchFromCache, writeData, normalizeName } from './utils.js';
 
 export class Presets {
-	static #newNameActions = Object.freeze(['save', 'rename']);
+	static #newNameActions = Object.freeze(['save', 'copy']);
 
 	#bus;
 	#events;
 	#params;
+	#digits;
+	#separator;
 	#cacheName;
 	#presetsDate;
 	#presetsFile;
@@ -15,8 +17,6 @@ export class Presets {
 	#volumeSearchParam;
 	#defaultSetValue;
 	#defaultTitleValue;
-	#digits;
-	#separator;
 	#index              = -1;
 	#presets            = null;
 	#lastAction         = null;
@@ -26,6 +26,8 @@ export class Presets {
 		this.#bus               = bus;
 		this.#events            = config.events;
 		this.#params            = new Map(new URLSearchParams(location.search));
+		this.#digits            = config.formatDigits;
+		this.#separator         = config.trackFormatSeparator;
 		this.#cacheName         = config.dataCache;
 		this.#presetsFile       = config.presetsFile;
 		this.#setSearchParam    = config.setSearchParam;
@@ -34,8 +36,6 @@ export class Presets {
 		this.#volumeSearchParam = config.volumeSearchParam;
 		this.#defaultSetValue   = config.defaultSetValue;
 		this.#defaultTitleValue = config.defaultTitleValue;
-		this.#digits            = config.formatDigits;
-		this.#separator         = config.trackFormatSeparator;
 
 		this.#loadPresets([]);
 
@@ -161,11 +161,13 @@ export class Presets {
 	async #editSave({ action, name, promise }) {
 		try {
 			const data = this.#presets;
-			const isNewName = Presets.#newNameActions.includes(action);
-			const status = this.#validateNewName(data, name);
+			const allowedName  = action === 'save' ? this.#params.get(this.#titleSearchParam) : null;
+			const isDuplicated = Presets.#newNameActions.includes(action)
+				&& name !== allowedName
+				&& data.some(preset => preset.name === name);
 
-			if (isNewName && status !== 'valid') {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsInvalidName, { detail: status }));
+			if (isDuplicated) {
+				this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsInvalidName, { detail: 'duplicated' }));
 				promise.resolve(false);
 				return;
 			}
@@ -181,22 +183,20 @@ export class Presets {
 	}
 
 	async #applyModification(currentData, action, name) {
-		// Copie : en cas d'échec d'écriture, la liste en mémoire reste celle affichée
 		const data      = currentData.map(preset => ({ ...preset }));
 		const isNewName = Presets.#newNameActions.includes(action);
 		const value     = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
-		const indexName = action === 'save' ? name : this.#params.get(this.#titleSearchParam);
-		const index     = data.findIndex(preset => preset.name === indexName);
 		const title     = this.#params.get(this.#titleSearchParam) || this.#defaultTitleValue;
+		const index     = data.findIndex(preset => preset.name === title);
 
 		switch (action) {
 			case 'save':
-				if (index !== -1) data[index].value = value;
+				if (index !== -1) Object.assign(data[index], { name, value });
 				else data.push({ name, value });
 				break;
 
-			case 'rename':
-				if (index !== -1) data[index].name = name;
+			case 'copy':
+				data.push({ name, value });
 				break;
 
 			case 'delete':
@@ -214,13 +214,6 @@ export class Presets {
 	#isValidValue(value) {
 		return typeof value === 'string' && value.length > 0
 			&& [...value].every(char => char === this.#separator || this.#digits.includes(char));
-	}
-
-	#validateNewName(data, name) {
-		const existingNames = new Set(data.map(item => item.name));
-		existingNames.delete(this.#params.get(this.#titleSearchParam));
-		if (existingNames.has(name)) return 'duplicated';
-		return 'valid';
 	}
 
 	async #editCancel(promise) {
@@ -252,7 +245,6 @@ export class Presets {
 			let importedCount = 0;
 
 			for (const item of data) {
-				// Noms normalisés comme à l'enregistrement : pas de doublons visuellement identiques
 				const originalName = typeof item?.name === 'string' ? normalizeName(item.name) : '';
 				const value        = item?.value;
 				if (!originalName || !this.#isValidValue(value)) continue;

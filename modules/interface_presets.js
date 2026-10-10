@@ -1,7 +1,7 @@
 import { downloadFile, getFileContent, normalizeName } from './utils.js';
 
 export default class InterfacePresets {
-	static #newNameActions   = Object.freeze(['save', 'rename']);
+	static #newNameActions   = Object.freeze(['save', 'copy']);
 	static #enabledButtons   = 'button:not(:disabled)';
 	static #validityMessages = Object.freeze({
 		empty:      'invalidEmpty',
@@ -61,12 +61,14 @@ export default class InterfacePresets {
 
 	#openEdit({ command }) {
 		if (command !== 'show-modal') return;
+		const { elements } = this.#presetEditForm;
 		const title = this.#ui.sequenceTitle.textContent.trim();
-		const unsaved = this.#ui.presetsSelect.selectedIndex === -1;
-		this.#presetEditForm.elements.name.value = title;
-		this.#presetEditForm.elements.name.setCustomValidity('');
-		this.#presetEditForm.elements.rename.disabled = unsaved;
-		this.#presetEditForm.elements.delete.disabled = unsaved;
+		// Un morceau porte le nom du titre (enregistré ou modifié) : on peut le copier ou le supprimer
+		const known = Array.from(this.#ui.presetsSelect.options).some(option => option.text === title);
+		elements.name.value = title;
+		elements.name.setCustomValidity('');
+		elements.copy.disabled = !known;
+		elements.delete.disabled = !known;
 	}
 
 	#cancelEdit(messages, invoker = null) {
