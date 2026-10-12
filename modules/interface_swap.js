@@ -74,7 +74,7 @@ export default class InterfaceSwap {
 		const sourceIndex = Number(event.dataTransfer.getData('text/plain'));
 
 		if (event.target === this.#endDropZone) {
-			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null));
+			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null), this.#ui.tracks[sourceIndex]);
 			return;
 		}
 
@@ -88,7 +88,7 @@ export default class InterfaceSwap {
 		if (targetIndex === null) {
 			this.trashTrack(sourceIndex);
 		} else {
-			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, targetIndex));
+			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, targetIndex), this.#ui.tracks[sourceIndex]);
 		}
 	}
 

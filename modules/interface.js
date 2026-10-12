@@ -1,6 +1,7 @@
 import { buildStyles, buildTracks, buildInstruments } from './build-dom.js';
 
 export class Interface {
+	static #movingClass = 'moving';
 	static #modules = Object.freeze([
 		{ name: 'controls',    path: './interface_controls.js' },
 		{ name: 'dialogs',     path: './interface_dialogs.js' },
@@ -159,10 +160,15 @@ export class Interface {
 	getTrackIndex(track)      { return track.dataset.index | 0; }
 	getTrackInstrument(track) { return track.dataset[this.#instrumentKey] | 0; }
 
-	startViewTransition(callback) {
-		document.documentElement.dataset.transitioning = '';
+	startViewTransition(callback, moving = null) {
+		const { dataset } = document.documentElement;
+		dataset.transitioning = '';
+		moving?.classList.add(Interface.#movingClass);
 		document.startViewTransition(callback)
-			.finished.finally(() => delete document.documentElement.dataset.transitioning);
+			.finished.finally(() => {
+				delete dataset.transitioning;
+				moving?.classList.remove(Interface.#movingClass);
+			});
 	}
 
 	set playing(status) {

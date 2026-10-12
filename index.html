@@ -329,6 +329,10 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 
 	[data-transitioning] & {
 		view-transition-name: match-element;
+
+		&.moving {
+			view-transition-name: moving;
+		}
 	}
 
 	&.reseted {
@@ -437,6 +441,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		button {
 			width: 2em;
 			height: 100%;
+			background: var(--color-background-base);
 
 			&::before {
 				mask-image: var(--icon-settings);
@@ -703,6 +708,10 @@ hr {
 			order: 3;
 		}
 	}
+}
+
+::view-transition-group(moving) {
+	z-index: 1;
 }
 
 ::view-transition-group(hr),

@@ -106,7 +106,7 @@ export default class InterfaceControls {
 		this.#ui.startViewTransition(() => {
 			if (isMoved) this.#ui.swap.moveTrack(trackIndex, targetIndex);
 			if (hasChanges) Object.assign(values, changes);
-		});
+		}, isMoved ? this.#track : null);
 
 		if (hasChanges) {
 			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { tracks: [{ id: trackIndex, changes }] } }));
