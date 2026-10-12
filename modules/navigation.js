@@ -104,6 +104,13 @@ export class Navigation {
 
 	#presetSelected({ name, value }) {
 		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
+		if (navigation.currentEntry?.getState()?.isUnsaved) {
+			const previous = URL.parse(navigation.entries()[navigation.currentEntry.index - 1]?.url)?.searchParams;
+			if (previous?.get(titleSearchParam) === name && previous.get(setSearchParam) === value) {
+				navigation.back();
+				return;
+			}
+		}
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
 		this.#searchParams.delete(tempoSearchParam);
