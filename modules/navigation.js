@@ -90,10 +90,12 @@ export class Navigation {
 			scroll: 'manual',
 			focusReset: 'manual',
 			handler: () => {
-				this.#searchParams = url.searchParams;
-				if (['reset', 'decode', 'decodeAll'].includes(action)) {
-					this.#decodeAction(action);
-					if (!keepScroll) requestAnimationFrame(() => window.scrollTo(0, 0));
+				if (!event.info?.keepState) {
+					this.#searchParams = url.searchParams;
+					if (['reset', 'decode', 'decodeAll'].includes(action)) {
+						this.#decodeAction(action);
+						if (!keepScroll) requestAnimationFrame(() => window.scrollTo(0, 0));
+					}
 				}
 				if (shouldDispatch) {
 					this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationChanged, { detail: new Map(this.#searchParams) }));
@@ -104,15 +106,12 @@ export class Navigation {
 
 	#presetSelected({ name, value }) {
 		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
-		if (navigation.currentEntry?.getState()?.isUnsaved) {
-			const previous = URL.parse(navigation.entries()[navigation.currentEntry.index - 1]?.url)?.searchParams;
-			if (previous?.get(titleSearchParam) === name && previous.get(setSearchParam) === value) {
-				navigation.back();
-				return;
-			}
-		}
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
+		if (this.#isUnsaved && this.#isSamePreset(this.#previousEntry)) {
+			navigation.back();
+			return;
+		}
 		this.#searchParams.delete(tempoSearchParam);
 		this.#searchParams.delete(volumeSearchParam);
 		this.#navigate({ action: 'decodeAll', dispatch: true });
@@ -129,9 +128,8 @@ export class Navigation {
 			navigation.transition.finished.then(() => this.#updateEntry(isUnsaved), () => {});
 			return;
 		}
-		const state = navigation.currentEntry?.getState() ?? {};
-		if (!!state.isUnsaved === isUnsaved) return;
-		navigation.updateCurrentEntry({ state: { ...state, isUnsaved } });
+		if (this.#isUnsaved === isUnsaved) return;
+		navigation.updateCurrentEntry({ state: { ...navigation.currentEntry?.getState(), isUnsaved } });
 	}
 
 	#encodeURL(values) {
@@ -155,10 +153,10 @@ export class Navigation {
 	}
 
 	#navigate(state, replace = false) {
-		const current   = navigation.currentEntry;
 		const nextUrl   = this.#url;
-		const isUnsaved = !!current?.getState()?.isUnsaved;
-		const previous  = navigation.entries()[(current?.index ?? -1) - 1];
+		const current   = navigation.currentEntry;
+		const previous  = this.#previousEntry;
+		const isUnsaved = this.#isUnsaved;
 
 		if ((replace || !isUnsaved) && current?.url === nextUrl) return;
 
@@ -167,9 +165,16 @@ export class Navigation {
 			return;
 		}
 
-		if (isUnsaved && previous?.url === nextUrl && !previous.getState()?.isUnsaved) {
-			navigation.back({ info: { keepScroll: state.action === 'encoded' } });
-			return;
+		if (isUnsaved && !previous?.getState()?.isUnsaved) {
+			if (state.action === 'encoded' && this.#isSamePreset(previous)) {
+				navigation.back({ info: { keepState: true } }).finished
+					.then(() => this.#navigate(state, true), () => {});
+				return;
+			}
+			if (previous?.url === nextUrl) {
+				navigation.back();
+				return;
+			}
 		}
 
 		navigation.navigate(nextUrl, { history: isUnsaved ? 'replace' : 'push', state });
@@ -185,6 +190,20 @@ export class Navigation {
 		if (!searchParams) return;
 		this.#searchParams = new URLSearchParams(searchParams);
 		this.#navigate({ action: 'encoded', dispatch: true }, replace);
+	}
+
+	#isSamePreset(entry) {
+		const params = URL.parse(entry?.url)?.searchParams;
+		const { setSearchParam, titleSearchParam } = this.#config;
+		return !!params && [setSearchParam, titleSearchParam].every(key => params.get(key) === this.#searchParams.get(key));
+	}
+
+	get #isUnsaved() {
+		return !!navigation.currentEntry?.getState()?.isUnsaved;
+	}
+
+	get #previousEntry() {
+		return navigation.entries()[navigation.currentEntry?.index - 1];
 	}
 
 	get #url() {
