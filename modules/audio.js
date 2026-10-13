@@ -179,7 +179,6 @@ export class Audio {
 		const audioStream = new window.Audio(URL.createObjectURL(blob));
 		audioStream.loop = true;
 		audioStream.volume = 0.001;
-		document.body.append(audioStream);
 		return audioStream;
 	}
 
