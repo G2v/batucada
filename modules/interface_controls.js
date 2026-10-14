@@ -1,4 +1,6 @@
 export default class InterfaceControls {
+	static #inheritedTrackKeys = Object.freeze(['beats', 'steps']);
+
 	#ui;
 	#bus;
 	#events;
@@ -18,14 +20,12 @@ export default class InterfaceControls {
 	#trackPositionText;
 	#trackSettingsDialog;
 	#controlsSection;
-	#defaultInstrument;
 
 	constructor({ bus, parent, config }) {
 		this.#ui                = parent;
 		this.#bus               = bus;
 		this.#names             = config.names;
 		this.#events            = config.events;
-		this.#defaultInstrument = config.defaultInstrument;
 
 		const { selectors } = config;
 
@@ -171,8 +171,8 @@ export default class InterfaceControls {
 		const index       = this.#ui.getTrackIndex(track);
 		const order       = this.#ui.tracksOrder;
 		const position    = order.indexOf(index);
-		const isLastTrack = this.#ui.getTrackInstrument(track) === this.#defaultInstrument;
-		const firstEmpty  = order.findIndex(trackIndex => this.#ui.getTrackInstrument(this.#ui.tracks[trackIndex]) === this.#defaultInstrument);
+		const isLastTrack = this.#ui.isTrackEmpty(track);
+		const firstEmpty  = order.findIndex(trackIndex => this.#ui.isTrackEmpty(this.#ui.tracks[trackIndex]));
 		const filledCount = firstEmpty === -1 ? order.length : firstEmpty;
 
 		for (const option of this.#positionSelect.options) {
@@ -199,12 +199,26 @@ export default class InterfaceControls {
 	}
 
 	#inputInstrument(target) {
-		const value = Number(target.value);
-		const track = this.#ui.getTrack(target);
-		const index = this.#ui.getTrackIndex(track);
+		const value     = Number(target.value);
+		const track     = this.#ui.getTrack(target);
+		const index     = this.#ui.getTrackIndex(track);
+		const tracks    = [{ id: index, changes: { instrument: value } }];
+		const nextTrack = this.#ui.isTrackEmpty(track) ? track.nextElementSibling : null;
+		const inherited = nextTrack && this.#ui.isTrackEmpty(nextTrack) ? this.#inheritedChanges(track, nextTrack) : null;
+		if (inherited) {
+			tracks.push({ id: this.#ui.getTrackIndex(nextTrack), changes: inherited });
+			Object.assign(nextTrack.dataset, inherited);
+		}
 		this.#ui.startViewTransition(() => track.dataset.instrument = value);
-		const detail = { tracks: [ { id:index, changes: { instrument: value } } ] };
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail }));
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceUpdateData, { detail: { tracks } }));
+	}
+
+	#inheritedChanges(source, target) {
+		const changes = {};
+		for (const key of InterfaceControls.#inheritedTrackKeys) {
+			if (source.dataset[key] !== target.dataset[key]) changes[key] = Number(source.dataset[key]);
+		}
+		return Object.keys(changes).length ? changes : null;
 	}
 
 	#inputVolume(target) {

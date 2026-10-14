@@ -168,7 +168,7 @@ export default class InterfaceAria {
 			case 'ArrowDown': {
 				const isDown    = key === 'ArrowDown';
 				const nextTrack = isDown ? currentTrack.nextElementSibling : currentTrack.previousElementSibling;
-				if (!nextTrack || (isDown && this.#ui.getTrackInstrument(currentTrack) === this.#defaultInstrument)) return null;
+				if (!nextTrack || (isDown && this.#ui.isTrackEmpty(currentTrack))) return null;
 				const verticalIndex = this.#verticalRoving ?? currentStepIndex;
 				return { nextTrack, nextStepIndex: this.#clampPosition(verticalIndex, nextTrack.dataset), verticalIndex };
 			}

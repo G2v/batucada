@@ -18,6 +18,7 @@ export class Interface {
 	#resolution;
 	#instrumentKey;
 	#trackProperties;
+	#defaultInstrument;
 
 	#nodes           = {};
 	#ready           = {};
@@ -26,11 +27,12 @@ export class Interface {
 	#headTitlePrefix = `${document.title} - `;
 
 	constructor({ bus, config, initial = {} }) {
-		const events             = config.events;
-		this.#selectors          = config.selectors;
-		this.#resolution         = config.resolution;
-		this.#instrumentKey      = config.trackKeys.instrument;
-		this.#trackProperties    = new Set(Object.values(config.trackKeys));
+		const events            = config.events;
+		this.#selectors         = config.selectors;
+		this.#resolution        = config.resolution;
+		this.#instrumentKey     = config.trackKeys.instrument;
+		this.#trackProperties   = new Set(Object.values(config.trackKeys));
+		this.#defaultInstrument = config.defaultInstrument;
 
 		bus.addEventListener(events.audioStop,            ({ detail }) => this.#instances.animation?.stop());
 		bus.addEventListener(events.audioUpdateData,      ({ detail }) => this.#update(detail));
@@ -159,6 +161,7 @@ export class Interface {
 	getTrack(child)           { return child.closest(this.#selectors.track); }
 	getTrackIndex(track)      { return track.dataset.index | 0; }
 	getTrackInstrument(track) { return track.dataset[this.#instrumentKey] | 0; }
+	isTrackEmpty(track)       { return this.getTrackInstrument(track) === this.#defaultInstrument; }
 
 	startViewTransition(callback, moving = null) {
 		const { dataset } = document.documentElement;

@@ -10,7 +10,6 @@ export default class InterfaceSwap {
 	#events;
 	#trashZone;
 	#endDropZone;
-	#defaultInstrument;
 	#over = new Set();
 
 	constructor({ bus, parent, config }) {
@@ -19,7 +18,6 @@ export default class InterfaceSwap {
 		this.#events            = config.events;
 		this.#trashZone         = document.querySelector(config.selectors.trashZone);
 		this.#endDropZone       = document.querySelector(config.selectors.endDropZone);
-		this.#defaultInstrument = config.defaultInstrument;
 
 		this.#ui.container.addEventListener('dragstart', (event) => this.#handleDragStart(event));
 		this.#ui.container.addEventListener('dragenter', (event) => this.#handleDragEnter(event));
@@ -32,7 +30,7 @@ export default class InterfaceSwap {
 	#handleDragStart(event) {
 		const track = this.#ui.getTrack(event.target);
 		if (!track) return;
-		if (this.#ui.getTrackInstrument(track) !== this.#defaultInstrument) {
+		if (!this.#ui.isTrackEmpty(track)) {
 			this.#ui.container.classList.add(InterfaceSwap.#swapClass);
 		}
 		this.#ui.container.classList.add(InterfaceSwap.#trashClass);
@@ -120,7 +118,7 @@ export default class InterfaceSwap {
 	trashTrack(sourceIndex) {
 		const draggedTrack      = this.#ui.tracks[sourceIndex];
 		const isLastVisualTrack = sourceIndex === this.#ui.tracksOrder.at(-1)
-			|| this.#ui.getTrackInstrument(draggedTrack) === this.#defaultInstrument;
+			|| this.#ui.isTrackEmpty(draggedTrack);
 
 		if (isLastVisualTrack) {
 			const target = draggedTrack.nextElementSibling || draggedTrack;
