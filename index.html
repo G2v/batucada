@@ -376,7 +376,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 
 		span {
 			margin-left: 1px;
-			line-height: calc(1.65em / .9);
+			align-self: center;
 		}
 
 		&::after {
@@ -550,7 +550,6 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 			--step-background: var(--color-background-strong);
 
 			&::before {
-				display: block;
 				color: CanvasText;
 				text-align: center;
 				line-height: 1.65em;
@@ -664,7 +663,7 @@ hr {
 		#preset_label {
 			overflow: hidden;
 			grid-area: 1 / 1;
-			line-height: 2.5rem;
+			align-self: center;
 			white-space: nowrap;
 			padding: 0 1em 0 .5em;
 			text-overflow: ellipsis;
@@ -698,7 +697,7 @@ hr {
 		output {
 			width: 4em;
 			margin-left: .5em;
-			line-height: 2.5rem;
+			align-self: center;
 		}
 
 	}
@@ -1538,7 +1537,7 @@ body > footer {
 					data-cancel-success="L'opération a été annulée."
 					data-cancel-failure="⚠️ L'opération ne peut être annulée.">Supprimer le morceau</button>
 				<button name="share" formnovalidate
-					data-failure="🔗 Lien de partage copié dans le presse-papier.">Partager le morceau</button>
+					data-failure="Lien de partage copié dans le presse-papier.">Partager le morceau</button>
 			</form>
 		</div>
 	</dialog>
@@ -1637,7 +1636,8 @@ body > footer {
 							<p>Cela remplace les instruments actuels.</p>
 							<footer>
 								<button commandfor="instruments-import" command="close" value="back">Annuler</button>
-								<button commandfor="instruments-import" command="close" value="import">Charger</button>
+								<button commandfor="instruments-import" command="close" value="import"
+									data-failure="⚠️ Le chargement a échoué.">Charger</button>
 							</footer>
 						</div>
 					</dialog>
@@ -1647,7 +1647,8 @@ body > footer {
 							<p>Cela remplace les instruments actuels.</p>
 							<footer>
 								<button commandfor="instruments-restore" command="close" value="back">Annuler</button>
-								<button commandfor="instruments-restore" command="close" value="restore">Restaurer</button>
+								<button commandfor="instruments-restore" command="close" value="restore"
+									data-failure="⚠️ La restauration a échouée.">Restaurer</button>
 							</footer>
 						</div>
 					</dialog>

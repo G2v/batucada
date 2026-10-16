@@ -58,13 +58,13 @@ export default class InterfaceInstruments {
 
 	#confirmImportCommand(event) {
 		if (event.source.value === 'import') {
-			this.#instrumentsImport();
+			this.#instrumentsImport(event.source.dataset);
 		}
 	}
 
 	#confirmRestoreCommand(event) {
 		if (event.source.value === 'restore') {
-			this.#instrumentsRestore();
+			this.#instrumentsRestore(event.source.dataset);
 		}
 	}
 
@@ -82,17 +82,12 @@ export default class InterfaceInstruments {
 		if (await downloadFile(filename, content)) this.#instrumentsDialog.close();
 	}
 
-	async #instrumentsRestore() {
-		document.body.inert = true;
-		try {
+	#instrumentsRestore(messages) {
+		return this.#replaceLibrary(async () => {
 			const cache = await caches.open(this.#dataCache);
 			await cache.delete(this.#instrumentsSoundsFile);
 			await cache.delete(this.#instrumentsMetadataFile);
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
-		}
-		catch {
-			document.body.inert = false;
-		}
+		}, messages);
 	}
 
 	async #libraryCheck(messages) {
@@ -156,16 +151,24 @@ export default class InterfaceInstruments {
 		}
 	}
 
-	async #instrumentsImport() {
-		document.body.inert = true;
+	#instrumentsImport(messages) {
+		const { sounds, metadata } = this.#pendingImport;
+		return this.#replaceLibrary(async () => {
+			await writeData(this.#dataCache, this.#instrumentsSoundsFile, sounds);
+			await writeData(this.#dataCache, this.#instrumentsMetadataFile, metadata);
+		}, messages);
+	}
+
+	async #replaceLibrary(write, { failure }) {
 		try {
-			await writeData(this.#dataCache, this.#instrumentsSoundsFile, this.#pendingImport.sounds);
-			await writeData(this.#dataCache, this.#instrumentsMetadataFile, this.#pendingImport.metadata);
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
+			await write();
 		}
 		catch {
-			document.body.inert = false;
+			this.#ui.dialogs.showToast(failure);
+			return;
 		}
+		document.body.inert = true;
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
 	}
 
 	static async #validateAudio(dataUrl, audioContext) {
