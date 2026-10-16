@@ -134,6 +134,7 @@
 	--icon-phrase-1:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m22.5 7v23h-5v-16l-6 2v-4z" fill="white"/></svg>');
 	--icon-phrase-2:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m12.5 14c0-3 3-5 7-5 3 0 6 2 6 5 0 2-3 5-7 8l-7 6 16 0" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
 	--icon-phrase-3:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m13 14c0-3 3-5 7-5 3 0 6 2 6 5 0 2-2 4-8 4.5 6 0.5 8 2.5 8 5 0 3-3 5.5-7 5.5-4 0-7-2.5-7-5.5" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
+	--icon-phrase-4:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m21.5 30v-22l-11 15h16.5" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
 	--icon-settings:   url('data:image/svg+xml,<svg viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg"><path d="m10 10v6a4 4 0 1 0 .01 0m0 8v12M23 10v12a4 4 0 1 0 .01 0m0 8v6M36 10v8a4 4 0 1 0 .01 0m0 8v10" stroke-width="2" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-arrow-left: url('data:image/svg+xml,<svg viewBox="0 0 14 30" xmlns="http://www.w3.org/2000/svg"><path d="m7 10l6 5l-6 5" fill="none" stroke-width="1" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-arrow-down: url('data:image/svg+xml,<svg viewBox="0 0 14 30" xmlns="http://www.w3.org/2000/svg"><path d="m4 14l3 4 3 -4" fill="none" stroke-width="1" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
@@ -368,13 +369,14 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		grid-template-columns: var(--main-margin) 1fr;
 
 		span, select {
+			font-size: .9em;
 			grid-area: 1 / 2;
 			padding-left: .3em;
 		}
 
 		span {
 			margin-left: 1px;
-			line-height: 1.65em;
+			line-height: calc(1.65em / .9);
 		}
 
 		&::after {
@@ -397,6 +399,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 	&[data-phrase="1"] .instrument::after { background-image: var(--icon-phrase-1); }
 	&[data-phrase="2"] .instrument::after { background-image: var(--icon-phrase-2); }
 	&[data-phrase="3"] .instrument::after { background-image: var(--icon-phrase-3); }
+	&[data-phrase="4"] .instrument::after { background-image: var(--icon-phrase-4); }
 
 	&[data-steps="6"], &[data-steps="8"] {
 		.beat .grid { width: 9.5em; }
@@ -532,8 +535,8 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 			&[value="9"] { --current-icon: var(--icon-9, var(--icon-default)); }
 
 			&::before {
+				inset: .11em;
 				content: '';
-				inset: .3em .1em;
 				position: absolute;
 				mask-position: center;
 				mask-repeat: no-repeat;
@@ -1488,6 +1491,7 @@ body > footer {
 						<option value="1">Intro 1</option>
 						<option value="2">Intro 2</option>
 						<option value="3">Intro 3</option>
+						<option value="4">Intro 4</option>
 						<option value="0" selected>Tourne</option>
 					</select>
 				</label>
