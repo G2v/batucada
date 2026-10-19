@@ -68,7 +68,7 @@ function start(time) {
 
 function restart() {
 	beatCounter = 0;
-	phraseCounter = 0;
+	phraseCounter = 1;
 }
 
 function stop() {
