@@ -1,1 +1,1 @@
-export default '1.01.24'
+export default '1.01.25'
