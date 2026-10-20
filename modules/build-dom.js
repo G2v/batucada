@@ -1,3 +1,12 @@
+export function firstTracksCount(config, { sheet = [], tracks = [], volumes = [] }) {
+	const { tracksLength, resolution } = config;
+	let last = -1;
+	for (const { id } of tracks)       last = Math.max(last, id);
+	for (const { id } of volumes)      last = Math.max(last, id);
+	for (const { stepIndex } of sheet) last = Math.max(last, stepIndex / resolution.track | 0);
+	return Math.min(tracksLength, last + 2);
+}
+
 function cloneIndexed(node, count, parent) {
 	const label = node.ariaLabel.replace(/\s*\d+$/, '');
 	for (let index = 1; index < count; index++) {
@@ -31,8 +40,8 @@ export function buildStyles({ instrumentsLibraryReady }) {
 	});
 }
 
-export function buildTracks(config, template) {
-	const { tracksLength, selectors, resolution } = config;
+export function buildTracks(config, template, start = 0, end = config.tracksLength) {
+	const { selectors, resolution } = config;
 
 	const masterTrack = template.cloneNode(true);
 	const firstBar    = masterTrack.querySelector(selectors.bar);
@@ -46,7 +55,7 @@ export function buildTracks(config, template) {
 	const nodes = { tracks: [], instruments: [], volumes: [], steps: [] };
 	const fragment = new DocumentFragment();
 
-	for (let index = 0; index < tracksLength; index++) {
+	for (let index = start; index < end; index++) {
 		const track  = masterTrack.cloneNode(true);
 		const steps  = track.querySelectorAll(selectors.stepButton);
 

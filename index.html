@@ -109,7 +109,6 @@
 		hsl(from var(--color-primary) h s 20%),
 		hsl(from var(--color-primary) h s 100%)
 	);
-
 	--color-shadow-light: light-dark(
 		hsl(from var(--color-primary) h 50% 10% / .1),
 		hsl(from var(--color-primary) h 50% 10% / .4)
@@ -119,6 +118,7 @@
 		hsl(from var(--color-primary) h 50% 10% / .6)
 	);
 	--color-shadow-strong: hsl(from var(--color-primary) h 50% 10% / .4);
+	--color-invalid: hsl(from var(--color-stroke-set) 0 s l);
 
 	--icon-back:       url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m27.5 20h-15m5 5l-5-5l5-5" fill="none" stroke-width="2" stroke="black" stroke-linecap="round"/></svg>');
 	--icon-menu:       url('data:image/svg+xml,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m4 6h16m-16 6h16m-16 6h16" stroke-width="2" stroke="black" stroke-linecap="round"/></svg>');
@@ -858,8 +858,8 @@ select:has(:checked) {
 	background-color: var(--color-background-base);
 }
 
-input:user-invalid {
-	background: rgba(255, 0, 0, 0.2);
+input:user-invalid:focus-visible {
+	outline-color: var(--color-invalid);
 }
 
 a {
@@ -984,6 +984,7 @@ dialog {
 			border: none;
 			width: 2.5em;
 			height: 2.5em;
+			overflow: visible;
 			border-radius: 50%;
 			position: absolute;
 			outline-offset: -.4em;
@@ -1365,6 +1366,7 @@ body > footer {
 		color: inherit;
 	}
 }
+
 </style>
 </head>
 <body>

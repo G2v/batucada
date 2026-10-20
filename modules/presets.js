@@ -16,7 +16,6 @@ export class Presets {
 	#tempoSearchParam;
 	#volumeSearchParam;
 	#defaultSetValue;
-	#defaultTitleValue;
 	#index              = -1;
 	#presets            = null;
 	#lastAction         = null;
@@ -35,7 +34,6 @@ export class Presets {
 		this.#tempoSearchParam  = config.tempoSearchParam;
 		this.#volumeSearchParam = config.volumeSearchParam;
 		this.#defaultSetValue   = config.defaultSetValue;
-		this.#defaultTitleValue = config.defaultTitleValue;
 
 		this.#loadPresets([]);
 
@@ -81,7 +79,7 @@ export class Presets {
 		try {
 			await writeData(this.#cacheName, this.#presetsFile, [], false);
 			this.#presetsDate = null;
-			this.#updatePresets([], this.#defaultTitleValue, 'clear');
+			this.#updatePresets([], '', 'clear');
 			resolve();
 		} catch {
 			reject();
@@ -101,12 +99,9 @@ export class Presets {
 			this.#index = -1;
 			changes.index = this.#index;
 		}
-		if (
-			this.#params.has(this.#titleSearchParam)
-			&& this.#params.get(this.#titleSearchParam) !== this.#defaultTitleValue
-		) {
+		if (this.#params.get(this.#titleSearchParam)) {
 			this.#params.delete(this.#titleSearchParam);
-			changes.title = this.#defaultTitleValue;
+			changes.title = '';
 		}
 		this.#params.delete(this.#setSearchParam);
 		this.#dispatchChanges(changes, 'reset');
@@ -129,9 +124,9 @@ export class Presets {
 			changes.presets = { values: presets, lastModified: this.#presetsDate }
 		}
 		const setValue    = this.#params.get(this.#setSearchParam)   || this.#defaultSetValue;
-		const titleValue  = this.#params.get(this.#titleSearchParam) || this.#defaultTitleValue;
+		const titleValue  = this.#params.get(this.#titleSearchParam) || '';
 		const targetTitle = title ?? titleValue;
-		const index = (this.#presets === null || targetTitle === this.#defaultTitleValue)
+		const index = (this.#presets === null || !targetTitle)
 			? -1
 			: this.#presets.findIndex(({ value, name }) => value === setValue && name === targetTitle);
 
@@ -186,7 +181,7 @@ export class Presets {
 		const data      = currentData.map(preset => ({ ...preset }));
 		const isNewName = Presets.#newNameActions.includes(action);
 		const value     = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
-		const title     = this.#params.get(this.#titleSearchParam) || this.#defaultTitleValue;
+		const title     = this.#params.get(this.#titleSearchParam) || '';
 		const index     = data.findIndex(preset => preset.name === title);
 
 		switch (action) {
@@ -208,7 +203,7 @@ export class Presets {
 
 		await this.#saveData(data);
 		this.#lastAction = { data: currentData, title };
-		this.#updatePresets(data, action === 'delete' ? this.#defaultTitleValue : name, action);
+		this.#updatePresets(data, action === 'delete' ? '' : name, action);
 	}
 
 	#isValidValue(value) {

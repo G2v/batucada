@@ -7,7 +7,6 @@ const names = Object.freeze({
 });
 
 const events = Object.freeze({
-
 	audioStop:           'audio:stop',
 	audioState:          'audio:state',
 	audioChanged:        'audio:changed',
@@ -44,7 +43,6 @@ const events = Object.freeze({
 });
 
 const selectors = Object.freeze({
-
 	bar:              '.bar',
 	beat:             '.beat',
 	track:            '.track',
@@ -116,9 +114,18 @@ const trackKeys = Object.freeze({
 	instrument: 'instrument',
 });
 
+const emptyStroke  = 0;
+const tracksLength = 20;
+
+const setSearchParam    = 'set';
+const tempoSearchParam  = 'bpm';
+const titleSearchParam  = 'title';
+const volumeSearchParam = 'vol';
+
+const formatDigits          = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const defaultSetValue       = formatDigits[0];
 const trackFormatSeparator  = '-';
 const trackFormatAllocation = Object.freeze({ phrase: 6, bars: 8, beats: 4, steps: 5, reserved: 4 });
-const formatDigits          = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 const instrumentsLibraryReady = (async () => {
 	const url     = new URL(core_config.instrumentsMetadataFile, location.href).href;
@@ -166,7 +173,6 @@ const defaultSteps      = steps      | 0;
 const defaultPhrase     = phrase     | 0;
 const defaultInstrument = instrument | 0;
 
-
 const indexFrom = (values, defaultValue) => Object.freeze(
 	[defaultValue, ...values.filter(value => value !== defaultValue)]
 );
@@ -186,16 +192,19 @@ export const config = Object.freeze({
 	events,
 	trackKeys,
 	selectors,
-	instrumentsLibraryReady,
-	emptyStroke:           0,
-	resolution:            {
+	emptyStroke,
+	tracksLength,
+	setSearchParam,
+	tempoSearchParam,
+	titleSearchParam,
+	volumeSearchParam,
+	resolution: {
 		beat:  maxSteps,
 		bar:   maxSteps * maxBeats,
 		track: maxSteps * maxBeats * maxBars,
 		maxBars, maxBeats,
 	},
 	maxGain,
-	defaultTempo,
 	tempoMin,
 	tempoMax,
 	tempoStep,
@@ -203,15 +212,18 @@ export const config = Object.freeze({
 	defaultBars,
 	defaultBeats,
 	defaultSteps,
+	defaultTempo,
 	defaultPhrase,
 	defaultVolume,
 	defaultInstrument,
 	defaultPreferences,
-	barsIndex:             indexFrom(barsValues,   defaultBars),
-	beatsIndex:            indexFrom(beatsValues,  defaultBeats),
-	stepsIndex:            indexFrom(stepsValues,  defaultSteps),
-	phraseIndex:           indexFrom(phraseValues, defaultPhrase),
+	barsIndex:   indexFrom(barsValues,   defaultBars),
+	beatsIndex:  indexFrom(beatsValues,  defaultBeats),
+	stepsIndex:  indexFrom(stepsValues,  defaultSteps),
+	phraseIndex: indexFrom(phraseValues, defaultPhrase),
+	formatDigits,
+	defaultSetValue,
 	trackFormatSeparator,
 	trackFormatAllocation,
-	formatDigits,
+	instrumentsLibraryReady,
 });

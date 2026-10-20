@@ -105,9 +105,9 @@ export class Navigation {
 	}
 
 	#presetSelected({ name, value }) {
-		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue, defaultTitleValue } = this.#config;
+		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue } = this.#config;
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
-		this.#searchParams.set(titleSearchParam, name || defaultTitleValue);
+		this.#searchParams.set(titleSearchParam, name || '');
 		if (this.#isUnsaved && this.#isSamePreset(this.#previousEntry)) {
 			navigation.back();
 			return;

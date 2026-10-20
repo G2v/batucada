@@ -1,7 +1,7 @@
 export function initialState(config, order = Array.from({ length: config.tracksLength }, (_, i) => i)) {
 	return {
 		tempo:   config.defaultTempo,
-		title:   config.defaultTitleValue,
+		title:   '',
 		order,
 		sheet:   null,
 		tracks:  null,
@@ -31,7 +31,7 @@ export function decodeAll(config, searchParams, state) {
 		[config.setSearchParam]:    config.defaultSetValue,
 		[config.volumeSearchParam]: config.defaultVolume,
 		[config.tempoSearchParam]:  config.defaultTempo,
-		[config.titleSearchParam]:  config.defaultTitleValue,
+		[config.titleSearchParam]:  '',
 		...asObject(searchParams),
 	}, state);
 }
@@ -54,9 +54,7 @@ function decodeSet(config, state, encodedValues, changes) {
 
 	const allocationKeys = Object.keys(allocation);
 	const values         = encodedValues.split(trackFormatSeparator);
-
-	// Une URL malformée peut porter plus de segments que de pistes : on les ignore
-	const limitTracks = isVirginTrack ? Math.min(values.length, tracksLength) : tracksLength;
+	const limitTracks    = isVirginTrack ? Math.min(values.length, tracksLength) : tracksLength;
 
 	for (let i = 0; i < limitTracks; i++) {
 		const trackChanges = {};

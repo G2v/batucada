@@ -1,4 +1,4 @@
-import { buildStyles, buildTracks, buildInstruments } from './build-dom.js';
+import { buildStyles, buildTracks, buildInstruments, firstTracksCount } from './build-dom.js';
 
 export class Interface {
 	static #movingClass = 'moving';
@@ -20,13 +20,15 @@ export class Interface {
 	#trackProperties;
 	#defaultInstrument;
 
+	#tracksReady     = Promise.withResolvers();
 	#nodes           = {};
 	#ready           = {};
 	#instances       = {};
 	#playing         = false;
 	#headTitlePrefix = `${document.title} - `;
 
-	constructor({ bus, config, initial = {} }) {
+	constructor(params) {
+		const { bus, config }   = params;
 		const events            = config.events;
 		this.#selectors         = config.selectors;
 		this.#resolution        = config.resolution;
@@ -43,31 +45,39 @@ export class Interface {
 		bus.addEventListener(events.navigationDecoded,    ({ detail }) => this.#update(detail));
 		bus.addEventListener(events.navigationCloseModal, ({ detail }) => this.#instances.dialogs?.closeModal(detail));
 
-		this.#build({ bus, config, initial });
+		this.#build(params);
+		this.#loadModules(params);
 	}
 
 	#build(params) {
 		const { config, initial } = params;
+		const addTracks = (start, end) => {
+			const { nodes, fragment } = buildTracks(config, this.trackTemplate, start, end);
+			for (const [key, list] of Object.entries(nodes)) (this.#nodes[key] ??= []).push(...list);
+			buildInstruments(config, nodes).catch(reportError);
+			return fragment;
+		};
 
 		buildStyles(config).catch(reportError);
 
-		const { nodes, fragment } = buildTracks(config, this.trackTemplate);
-		Object.assign(this.#nodes, nodes);
+		const firstCount = firstTracksCount(config, initial);
+		const fragment   = addTracks(0, firstCount);
 		this.#apply(initial);
-
-		buildInstruments(config, nodes).catch(reportError);
 
 		document.documentElement.style.removeProperty('--untitled');
 		document.documentElement.style.removeProperty('--tracks-count');
 		this.trackList.appendChild(fragment);
 		if (initial.title === undefined) document.title = this.#headTitlePrefix + this.untitled;
 
-		this.#loadModules(params);
+		requestAnimationFrame(() => setTimeout(() => {
+			this.trackList.appendChild(addTracks(firstCount));
+			this.#tracksReady.resolve();
+		}));
 	}
 
 	#loadModules(params) {
 		Interface.#modules.forEach(({ name, path }) => {
-			this.#ready[name] = import(path).then(module => {
+			this.#ready[name] = Promise.all([import(path), this.#tracksReady.promise]).then(([module]) => {
 				this.#instances[name] = new module.default({ ...params, parent: this });
 			});
 		});
@@ -99,7 +109,7 @@ export class Interface {
 	}
 
 	set #title(value) {
-		const titleText = value.replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
+		const titleText = value.replace(/[\s\p{Z}​-‍﻿]+/gu, ' ').trim();
 		this.sequenceTitle.textContent = titleText;
 		document.title = this.#headTitlePrefix + (titleText || this.untitled);
 	}
