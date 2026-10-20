@@ -36,14 +36,16 @@ export class Interface {
 		this.#trackProperties   = new Set(Object.values(config.trackKeys));
 		this.#defaultInstrument = config.defaultInstrument;
 
-		bus.addEventListener(events.audioStop,            ({ detail }) => this.#instances.animation?.stop());
-		bus.addEventListener(events.audioUpdateData,      ({ detail }) => this.#update(detail));
-		bus.addEventListener(events.audioPushAnimations,  ({ detail }) => this.#instances.animation?.start(detail));
-		bus.addEventListener(events.presetsUpdateData,    ({ detail }) => this.#update(detail));
-		bus.addEventListener(events.presetsInvalidName,   ({ detail }) => this.#instances.presets?.reportNameValidity(detail));
-		bus.addEventListener(events.swClientNewVersion,   ({ detail }) => this.#instances.app?.showUpdateButton(detail));
-		bus.addEventListener(events.navigationDecoded,    ({ detail }) => this.#update(detail));
-		bus.addEventListener(events.navigationCloseModal, ({ detail }) => this.#instances.dialogs?.closeModal(detail));
+		bus.addEventListener(events.audioStop,                 ({ detail }) => this.#instances.animation?.stop());
+		bus.addEventListener(events.audioUpdateData,           ({ detail }) => this.#update(detail));
+		bus.addEventListener(events.audioPushAnimations,       ({ detail }) => this.#instances.animation?.start(detail));
+		bus.addEventListener(events.presetsUpdateData,         ({ detail }) => this.#update(detail));
+		bus.addEventListener(events.presetsInvalidName,        ({ detail }) => this.#instances.presets?.reportNameValidity(detail));
+		bus.addEventListener(events.swClientNewVersion,        ({ detail }) => this.#instances.app?.showUpdateButton(detail));
+		bus.addEventListener(events.navigationDecoded,         ({ detail }) => this.#update(detail));
+		// Autre morceau : les animations en attente visent l'ancien
+		bus.addEventListener(events.navigationSequenceChanged, () => this.#instances.animation?.clear());
+		bus.addEventListener(events.navigationCloseModal,      ({ detail }) => this.#instances.dialogs?.closeModal(detail));
 
 		this.#build(params);
 		this.#loadModules(params);
@@ -211,6 +213,5 @@ export class Interface {
 	get swap()          { return this.#instances.swap; }
 	get playing()       { return this.#playing; }
 	get dialogs()       { return this.#instances.dialogs; }
-	get animation()     { return this.#instances.animation; }
 	get tracksOrder()   { return [...this.trackList.children].map(track => track.dataset.index | 0); }
 }

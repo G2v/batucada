@@ -84,6 +84,7 @@ export class Navigation {
 
 		const action = isTraverse ? 'decodeAll' : state.action;
 		const shouldDispatch = isTraverse || !!state.dispatch;
+		const sequenceChanged = action === 'decodeAll' && !this.#isSameSequence(destination);
 		const keepScroll = Boolean(event.info?.keepScroll);
 
 		event.intercept({
@@ -94,6 +95,7 @@ export class Navigation {
 					this.#searchParams = url.searchParams;
 					if (['reset', 'decode', 'decodeAll'].includes(action)) {
 						this.#decodeAction(action);
+						if (sequenceChanged) this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationSequenceChanged));
 						if (!keepScroll) requestAnimationFrame(() => window.scrollTo(0, 0));
 					}
 				}
@@ -196,6 +198,12 @@ export class Navigation {
 		const params = URL.parse(entry?.url)?.searchParams;
 		const { setSearchParam, titleSearchParam } = this.#config;
 		return !!params && [setSearchParam, titleSearchParam].every(key => params.get(key) === this.#searchParams.get(key));
+	}
+
+	#isSameSequence(destination) {
+		const { titleSearchParam } = this.#config;
+		const title = URL.parse(destination.url)?.searchParams.get(titleSearchParam);
+		return !!title && title === URL.parse(navigation.currentEntry?.url)?.searchParams.get(titleSearchParam);
 	}
 
 	get #isUnsaved() {

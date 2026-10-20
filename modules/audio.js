@@ -57,17 +57,17 @@ export class Audio {
 
 		this.#applyPreferences({ ...config.defaultPreferences, ...JSON.parse(localStorage.preferences ?? '{}') });
 
-		this.#bus.addEventListener(this.#events.navigationDecoded,       ({ detail }) => this.#updateData(detail, true));
-		this.#bus.addEventListener(this.#events.interfaceReset,          () => this.#reset());
-		this.#bus.addEventListener(this.#events.interfaceChange,         ({ detail }) => this.#change(detail));
-		this.#bus.addEventListener(this.#events.interfaceMoveTrack,      ({ detail }) => this.#moveTrack(detail));
-		this.#bus.addEventListener(this.#events.interfaceSetStroke,      ({ detail }) => this.#setStroke(detail));
-		this.#bus.addEventListener(this.#events.interfaceUpdateData,     ({ detail }) => this.#updateData(detail));
-		this.#bus.addEventListener(this.#events.interfaceUserGesture,    () => this.#startAudio(), { once: true });
-		this.#bus.addEventListener(this.#events.interfacePresetSelected, () => this.#restart());
-		this.#bus.addEventListener(this.#events.interfacePreferences,    ({ detail }) => this.#applyPreferences(detail));
-		document.addEventListener('visibilitychange',                    () => this.#handleVisibilityChange());
-		document.addEventListener('freeze',                              () => this.#playing && this.#stopHiddenPlay());
+		this.#bus.addEventListener(this.#events.navigationDecoded,         ({ detail }) => this.#updateData(detail, true));
+		this.#bus.addEventListener(this.#events.navigationSequenceChanged, () => this.#restart());
+		this.#bus.addEventListener(this.#events.interfaceReset,            () => this.#reset());
+		this.#bus.addEventListener(this.#events.interfaceChange,           ({ detail }) => this.#change(detail));
+		this.#bus.addEventListener(this.#events.interfaceMoveTrack,        ({ detail }) => this.#moveTrack(detail));
+		this.#bus.addEventListener(this.#events.interfaceSetStroke,        ({ detail }) => this.#setStroke(detail));
+		this.#bus.addEventListener(this.#events.interfaceUpdateData,       ({ detail }) => this.#updateData(detail));
+		this.#bus.addEventListener(this.#events.interfaceUserGesture,      () => this.#startAudio(), { once: true });
+		this.#bus.addEventListener(this.#events.interfacePreferences,      ({ detail }) => this.#applyPreferences(detail));
+		document.addEventListener('visibilitychange',                      () => this.#handleVisibilityChange());
+		document.addEventListener('freeze',                                () => this.#playing && this.#stopHiddenPlay());
 
 		this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 		this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
@@ -257,17 +257,16 @@ export class Audio {
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.audioStop));
 	}
 
-	#restart() {
-		this.#post({ action: 'restart' });
-	}
-
 	#reset() {
 		this.#post({ action: 'reset' });
 		this.#muteSchedulesNotes();
 	}
 
+	#restart() {
+		this.#post({ action: 'restart' });
+	}
+
 	#playTicks(ticks) {
-		// Paquet arrivé après un arrêt : ne pas relancer les animations
 		if (!this.#playing) return;
 		const animations = new Map();
 		const timeDelta = this.#audibleTimeDelta();

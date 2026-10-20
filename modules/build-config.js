@@ -31,9 +31,10 @@ const events = Object.freeze({
 	interfacePresetsDelete:  'interface:presetsDelete',
 	interfacePresetSelected: 'interface:presetSelected',
 
-	navigationDecoded:    'navigation:decoded',
-	navigationChanged:    'navigation:changed',
-	navigationCloseModal: 'navigation:closeModal',
+	navigationDecoded:         'navigation:decoded',
+	navigationChanged:         'navigation:changed',
+	navigationCloseModal:      'navigation:closeModal',
+	navigationSequenceChanged: 'navigation:sequenceChanged',
 
 	presetsUpdateData:     'presets:updateData',
 	presetsInvalidName:    'presets:invalidName',

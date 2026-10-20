@@ -38,7 +38,6 @@ export default class InterfacePresets {
 	}
 
 	#presetSelected(event) {
-		this.#ui.animation?.clear();
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetSelected, { detail: event.target.selectedIndex }));
 	}
 
