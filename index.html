@@ -1647,7 +1647,7 @@ body > footer {
 					<button commandfor="instruments" command="--export">Exporter la bibliothèque</button>
 					<button commandfor="instruments" command="--import"
 						data-failure="⚠️ Impossible de charger la bibliothèque.">Charger une autre bibliothèque</button>
-					<button commandfor="instruments-restore" command="show-modal" disabled>Restaurer la bibliothèque par défaut</button>
+					<button commandfor="instruments-restore" command="show-modal">Restaurer la bibliothèque par défaut</button>
 					<dialog id="instruments-import" aria-label="Confirmation" class="confirm">
 						<div>
 							<p>Charger la bibliothèque ?</p>
@@ -1701,11 +1701,7 @@ body > footer {
 		import { SwClient }      from './modules/sw-client.js';
 
 		const initial = decodeInitial(config, new URLSearchParams(location.search));
-		const params = {
-			bus: new EventTarget(),
-			config,
-			initial,
-		};
+		const params = { bus: new EventTarget(), config, initial };
 
 		new Audio(params);
 		new Interface(params);
