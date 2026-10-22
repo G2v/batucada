@@ -85,8 +85,8 @@ const selectors = Object.freeze({
 
 	aboutDialog:       '#about',
 	aboutContactLink:  '#contact a',
-	aboutVersionText:  '#version span',
-	aboutUpdateButton: '#version button',
+	aboutVersionText:  '#version #version_number',
+	aboutUpdate:       '#version #update',
 
 	preferencesForm: '#preferences form',
 

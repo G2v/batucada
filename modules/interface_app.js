@@ -4,7 +4,7 @@ import app_config from '../config/app.js';
 export default class InterfaceApp {
 	#bus;
 	#events;
-	#aboutUpdateButton;
+	#aboutUpdate;
 	#defaultPreferences;
 
 	constructor({ bus, config }) {
@@ -13,8 +13,8 @@ export default class InterfaceApp {
 		this.#defaultPreferences = config.defaultPreferences;
 		const { selectors }      = config;
 
-		const preferencesForm   = document.querySelector(selectors.preferencesForm);
-		this.#aboutUpdateButton = document.querySelector(selectors.aboutUpdateButton);
+		const preferencesForm = document.querySelector(selectors.preferencesForm);
+		this.#aboutUpdate     = document.querySelector(selectors.aboutUpdate);
 
 		Object.assign(document.querySelector(selectors.aboutContactLink), {
 			href:        `mailto:${app_config.email}`,
@@ -30,12 +30,24 @@ export default class InterfaceApp {
 	}
 
 	showUpdateButton() {
-		this.#aboutUpdateButton.hidden = false;
+		this.#aboutUpdate.dataset.state = 'available';
+	}
+
+	#findUpdate() {
+		const { dataset } = this.#aboutUpdate;
+		if (dataset.state === 'available') return;
+		dataset.state = 'search';
+		const { promise, resolve, reject } = Promise.withResolvers();
+		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceFindUpdate, { detail: { resolve, reject } }));
+		promise.then(
+			found => dataset.state = found ? 'available' : 'none',
+			()    => delete dataset.state,
+		);
 	}
 
 	#aboutCommands(event) {
 		const commands = {
-			'show-modal': () => this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceFindUpdate)),
+			'show-modal': () => this.#findUpdate(),
 			'update':     () => {
 				document.body.inert = true;
 				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));

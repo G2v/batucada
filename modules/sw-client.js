@@ -7,9 +7,9 @@ export class SwClient {
 	#updateRequested = false;
 
 	constructor({ bus, config }) {
-		if (!('serviceWorker' in navigator)) return;
+		if (!navigator.serviceWorker) return;
 
-		this.#bus = bus;
+		this.#bus    = bus;
 		this.#events = config.events;
 
 		const hadController = Boolean(navigator.serviceWorker.controller);
@@ -18,7 +18,7 @@ export class SwClient {
 		});
 
 		this.#bus.addEventListener(this.#events.interfaceInstall,    () => this.#install());
-		this.#bus.addEventListener(this.#events.interfaceFindUpdate, () => this.#findUpdate());
+		this.#bus.addEventListener(this.#events.interfaceFindUpdate, ({ detail }) => this.#findUpdate().then(detail.resolve, detail.reject));
 
 		defer(() => this.#init());
 	}
@@ -36,8 +36,6 @@ export class SwClient {
 	}
 
 	get #hasUpdate() {
-		// Si un service worker est en attente alors qu'un service worker est déja actif,
-		// alors il s'agit une mise à jour.
 		return Boolean(this.#registration?.waiting && this.#registration.active);
 	}
 
@@ -46,10 +44,14 @@ export class SwClient {
 	}
 
 	async #findUpdate() {
-		this.#registration ??= await navigator.serviceWorker.ready;
-		this.#checkUpdate();
-		if (this.#hasUpdate) return;
-		this.#registration.update().catch(() => {});
+		this.#registration ??= await navigator.serviceWorker?.getRegistration();
+		if (!this.#registration) return false;
+		if (!this.#hasUpdate) {
+			await this.#registration.update();
+			const { installing } = this.#registration;
+			if (installing) await new Promise(resolve => installing.addEventListener('statechange', resolve, { once: true }));
+		}
+		return this.#hasUpdate;
 	}
 
 	#install() {
