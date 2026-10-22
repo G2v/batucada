@@ -68,60 +68,69 @@ export function moveTrack(config, { values: { trashed, order, previousOrder }, s
 }
 
 function encodeSet(config, { tracks, sheet, order }) {
-	const { defaultSetValue, trackFormatSeparator } = config;
-	const defaultHeader = defaultSetValue.repeat(4);
-	const encodedParts  = [];
+	const { defaultSetValue, trackFormatSeparator, trackHeaderLength } = config;
+	const emptyValue   = defaultSetValue.repeat(trackHeaderLength);
+	const encodedParts = [];
 
 	for (const id of order) {
-		const track  = tracks?.[id] || emptyTrack(config, id);
-		const header = encodeTrack(config, track);
-		const body   = encodeSheet(config, track, sheet);
-		if (header === defaultHeader && body === '') break;
-		encodedParts.push(header + body);
+		const track   = tracks?.[id] || emptyTrack(config, id);
+		const encoded = encodeTrack(config, track, sheet);
+		if (encoded === emptyValue) break;
+		encodedParts.push(encoded);
 	}
 
 	return encodedParts.join(trackFormatSeparator);
 }
 
-function encodeTrack(config, track) {
+function encodeTrack(config, track, sheet) {
 	const {
-		formatDigits: digits, trackFormatAllocation: allocation,
-		stepsIndex, beatsIndex, barsIndex, phraseIndex, instrumentsBase,
+		formatDigits: digits, trackFormatAllocation: allocation, trackHeaderLength,
+		defaultSteps, defaultBeats, defaultBars, defaultPhrase,
 	} = config;
-	const outputBase = digits.length;
+	const strokes = readStrokes(config, track, sheet);
+	const base    = Math.max(1, ...strokes) + 1;
 
 	const params = {
-		steps:    stepsIndex .indexOf(track.steps),
-		beats:    beatsIndex .indexOf(track.beats),
-		bars:     barsIndex  .indexOf(track.bars),
-		phrase:   phraseIndex.indexOf(track.phrase),
-		reserved: 0,
+		base:    base - 2,
+		steps:   toCode(track.steps,  defaultSteps),
+		beats:   toCode(track.beats,  defaultBeats),
+		bars:    toCode(track.bars,   defaultBars),
+		phrase:  toCode(track.phrase, defaultPhrase),
+		reserve: 0,
 	};
-	const packed = pack(params, allocation);
+	const packed = BigInt(pack(params, allocation));
 
 	return digits[track.instrument]
-		+ digits[(instrumentsBase[track.instrument] ?? 2) - 2]
-		+ digits[packed / outputBase | 0]
-		+ digits[packed % outputBase];
+		+ toDigits(packed, digits).padStart(trackHeaderLength - 1, digits[0])
+		+ encodeSheet(strokes, base, digits);
 }
 
-function encodeSheet(config, track, sheet) {
-	if (sheet === null) return '';
-	const { formatDigits: digits, instrumentsBase, resolution: { bar, beat } } = config;
-	const base = BigInt(instrumentsBase[track.instrument] || 2);
-
-	let number = 0n;
-	for (let barIndex = track.bars - 1; barIndex >= 0; barIndex--) {
+function readStrokes({ resolution: { bar, beat } }, track, sheet) {
+	const strokes = [];
+	if (sheet === null) return strokes;
+	for (let barIndex = 0; barIndex < track.bars; barIndex++) {
 		const barOffset = track.sheetIndex + (barIndex * bar);
-		for (let beatIndex = track.beats - 1; beatIndex >= 0; beatIndex--) {
+		for (let beatIndex = 0; beatIndex < track.beats; beatIndex++) {
 			const beatOffset = barOffset + (beatIndex * beat);
-			for (let stepIndex = track.steps - 1; stepIndex >= 0; stepIndex--) {
-				number = number * base + BigInt(sheet[beatOffset + stepIndex]);
+			for (let stepIndex = 0; stepIndex < track.steps; stepIndex++) {
+				strokes.push(sheet[beatOffset + stepIndex]);
 			}
 		}
 	}
+	return strokes;
+}
 
+function encodeSheet(strokes, base, digits) {
+	const bigBase = BigInt(base);
+	let number = 0n;
+	for (let index = strokes.length - 1; index >= 0; index--) {
+		number = number * bigBase + BigInt(strokes[index]);
+	}
 	return toDigits(number, digits);
+}
+
+function toCode(value, defaultValue) {
+	return value === defaultValue ? 0 : value;
 }
 
 function encodeVolumes(config, { volumes, order }) {

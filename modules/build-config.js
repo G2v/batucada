@@ -116,7 +116,7 @@ const trackKeys = Object.freeze({
 });
 
 const emptyStroke  = 0;
-const tracksLength = 20;
+const tracksLength = 24;
 
 const setSearchParam    = 'set';
 const tempoSearchParam  = 'bpm';
@@ -126,7 +126,8 @@ const volumeSearchParam = 'vol';
 const formatDigits          = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const defaultSetValue       = formatDigits[0];
 const trackFormatSeparator  = '-';
-const trackFormatAllocation = Object.freeze({ phrase: 6, bars: 8, beats: 4, steps: 5, reserved: 4 });
+const trackHeaderLength     = 4;
+const trackFormatAllocation = Object.freeze({ base: 9, steps: 9, beats: 9, bars: 9, phrase: 9, reserve: 4 });
 
 const instrumentsLibraryReady = (async () => {
 	const url     = new URL(core_config.instrumentsMetadataFile, location.href).href;
@@ -146,7 +147,7 @@ const instrumentsLibraryReady = (async () => {
 instrumentsLibraryReady.catch(() => {});
 
 const query         = selector => document.querySelector(selector);
-const optionsValues = node => Array.from(node.options, option => option.value | 0);
+const optionsValues = node => Object.freeze(Array.from(node.options, option => option.value | 0));
 
 const trackTemplate = query(selectors.trackTemplate).content.querySelector(selectors.track);
 const volumeSlider  = trackTemplate.querySelector(selectors.volumeSlider);
@@ -173,12 +174,7 @@ const defaultBeats      = beats      | 0;
 const defaultSteps      = steps      | 0;
 const defaultPhrase     = phrase     | 0;
 const defaultInstrument = instrument | 0;
-
-const indexFrom = (values, defaultValue) => Object.freeze(
-	[defaultValue, ...values.filter(value => value !== defaultValue)]
-);
-
-const defaultVolume = formatDigits[defaultGain];
+const defaultVolume     = formatDigits[defaultGain];
 
 const defaultPreferences = Object.freeze(Object.fromEntries(
 	Array.from(query(selectors.preferencesForm).elements, ({ name, options }) => {
@@ -218,12 +214,13 @@ export const config = Object.freeze({
 	defaultVolume,
 	defaultInstrument,
 	defaultPreferences,
-	barsIndex:   indexFrom(barsValues,   defaultBars),
-	beatsIndex:  indexFrom(beatsValues,  defaultBeats),
-	stepsIndex:  indexFrom(stepsValues,  defaultSteps),
-	phraseIndex: indexFrom(phraseValues, defaultPhrase),
+	barsValues,
+	beatsValues,
+	stepsValues,
+	phraseValues,
 	formatDigits,
 	defaultSetValue,
+	trackHeaderLength,
 	trackFormatSeparator,
 	trackFormatAllocation,
 	instrumentsLibraryReady,

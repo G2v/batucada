@@ -2,17 +2,7 @@ export default {
 	appCache:                'app',
 	dataCache:               'data',
 
-	tracksLength:            16,
-
-	defaultSetValue:         '0',
-	defaultTitleValue:       '',
-
-	setSearchParam:          'set',
-	tempoSearchParam:        'bpm',
-	titleSearchParam:        'title',
-	volumeSearchParam:       'vol',
-
-	presetsFile:             './data/presets.json',
+	presetsFile:             './data/presets-2.json',
 	instrumentsSoundsFile:   './data/instruments-sounds.json',
 	instrumentsMetadataFile: './data/instruments-metadata.json',
 }

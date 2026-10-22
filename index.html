@@ -135,6 +135,10 @@
 	--icon-phrase-2:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m12.5 14c0-3 3-5 7-5 3 0 6 2 6 5 0 2-3 5-7 8l-7 6 16 0" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
 	--icon-phrase-3:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m13 14c0-3 3-5 7-5 3 0 6 2 6 5 0 2-2 4-8 4.5 6 0.5 8 2.5 8 5 0 3-3 5.5-7 5.5-4 0-7-2.5-7-5.5" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
 	--icon-phrase-4:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m21.5 30v-22l-11 15h16.5" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
+	--icon-phrase-5:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m26.5 10h-12.5l-1 8.5c2-1.5 4-2 6-2 4 0 7 2.5 7 6.5 0 4-3 6-7 6-4 0-7-2-7-5" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
+	--icon-phrase-6:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m26 13c-1.2-2.8-3.4-4.2-6.5-4.2-4.9 0-7.5 3.5-7.5 10 0 6.5 2.6 10 7.5 10 3.7 0 6.1-2 7-5.8 0.9-3.2-3.1-5.8-7-5.8-3.9 0-7.9 2.6-7 5.8" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
+	--icon-phrase-7:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m11.5 11h15c-5 5.5-8 11.5-8 20" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
+	--icon-phrase-8:   url('data:image/svg+xml,<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><path d="m14 14c0-2.5 2.5-4.5 5.5-4.5 3 0 5.5 2 5.5 4.5 0 2.5-2.5 4.5-5.5 4.5-3 0-5.5-2-5.5-4.5zm-1 9.5c0-2.8 2.9-5 6.5-5 3.6 0 6.5 2.2 6.5 5 0 2.8-2.9 5-6.5 5-3.6 0-6.5-2.2-6.5-5z" fill="none" stroke="white" stroke-width="4" stroke-linecap="butt" stroke-linejoin="bevel"/></svg>');
 	--icon-settings:   url('data:image/svg+xml,<svg viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg"><path d="m10 10v6a4 4 0 1 0 .01 0m0 8v12M23 10v12a4 4 0 1 0 .01 0m0 8v6M36 10v8a4 4 0 1 0 .01 0m0 8v10" stroke-width="2" stroke="black" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-arrow-left: url('data:image/svg+xml,<svg viewBox="0 0 14 30" xmlns="http://www.w3.org/2000/svg"><path d="m7 10l6 5l-6 5" fill="none" stroke-width="1" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
 	--icon-arrow-down: url('data:image/svg+xml,<svg viewBox="0 0 14 30" xmlns="http://www.w3.org/2000/svg"><path d="m4 14l3 4 3 -4" fill="none" stroke-width="1" stroke="black" stroke-linejoin="round" stroke-linecap="round"/></svg>');
@@ -351,6 +355,8 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		&[data-bars="4"] .bar:nth-child(n+5),
 		&[data-bars="6"] .bar:nth-child(n+7),
 		&[data-bars="8"] .bar:nth-child(n+9),
+		&[data-beats="2"] .beat:nth-child(n+3),
+		&[data-beats="3"] .beat:nth-child(n+4),
 		&[data-beats="4"] .beat:nth-child(n+5),
 		&[data-beats="6"] .beat:nth-child(n+7),
 		&[data-steps="3"] .grid [name="step"]:nth-child(n+3),
@@ -400,6 +406,10 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 	&[data-phrase="2"] .instrument::after { background-image: var(--icon-phrase-2); }
 	&[data-phrase="3"] .instrument::after { background-image: var(--icon-phrase-3); }
 	&[data-phrase="4"] .instrument::after { background-image: var(--icon-phrase-4); }
+	&[data-phrase="5"] .instrument::after { background-image: var(--icon-phrase-5); }
+	&[data-phrase="6"] .instrument::after { background-image: var(--icon-phrase-6); }
+	&[data-phrase="7"] .instrument::after { background-image: var(--icon-phrase-7); }
+	&[data-phrase="8"] .instrument::after { background-image: var(--icon-phrase-8); }
 
 	&[data-steps="6"], &[data-steps="8"] {
 		.beat .grid { width: 9.5em; }
@@ -1475,6 +1485,8 @@ body > footer {
 				</label>
 				<label>Temps
 					<select id="beats" name="beats">
+						<option value="2">2</option>
+						<option value="3">3</option>
 						<option value="4" selected>4</option>
 						<option value="6">6</option>
 					</select>
@@ -1489,11 +1501,15 @@ body > footer {
 				</label>
 				<label>Phrase
 					<select name="phrase">
+						<option value="0" selected>Tourne</option>
 						<option value="1">Intro 1</option>
 						<option value="2">Intro 2</option>
 						<option value="3">Intro 3</option>
 						<option value="4">Intro 4</option>
-						<option value="0" selected>Tourne</option>
+						<option value="5">Intro 5</option>
+						<option value="6">Intro 6</option>
+						<option value="7">Intro 7</option>
+						<option value="8">Intro 8</option>
 					</select>
 				</label>
 				<label>Position

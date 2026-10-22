@@ -46,8 +46,8 @@ function decodeSet(config, state, encodedValues, changes) {
 	const isVirginTrack = !state.tracks;
 	const isVirginSheet = !state.sheet;
 	const {
-		formatDigits: digits, trackFormatSeparator, trackFormatAllocation: allocation,
-		defaultSetValue, barsIndex, beatsIndex, stepsIndex, phraseIndex,
+		formatDigits: digits, trackFormatSeparator, trackFormatAllocation: allocation, trackHeaderLength,
+		defaultSetValue, barsValues, beatsValues, stepsValues, phraseValues,
 		defaultBars, defaultBeats, defaultSteps, defaultPhrase,
 		tracksLength, resolution: { maxBars, maxBeats, bar, beat },
 	} = config;
@@ -60,18 +60,18 @@ function decodeSet(config, state, encodedValues, changes) {
 		const trackChanges = {};
 		const id    = state.order[i];
 		const track = state.tracks?.[id] || emptyTrack(config, id);
-		const data  = (values[i] || '').padEnd(3, defaultSetValue);
+		const data  = (values[i] || '').padEnd(trackHeaderLength, defaultSetValue);
 
 		const instrument   = fromDigits(data.slice(0, 1), digits);
-		const base         = BigInt(Math.min(fromDigits(data.slice(1, 2), digits) + 2, 10));
-		const packedValues = fromDigits(data.slice(2, 4), digits);
+		const packedValues = fromDigits(data.slice(1, trackHeaderLength), digits);
 		const paramsValues = unpack(packedValues, allocation, allocationKeys);
+		const base         = BigInt(paramsValues.base + 2);
 
 		const params = {
-			bars:       barsIndex[paramsValues.bars]     ?? defaultBars,
-			beats:      beatsIndex[paramsValues.beats]   ?? defaultBeats,
-			steps:      stepsIndex[paramsValues.steps]   ?? defaultSteps,
-			phrase:     phraseIndex[paramsValues.phrase] ?? defaultPhrase,
+			bars:       fromCode(paramsValues.bars,   barsValues,   defaultBars),
+			beats:      fromCode(paramsValues.beats,  beatsValues,  defaultBeats),
+			steps:      fromCode(paramsValues.steps,  stepsValues,  defaultSteps),
+			phrase:     fromCode(paramsValues.phrase, phraseValues, defaultPhrase),
 			instrument,
 		};
 
@@ -81,7 +81,7 @@ function decodeSet(config, state, encodedValues, changes) {
 			}
 		}
 
-		let sheetNumber   = toBigInt(data.slice(4), digits);
+		let sheetNumber   = toBigInt(data.slice(trackHeaderLength), digits);
 		const limitBars   = isVirginTrack ? params.bars  : maxBars;
 		const limitBeats  = isVirginTrack ? params.beats : maxBeats;
 		const limitSteps  = isVirginTrack ? params.steps : beat;
@@ -161,6 +161,10 @@ function emptyTrack(config, index) {
 		instrument: defaultInstrument,
 		sheetIndex: resolution.track * index,
 	};
+}
+
+function fromCode(code, values, defaultValue) {
+	return code && values.includes(code) ? code : defaultValue;
 }
 
 function fromDigits(string, digits) {

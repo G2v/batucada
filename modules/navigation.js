@@ -9,7 +9,6 @@ export class Navigation {
 	#events;
 	#config;
 	#searchParams;
-	#instrumentsBase;
 
 	constructor({ bus, config }) {
 		this.#bus             = bus;
@@ -17,9 +16,6 @@ export class Navigation {
 		this.#events          = config.events;
 		this.#state           = initialState(config);
 		this.#searchParams    = new URLSearchParams(location.search);
-		this.#instrumentsBase = config.instrumentsLibraryReady.then(({ instruments }) =>
-			Object.fromEntries(instruments.map(({ id, strokes }) => [id, strokes.length + 1]))
-		);
 
 		history.scrollRestoration = 'manual';
 		this.#saveLastSequence();
@@ -182,9 +178,8 @@ export class Navigation {
 		navigation.navigate(nextUrl, { history: isUnsaved ? 'replace' : 'push', state });
 	}
 
-	async #encode(encoder, values, replace = false) {
-		const instrumentsBase = await this.#instrumentsBase;
-		const searchParams = encoder({ ...this.#config, instrumentsBase }, {
+	#encode(encoder, values, replace = false) {
+		const searchParams = encoder(this.#config, {
 			searchParams: Object.fromEntries(this.#searchParams),
 			state: this.#state,
 			values,
