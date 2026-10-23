@@ -1207,13 +1207,35 @@ dialog {
 		gap: .2em;
 		display: grid;
 		grid-template-columns: auto auto 1fr;
+	}
 
-		button {
+	#update {
+		justify-self: center;
+
+		> * {
 			height: 1.7em;
-			justify-self: center;
+			white-space: nowrap;
 			margin: -.25em 0 -1em;
 		}
+
+		> span {
+			padding: 0 .6em;
+			font-size: .9em;
+			border-radius: 1em;
+			align-items: center;
+			display: inline-flex;
+			box-sizing: border-box;
+			border: 1px solid transparent;
+			background: var(--color-background-light);
+		}
+
+		&:not([data-state="search"]) #update_search,
+		&:not([data-state="none"]) #update_none,
+		&:not([data-state="available"]) button {
+			display: none;
+		}
 	}
+
 }
 
 #presets time:not(:empty) + span {
@@ -1259,13 +1281,10 @@ dialog {
 	&:popover-open:focus-within {
 		animation-play-state: paused;
 	}
-
 }
 
 @keyframes fade-out {
-	to {
-		opacity: 0;
-	}
+	to { opacity: 0; }
 }
 
 body > footer {
@@ -1376,7 +1395,6 @@ body > footer {
 		color: inherit;
 	}
 }
-
 </style>
 </head>
 <body>
@@ -1684,8 +1702,12 @@ body > footer {
 					<p>Application : Batucada Sequencer</p>
 					<p id="contact">Contact : <a></a></p>
 					<p id="version">Version :
-						<span></span>
-						<button commandfor="about" command="close" value="update" hidden>Mettre à jour</button>
+						<span id="version_number"></span>
+						<span id="update" data-state="search" aria-live="polite">
+							<span id="update_search">Recherche…</span>
+							<span id="update_none">À jour</span>
+							<button commandfor="about" command="close" value="update">Mettre à jour</button>
+						</span>
 					</p>
 				</section>
 			</div>

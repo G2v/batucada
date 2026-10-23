@@ -2,6 +2,8 @@ import version    from '../version.js';
 import app_config from '../config/app.js';
 
 export default class InterfaceApp {
+	static #searchMinDuration = 1000;
+
 	#bus;
 	#events;
 	#aboutUpdate;
@@ -30,19 +32,39 @@ export default class InterfaceApp {
 	}
 
 	showUpdateButton() {
-		this.#aboutUpdate.dataset.state = 'available';
+		this.#updateState = 'available';
 	}
 
-	#findUpdate() {
-		const { dataset } = this.#aboutUpdate;
-		if (dataset.state === 'available') return;
-		dataset.state = 'search';
+	async #findUpdate() {
+		if (this.#updateState === 'available') return;
+		if (!navigator.onLine) {
+			this.#updateState = null;
+			this.#updateState = await this.#requestUpdate() ? 'available' : null;
+			return;
+		}
+		this.#updateState = 'search';
+		const [found] = await Promise.all([this.#requestUpdate(), InterfaceApp.#wait(InterfaceApp.#searchMinDuration)]);
+		this.#updateState = found ? 'available' : found === false ? 'none' : null;
+	}
+
+
+	#requestUpdate() {
 		const { promise, resolve, reject } = Promise.withResolvers();
 		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceFindUpdate, { detail: { resolve, reject } }));
-		promise.then(
-			found => dataset.state = found ? 'available' : 'none',
-			()    => delete dataset.state,
-		);
+		return promise.catch(() => null);
+	}
+
+	get #updateState() {
+		return this.#aboutUpdate.dataset.state;
+	}
+
+	set #updateState(state) {
+		if (state) this.#aboutUpdate.dataset.state = state;
+		else delete this.#aboutUpdate.dataset.state;
+	}
+
+	static #wait(duration) {
+		return new Promise(resolve => setTimeout(resolve, duration));
 	}
 
 	#aboutCommands(event) {
