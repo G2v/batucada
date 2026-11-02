@@ -353,11 +353,14 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 		&[data-bars="2"] .bar:nth-child(n+3),
 		&[data-bars="3"] .bar:nth-child(n+4),
 		&[data-bars="4"] .bar:nth-child(n+5),
+		&[data-bars="5"] .bar:nth-child(n+6),
 		&[data-bars="6"] .bar:nth-child(n+7),
+		&[data-bars="7"] .bar:nth-child(n+8),
 		&[data-bars="8"] .bar:nth-child(n+9),
 		&[data-beats="2"] .beat:nth-child(n+3),
 		&[data-beats="3"] .beat:nth-child(n+4),
 		&[data-beats="4"] .beat:nth-child(n+5),
+		&[data-beats="5"] .beat:nth-child(n+6),
 		&[data-beats="6"] .beat:nth-child(n+7),
 		&[data-steps="3"] .grid [name="step"]:nth-child(n+3),
 		&[data-steps="4"] .grid [name="step"]:nth-child(n+4),
@@ -1497,7 +1500,9 @@ body > footer {
 						<option value="2">2</option>
 						<option value="3">3</option>
 						<option value="4">4</option>
+						<option value="5">5</option>
 						<option value="6">6</option>
+						<option value="7">7</option>
 						<option value="8">8</option>
 					</select>
 				</label>
@@ -1506,6 +1511,7 @@ body > footer {
 						<option value="2">2</option>
 						<option value="3">3</option>
 						<option value="4" selected>4</option>
+						<option value="5">5</option>
 						<option value="6">6</option>
 					</select>
 				</label>
