@@ -172,7 +172,7 @@ body {
 	background: var(--color-background-body);
 
 	&[inert] {
-		overflow: hidden;
+		overflow: clip;
 
 		&::after {
 			inset: 0;
@@ -671,7 +671,7 @@ hr {
 		display: grid;
 
 		#preset_label {
-			overflow: hidden;
+			overflow: clip;
 			grid-area: 1 / 1;
 			align-self: center;
 			white-space: nowrap;
@@ -829,7 +829,7 @@ select {
 	}
 
 	selectedcontent {
-		overflow: hidden;
+		overflow: clip;
 		white-space: nowrap;
 		text-overflow: ellipsis;
 	}
@@ -884,7 +884,7 @@ a {
 }
 
 .icon {
-	overflow: hidden;
+	overflow: clip;
 	position: relative;
 	text-indent: -10000px;
 
@@ -915,7 +915,7 @@ dialog {
 	box-shadow: 0 0 .5em var(--color-shadow-medium);
 
 	&::backdrop {
-		overflow: hidden;
+		overflow: clip;
 		backdrop-filter: blur(2px);
 		overscroll-behavior: contain;
 		background: var(--color-shadow-strong);
@@ -933,7 +933,7 @@ dialog {
 	}
 
 	.nested {
-		overflow: hidden;
+		overflow: clip;
 		anchor-name: --nested;
 		anchor-scope: --nested;
 		position-anchor: --app-menu;
@@ -953,7 +953,7 @@ dialog {
 
 		@starting-style {
 			&:open {
-				overflow: hidden;
+				overflow: clip;
 				height: calc(anchor-size(height) + 2px);
 
 				button[value="back"] {
@@ -1199,7 +1199,7 @@ dialog {
 	}
 
 	#contact {
-		overflow: hidden;
+		overflow-x: clip;
 		text-overflow: ellipsis;
 	}
 
@@ -1484,7 +1484,7 @@ body > footer {
 		<p></p>
 		<button aria-label="Annuler cette action">Annuler</button>
 	</div>
-	<dialog id="track-settings" aria-labelledby="track-settings-title" data-dismiss>
+	<dialog id="track-settings" aria-labelledby="track-settings-title" data-dismiss autofocus>
 		<div>
 			<header>
 				<button commandfor="track-settings" command="close" class="icon">Fermer</button>
@@ -1547,7 +1547,7 @@ body > footer {
 			</footer>
 		</div>
 	</dialog>
-	<dialog id="preset-edit" aria-labelledby="preset-edit-title" data-dismiss>
+	<dialog id="preset-edit" aria-labelledby="preset-edit-title" data-dismiss autofocus>
 		<div>
 			<header>
 				<button commandfor="preset-edit" command="close" class="icon">Fermer</button>
@@ -1577,7 +1577,7 @@ body > footer {
 			</form>
 		</div>
 	</dialog>
-	<dialog id="app-menu" aria-labelledby="app-title" data-dismiss>
+	<dialog id="app-menu" aria-labelledby="app-title" data-dismiss autofocus>
 		<div>
 			<header>
 				<button commandfor="app-menu" command="close" class="icon">Fermer</button>
@@ -1590,7 +1590,7 @@ body > footer {
 				<li><button commandfor="about" command="show-modal">À propos</button></li>
 			</menu>
 		</div>
-		<dialog id="preferences" aria-labelledby="preferences-title" class="nested" data-dismiss>
+		<dialog id="preferences" aria-labelledby="preferences-title" class="nested" data-dismiss autofocus>
 			<div>
 				<header>
 					<button commandfor="preferences" command="close" class="icon" value="back">Retour</button>
@@ -1621,7 +1621,7 @@ body > footer {
 				</form>
 			</div>
 		</dialog>
-		<dialog id="presets" aria-labelledby="presets-title" class="nested" data-dismiss>
+		<dialog id="presets" aria-labelledby="presets-title" class="nested" data-dismiss autofocus>
 			<div>
 				<header>
 					<button commandfor="presets" command="close" class="icon" value="back">Retour</button>
@@ -1653,7 +1653,7 @@ body > footer {
 				</section>
 			</div>
 		</dialog>
-		<dialog id="instruments" aria-labelledby="instruments-title" class="nested" data-dismiss>
+		<dialog id="instruments" aria-labelledby="instruments-title" class="nested" data-dismiss autofocus>
 			<div>
 				<header>
 					<button commandfor="instruments" command="close" class="icon" value="back">Retour</button>
@@ -1691,7 +1691,7 @@ body > footer {
 				</section>
 			</div>
 		</dialog>
-		<dialog id="about" aria-labelledby="about-title" class="nested" data-dismiss>
+		<dialog id="about" aria-labelledby="about-title" class="nested" data-dismiss autofocus>
 			<div>
 				<header>
 					<button commandfor="about" command="close" class="icon" value="back">Retour</button>
