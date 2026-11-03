@@ -218,7 +218,7 @@ body {
 	align-items: center;
 	border-radius: .4em;
 	justify-content: center;
-	inset: -4em .5em auto .5em;
+	inset: auto .5em calc(100% + 2em);
 	color: var(--color-text-contrast);
 	background: var(--color-background-contrast);
 	box-shadow: 0 0 .5em var(--color-shadow-strong);
@@ -253,10 +253,8 @@ table {
 }
 
 caption {
-	margin: auto;
-	display: grid;
-	padding: 0 .5em;
 	position: relative;
+	padding: .1em 1.2em;
 	visibility: var(--untitled, visible);
 
 	main:has(> #controls > #preset > select > option:checked) & {
@@ -271,7 +269,6 @@ caption {
 
 	h1 {
 		text-wrap: balance;
-		padding: .1em .3em;
 
 		#title,
 		#untitled {
@@ -293,6 +290,7 @@ caption {
 
 	& > span {
 		font-size:0;
+		display: block;
 	}
 
 	#saved,
@@ -831,6 +829,7 @@ select {
 	}
 
 	selectedcontent {
+		min-width: 0;
 		overflow: clip;
 		white-space: nowrap;
 		text-overflow: ellipsis;
