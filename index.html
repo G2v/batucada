@@ -259,19 +259,10 @@ caption {
 	width: fit-content;
 	align-items: center;
 	visibility: var(--untitled, visible);
-	grid-template-columns: minmax(0, auto) 2em;
-
-	&::after {
-		height: 2em;
-		content: '';
-		grid-area: 1 / 2;
-		mask-position: center;
-		background-color: currentColor;
-		mask-image: var(--icon-unsaved);
-	}
+	grid-template-columns: minmax(0, auto);
 
 	main:has(> #controls > #preset > select > option:checked) & {
-		&::after {
+		h1::after {
 			mask-image: var(--icon-saved);
 			background-color: var(--color-stroke-set);
 		}
@@ -282,15 +273,18 @@ caption {
 
 	h1 {
 		grid-area: 1 / 1;
-		padding: .1em .1em .1em .4em;
+		padding: .1em 0 .1em .4em;
+
+		&::after {
+			content: '';
+			padding-left: 1.6em;
+			background-color: currentColor;
+			mask: var(--icon-unsaved) no-repeat center / 1.6em;
+		}
 
 		#title:empty,
 		#title:not(:empty) + #untitled {
 			display: none;
-		}
-
-		#title:empty + #untitled {
-			display: block;
 		}
 	}
 
@@ -305,9 +299,9 @@ caption {
 
 	button {
 		z-index: 1;
+		grid-area: 1 / 1;
 		align-self: stretch;
 		text-indent: -10000px;
-		grid-area: 1 / 1 / 2 / 3;
 
 		&:not(:hover) {
 			border-color:transparent;
