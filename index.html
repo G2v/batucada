@@ -256,13 +256,11 @@ caption {
 	margin: auto;
 	display: grid;
 	padding: 0 .5em;
-	width: fit-content;
-	align-items: center;
+	position: relative;
 	visibility: var(--untitled, visible);
-	grid-template-columns: minmax(0, auto);
 
 	main:has(> #controls > #preset > select > option:checked) & {
-		h1::after {
+		:is(#title, #untitled)::after {
 			mask-image: var(--icon-saved);
 			background-color: var(--color-stroke-set);
 		}
@@ -272,14 +270,19 @@ caption {
 	}
 
 	h1 {
-		grid-area: 1 / 1;
-		padding: .1em 0 .1em .4em;
+		text-wrap: balance;
+		padding: .1em .3em;
 
-		&::after {
-			content: '';
-			padding-left: 1.6em;
-			background-color: currentColor;
-			mask: var(--icon-unsaved) no-repeat center / 1.6em;
+		#title,
+		#untitled {
+			anchor-name: --title;
+
+			&::after {
+				content: '';
+				padding-left: 1.2em;
+				background-color: currentColor;
+				mask: var(--icon-unsaved) no-repeat left center / 1.6em;
+			}
 		}
 
 		#title:empty,
@@ -299,9 +302,11 @@ caption {
 
 	button {
 		z-index: 1;
-		grid-area: 1 / 1;
-		align-self: stretch;
+		position: absolute;
+		margin: -.3em -.5em;
 		text-indent: -10000px;
+		position-anchor: --title;
+		inset: anchor(top) anchor(right) anchor(bottom) anchor(left);
 
 		&:not(:hover) {
 			border-color:transparent;
