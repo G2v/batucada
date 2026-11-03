@@ -193,19 +193,12 @@ body {
 
 	h1 {
 		font-size: 1.2em;
+		@media (min-width: 520px) { font-size: 1.4em; }
 	}
 
 	h2 {
 		font-size: 1.1em;
-	}
-
-	@media (min-width: 520px) {
-		h1 {
-			font-size: 1.4em;
-		}
-		h2 {
-			font-size: 1.2em;
-		}
+		@media (min-width: 520px) { font-size: 1.2em; }
 	}
 }
 
@@ -254,7 +247,7 @@ table {
 
 caption {
 	position: relative;
-	padding: .1em 1.2em;
+	padding: .3em 1.2em;
 	visibility: var(--untitled, visible);
 
 	main:has(> #controls > #preset > select > option:checked) & {
@@ -268,6 +261,7 @@ caption {
 	}
 
 	h1 {
+		line-height: 1.2;
 		text-wrap: balance;
 
 		#title,
@@ -1608,7 +1602,7 @@ body > footer {
 							<option value="0">Désactivé</option>
 						</select>
 					</label>
-					<label>Audio
+					<label>Intros&nbsp;en&nbsp;cour de lecture
 						<select name="audio">
 							<option value="stereo" selected>Stéréo</option>
 							<option value="mono">Mono</option>
