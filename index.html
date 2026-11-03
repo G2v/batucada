@@ -1269,7 +1269,11 @@ dialog {
 		background-color: var(--color-background-light);
 	}
 
-	&:has(button[hidden]):popover-open {
+	&:not([data-cancel]) button {
+		display: none;
+	}
+
+	&:not([data-cancel]):popover-open {
 		animation: fade-out 1s forwards 5s;
 	}
 

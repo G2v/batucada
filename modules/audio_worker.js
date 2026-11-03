@@ -8,7 +8,6 @@ let sheet           = null;
 let tempo           = null;
 let tracks          = null;
 let volumes         = null;
-let beatSync        = 0;
 let beatCounter     = 0;
 let phraseCounter   = 0;
 let workerSyncDelta = 0;
@@ -42,7 +41,6 @@ function init(payload) {
 	order    = Array.from({ length: config.tracksLength }, (_, i) => i);
 	sheet    = new Uint8Array(config.tracksLength * config.resolution.track).fill(config.emptyStroke);
 	tempo    = config.tempo;
-	beatSync = config.defaultData.bars * config.defaultData.beats;
 	volumes  = new Array(config.tracksLength).fill(config.defaultData.volume);
 	tracks   = Array.from({ length: config.tracksLength }, (_, index) => {
 		return {
@@ -77,15 +75,14 @@ function stop() {
 }
 
 function scheduler(nextTickTime) {
+	if (!updatePhrase()) {
+		timer = null;
+		return self.postMessage([{ action: 'stop' }]);
+	}
+
 	let noteCount = 0;
 	const secondsPerBeat = 60 / tempo;
 	const ticksBuffer = new Float64Array(tracks.length * config.resolution.beat * 5);
-
-	const currentPhraseBeats = tracks
-		.filter(track => track.active && track.phrase === phraseCounter)
-		.reduce((max, track) => Math.max(max, track.bars * track.beats), 0);
-
-	const limit = (phraseCounter === 0) ? beatSync : currentPhraseBeats;
 
 	for (const [trackIndex, track] of tracks.entries()) {
 		const { instrument, bars, beats, steps, active, phrase, sheetIndex } = track;
@@ -109,32 +106,31 @@ function scheduler(nextTickTime) {
 		}
 	}
 
-	if (beatCounter < limit) {
-		const ticks = ticksBuffer.subarray(0, noteCount * 5);
-		self.postMessage([{ action: 'ticks', payload: ticks }], [ticks.buffer]);
-		beatCounter++;
-		scheduleNext(nextTickTime + secondsPerBeat);
-	}
+	const ticks = ticksBuffer.subarray(0, noteCount * 5);
+	self.postMessage([{ action: 'ticks', payload: ticks }], [ticks.buffer]);
+	beatCounter++;
+	scheduleNext(nextTickTime + secondsPerBeat);
+}
 
-	else {
+function phraseLength(phrase) {
+	const length = tracks
+		.filter(track => track.active && track.phrase === phrase)
+		.reduce((max, track) => Math.max(max, track.bars * track.beats), 0);
+	return (phrase === 0 && length) ? Infinity : length;
+}
+
+function updatePhrase() {
+	while (beatCounter >= phraseLength(phraseCounter)) {
+		if (phraseCounter === 0) return false;
 		const nextPhrase = tracks
 			.filter(track => track.active && track.phrase > phraseCounter)
 			.reduce((min, track) => Math.min(min, track.phrase), Infinity);
-		const hasNextPhrase = nextPhrase !== Infinity;
-		const hasLoop = tracks.some(track => track.active && track.phrase === 0);
-		if (phraseCounter !== 0 && hasNextPhrase) {
-			phraseCounter = nextPhrase;
-		} 
-		else if (hasLoop) {
-			phraseCounter = 0;
-		} 
-		else {
-			timer = null;
-			return self.postMessage([{ action: 'stop' }]);
-		}
+		if (nextPhrase !== Infinity) phraseCounter = nextPhrase;
+		else if (phraseLength(0)) phraseCounter = 0;
+		else return false;
 		beatCounter = 0;
-		scheduler(nextTickTime);
 	}
+	return true;
 }
 
 function scheduleNext(targetTime) {
@@ -168,15 +164,6 @@ function pushMessage(action, items, messages, transferables) {
 		transferables.push(payload.sheet.buffer);
 	}
 	messages.push({ action, payload });
-}
-
-function getBeatSync() {
-	const gcd = (a, b) => a ? gcd(b % a, a) : b;
-	const lcm = (a, b) => (a * b) / gcd(a, b);
-	const beats = tracks
-		.filter(track => track.active && track.phrase === 0)
-		.map(track => track.bars * track.beats);
-	return beats.length ? beats.reduce((a, b) => lcm(a, b)) : 0;
 }
 
 function updateData(changes, messages, transferables) {
@@ -255,7 +242,6 @@ function updateTracks(values, items, collateralItems, messages) {
 		messages.push({ action: 'updateData', payload: { volumes: volumeChanges } });
 	}
 	items.add('tracks')
-	beatSync = getBeatSync();
 }
 
 function updateSheetWith(track, resetValue, condition) {
@@ -386,7 +372,6 @@ function resetTracks(targetId = null) {
 	}
 
 	if (tracksChanges.length) {
-		beatSync = getBeatSync();
 		changes.tracks = tracksChanges;
 	}
 	if (volumesChanges.length) {
