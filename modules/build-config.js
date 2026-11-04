@@ -56,7 +56,7 @@ const selectors = Object.freeze({
 	trackList:       'tbody',
 	trashZone:       '#trash',
 	endDropZone:     'tfoot .dropzone',
-	sequenceTitle:   '#title',
+	sequenceTitle:   '#titled',
 	untitledLabel:   '#untitled',
 	trackTemplate:   'template',
 	controlsSection: '#controls',

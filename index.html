@@ -9,13 +9,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
 {
-	const osTheme = matchMedia('(prefers-color-scheme: dark)');
+	const colorSchemeQuery = matchMedia('(prefers-color-scheme: dark)');
 	window.applyTheme = () => {
-		if (localStorage.theme === (osTheme.matches ? 'dark' : 'light')) delete localStorage.theme;
-		document.documentElement.classList.toggle('dark', localStorage.theme ? localStorage.theme === 'dark' : osTheme.matches);
+		const colorScheme = colorSchemeQuery.matches ? 'dark' : 'light';
+		if (localStorage.theme === colorScheme) delete localStorage.theme;
+		document.documentElement.classList.toggle('dark', (localStorage.theme ?? colorScheme) === 'dark');
 	};
 	applyTheme();
-	osTheme.addEventListener('change', applyTheme);
+	colorSchemeQuery.addEventListener('change', applyTheme);
 
 	if (!location.search && localStorage.lastSequence) history.replaceState(null, '', localStorage.lastSequence);
 
@@ -233,6 +234,66 @@ main {
 		border-radius: .5em;
 		padding-bottom: .3em;
 	}
+
+	header {
+		padding: .3em 1.2em;
+		visibility: var(--untitled, visible);
+
+		main:has(> #controls > #preset > select > option:checked) & {
+			:is(#titled, #untitled)::after {
+				mask-image: var(--icon-saved);
+				background-color: var(--color-stroke-set);
+			}
+
+			#saved { display: block; }
+			#unsaved { display: none; }
+		}
+
+		h1 {
+			line-height: 1.2;
+			text-wrap: balance;
+
+			#titled,
+			#untitled {
+				anchor-name: --title;
+
+				&::after {
+					content: '';
+					padding-left: 1.2em;
+					background-color: currentColor;
+					mask: var(--icon-unsaved) no-repeat left center / 1.6em;
+				}
+			}
+
+			#titled:empty,
+			#titled:not(:empty) + #untitled {
+				display: none;
+			}
+		}
+
+		& > span {
+			font-size: 0;
+			display: block;
+		}
+
+		#saved,
+		&:has(#titled:empty) #unsaved {
+			display: none;
+		}
+
+		button {
+			z-index: 1;
+			position: absolute;
+			margin: -.3em -.5em;
+			text-indent: -10000px;
+			position-anchor: --title;
+			inset: anchor(top) anchor(right) anchor(bottom) anchor(left);
+
+			&:not(:hover) {
+				border-color:transparent;
+			}
+		}
+	}
 }
 
 table {
@@ -242,67 +303,6 @@ table {
 
 	td, th {
 		padding: 0;
-	}
-}
-
-caption {
-	position: relative;
-	padding: .3em 1.2em;
-	visibility: var(--untitled, visible);
-
-	main:has(> #controls > #preset > select > option:checked) & {
-		:is(#title, #untitled)::after {
-			mask-image: var(--icon-saved);
-			background-color: var(--color-stroke-set);
-		}
-
-		#saved { display: block; }
-		#unsaved { display: none; }
-	}
-
-	h1 {
-		line-height: 1.2;
-		text-wrap: balance;
-
-		#title,
-		#untitled {
-			anchor-name: --title;
-
-			&::after {
-				content: '';
-				padding-left: 1.2em;
-				background-color: currentColor;
-				mask: var(--icon-unsaved) no-repeat left center / 1.6em;
-			}
-		}
-
-		#title:empty,
-		#title:not(:empty) + #untitled {
-			display: none;
-		}
-	}
-
-	& > span {
-		font-size:0;
-		display: block;
-	}
-
-	#saved,
-	&:has(#title:empty) #unsaved {
-		display: none;
-	}
-
-	button {
-		z-index: 1;
-		position: absolute;
-		margin: -.3em -.5em;
-		text-indent: -10000px;
-		position-anchor: --title;
-		inset: anchor(top) anchor(right) anchor(bottom) anchor(left);
-
-		&:not(:hover) {
-			border-color:transparent;
-		}
 	}
 }
 
@@ -1400,12 +1400,12 @@ body > footer {
 <body>
 	<main>
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
-		<table>
-			<caption>
-				<h1 aria-live="polite"><span id="title"></span><span id="untitled">Nouveau morceau</span></h1>
-				<span id="saved">Morceau enregistré</span><span id="unsaved">Morceau non enregistré</span>
-				<button title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
-			</caption>
+		<header>
+			<h1 id="title" aria-live="polite"><span id="titled"></span><span id="untitled">Nouveau morceau</span></h1>
+			<span role="status"><span id="saved">Morceau enregistré</span><span id="unsaved">Morceau non enregistré</span></span>
+			<button title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
+		</header>
+		<table aria-labelledby="title">
 			<tbody></tbody>
 			<tfoot aria-hidden="true">
 				<tr><td class="dropzone"></td></tr>
