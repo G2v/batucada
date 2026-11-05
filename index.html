@@ -462,18 +462,21 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 	}
 
 	.sheet {
-		gap: .3em;
-		display: flex;
 		grid-column: 3;
-		flex-wrap: wrap;
 		grid-row: 2 / -1;
 		margin: 0 0 0 .9em;
-		border-radius: .1em;
 		contain: layout style;
 
-		&:focus-within:has([name="step"]:focus-visible) {
-			outline-offset: .2em;
-			outline: .1em dashed currentColor;
+		[role="toolbar"] {
+			gap: .3em;
+			display: flex;
+			flex-wrap: wrap;
+			border-radius: .1em;
+
+			&:focus-within:has([name="step"]:focus-visible) {
+				outline-offset: .2em;
+				outline: .1em dashed currentColor;
+			}
 		}
 	}
 
@@ -560,7 +563,6 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 
 			&::before {
 				color: CanvasText;
-				text-align: center;
 				line-height: 1.65em;
 				content: counter(beat);
 			}
@@ -601,7 +603,6 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot {
 }
 
 hr {
-	height: 0;
 	z-index: 2;
 	border: none;
 	padding: .7em;
@@ -615,7 +616,6 @@ hr {
 
 #controls {
 	z-index: 2;
-	padding: 0;
 	bottom: .5em;
 	display: flex;
 	flex-wrap: wrap;
@@ -900,7 +900,6 @@ a {
 }
 
 dialog {
-	inset: 0;
 	padding: 0;
 	color: inherit;
 	max-width: 26em;
@@ -916,7 +915,7 @@ dialog {
 	box-shadow: 0 0 .5em var(--color-shadow-medium);
 
 	&::backdrop {
-		overflow: clip;
+		overflow: hidden;
 		backdrop-filter: blur(2px);
 		overscroll-behavior: contain;
 		background: var(--color-shadow-strong);
@@ -1127,7 +1126,6 @@ dialog {
 		margin: auto;
 		display: flex;
 		list-style: none;
-		width: fit-content;
 		flex-direction: column;
 
 		li {
@@ -1188,9 +1186,7 @@ dialog {
 
 #about {
 	.content {
-		gap: 1em;
 		padding-top: .2em;
-		width: fit-content;
 	}
 
 	p {
@@ -1434,7 +1430,7 @@ body > footer {
 			<div id="preset">
 				<span id="preset_label" aria-hidden="true">Morceaux enregistrés</span>
 				<select aria-labelledby="preset_label">
-					<button aria-label="Morceau">
+					<button>
 						<selectedcontent></selectedcontent>
 					</button>
 				</select>
@@ -1466,7 +1462,7 @@ body > footer {
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
 				<span aria-hidden="true">+ Instrument</span>
 				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label-empty="Ajouter un instrument" data-template-aria-label-filled="Modifier l'instrument" autocomplete="off">
-					<button aria-label="instrument">
+					<button>
 						<selectedcontent></selectedcontent>
 					</button>
 				</select>
@@ -1474,21 +1470,23 @@ body > footer {
 			<td class="settings">
 				<button class="icon" title="Gérer la piste" commandfor="track-settings" command="show-modal">Gérer la piste</button>
 			</td>
-			<td class="sheet" role="toolbar" aria-label="Partition">
-				<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
-					<span class="beat" role="group" aria-label="Temps 1" data-index="0">
-						<button name="step" data-index="0" value="0" tabindex="-1" aria-label="Subdivision 1" data-template data-template-aria-label-empty="Subdivision 1" data-template-aria-label-filled="Subdivision 1, {{stroke}}" aria-pressed="false"></button>
-						<span class="grid">
-							<button name="step" data-index="1" value="0" tabindex="-1" aria-label="Subdivision 2" data-template data-template-aria-label-empty="Subdivision 2" data-template-aria-label-filled="Subdivision 2, {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="2" value="0" tabindex="-1" aria-label="Subdivision 3" data-template data-template-aria-label-empty="Subdivision 3" data-template-aria-label-filled="Subdivision 3, {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="3" value="0" tabindex="-1" aria-label="Subdivision 4" data-template data-template-aria-label-empty="Subdivision 4" data-template-aria-label-filled="Subdivision 4, {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="4" value="0" tabindex="-1" aria-label="Subdivision 5" data-template data-template-aria-label-empty="Subdivision 5" data-template-aria-label-filled="Subdivision 5, {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="5" value="0" tabindex="-1" aria-label="Subdivision 6" data-template data-template-aria-label-empty="Subdivision 6" data-template-aria-label-filled="Subdivision 6, {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="6" value="0" tabindex="-1" aria-label="Subdivision 7" data-template data-template-aria-label-empty="Subdivision 7" data-template-aria-label-filled="Subdivision 7, {{stroke}}" aria-pressed="false"></button>
-							<button name="step" data-index="7" value="0" tabindex="-1" aria-label="Subdivision 8" data-template data-template-aria-label-empty="Subdivision 8" data-template-aria-label-filled="Subdivision 8, {{stroke}}" aria-pressed="false"></button>
+			<td class="sheet">
+				<div role="toolbar" aria-label="Partition">
+					<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
+						<span class="beat" role="group" aria-label="Temps 1" data-index="0">
+							<button name="step" data-index="0" value="0" tabindex="-1" aria-label="Subdivision 1" data-template data-template-aria-label-empty="Subdivision 1" data-template-aria-label-filled="Subdivision 1, {{stroke}}" aria-pressed="false"></button>
+							<span class="grid">
+								<button name="step" data-index="1" value="0" tabindex="-1" aria-label="Subdivision 2" data-template data-template-aria-label-empty="Subdivision 2" data-template-aria-label-filled="Subdivision 2, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" data-index="2" value="0" tabindex="-1" aria-label="Subdivision 3" data-template data-template-aria-label-empty="Subdivision 3" data-template-aria-label-filled="Subdivision 3, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" data-index="3" value="0" tabindex="-1" aria-label="Subdivision 4" data-template data-template-aria-label-empty="Subdivision 4" data-template-aria-label-filled="Subdivision 4, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" data-index="4" value="0" tabindex="-1" aria-label="Subdivision 5" data-template data-template-aria-label-empty="Subdivision 5" data-template-aria-label-filled="Subdivision 5, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" data-index="5" value="0" tabindex="-1" aria-label="Subdivision 6" data-template data-template-aria-label-empty="Subdivision 6" data-template-aria-label-filled="Subdivision 6, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" data-index="6" value="0" tabindex="-1" aria-label="Subdivision 7" data-template data-template-aria-label-empty="Subdivision 7" data-template-aria-label-filled="Subdivision 7, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" data-index="7" value="0" tabindex="-1" aria-label="Subdivision 8" data-template data-template-aria-label-empty="Subdivision 8" data-template-aria-label-filled="Subdivision 8, {{stroke}}" aria-pressed="false"></button>
+							</span>
 						</span>
 					</span>
-				</span>
+				</div>
 			</td>
 			<td class="volume">
 				<label title="Volume">
@@ -1590,11 +1588,11 @@ body > footer {
 					data-cancel-failure="⚠️ L'opération ne peut être annulée.">Enregistrer une copie</button>
 				<button name="delete" hidden formnovalidate
 					data-success="Le morceau a été supprimé."
-					data-failure="⚠️ La suppression a échouée."
+					data-failure="⚠️ La suppression a échoué."
 					data-cancel-success="L'opération a été annulée."
 					data-cancel-failure="⚠️ L'opération ne peut être annulée.">Supprimer le morceau</button>
 				<button name="share" formnovalidate
-					data-failure="Lien de partage copié dans le presse-papier.">Partager le morceau</button>
+					data-failure="Lien de partage copié dans le presse-papiers.">Partager le morceau</button>
 			</form>
 		</div>
 	</dialog>
@@ -1667,7 +1665,7 @@ body > footer {
 							<div class="actions">
 								<button commandfor="presets-delete" command="close" value="back">Annuler</button>
 								<button commandfor="presets-delete" command="close" value="delete"
-									data-failure="⚠️ La suppression a échouée.">Supprimer</button>
+									data-failure="⚠️ La suppression a échoué.">Supprimer</button>
 							</div>
 						</div>
 					</dialog>
@@ -1705,7 +1703,7 @@ body > footer {
 							<div class="actions">
 								<button commandfor="instruments-restore" command="close" value="back">Annuler</button>
 								<button commandfor="instruments-restore" command="close" value="restore"
-									data-failure="⚠️ La restauration a échouée.">Restaurer</button>
+									data-failure="⚠️ La restauration a échoué.">Restaurer</button>
 							</div>
 						</div>
 					</dialog>
