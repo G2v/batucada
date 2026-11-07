@@ -69,8 +69,9 @@ export default class InterfaceDialogs {
 
 	showToast(message, cancel = null) {
 		this.#cancel = cancel;
-		this.#toast.toggleAttribute('data-cancel', Boolean(cancel));
-		this.#toast.getAnimations().forEach(animation => animation.cancel() || animation.play());
+		this.#toast.toggleAttribute('data-cancel', !!cancel);
+		this.#toast.hidePopover();
+		this.#toast.getAnimations();
 		this.#toast.showPopover(cancel?.invoker && { source: cancel.invoker });
 		requestAnimationFrame(() => this.#toastMessage.textContent = message);
 	}
