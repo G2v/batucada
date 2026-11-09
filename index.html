@@ -603,7 +603,6 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot { display: none; }
 
 	@media (min-width: 520px) {
 		grid-template-rows: 1em var(--step-height) 1fr;
-
 		.instrument, .settings, .volume { grid-area: 2 / auto; }
 	}
 }
@@ -667,9 +666,7 @@ hr {
 	#start {
 		order: 2;
 		width: var(--control-height);
-
-		&[aria-checked="true"]::before { mask-image: var(--icon-start); }
-
+		&[aria-checked="true"]::before  { mask-image: var(--icon-start); }
 		&[aria-checked="false"]::before { mask-image: var(--icon-stop); }
 	}
 
@@ -725,7 +722,6 @@ hr {
 			align-self: center;
 			font-variant-numeric: tabular-nums;
 		}
-
 	}
 
 	@media (min-width: 520px) {
@@ -1193,10 +1189,7 @@ body > footer {
 
 	#light { display: none; }
 
-	#dark,
-	#light {
-		pointer-events: none;
-	}
+	#dark, #light { pointer-events: none;}
 }
 
 @media (pointer: fine) and (hover: hover) {
