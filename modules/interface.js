@@ -176,14 +176,9 @@ export class Interface {
 	isTrackEmpty(track)       { return this.getTrackInstrument(track) === this.#defaultInstrument; }
 
 	startViewTransition(callback, moving = null) {
-		const { dataset } = document.documentElement;
-		dataset.transitioning = '';
 		moving?.classList.add(Interface.#movingClass);
-		document.startViewTransition(callback)
-			.finished.finally(() => {
-				delete dataset.transitioning;
-				moving?.classList.remove(Interface.#movingClass);
-			});
+		document.startViewTransition({ update: callback, types: ['pistes'] })
+			.finished.finally(() => moving?.classList.remove(Interface.#movingClass));
 	}
 
 	set playing(status) {

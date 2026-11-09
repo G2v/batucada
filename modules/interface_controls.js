@@ -247,6 +247,8 @@ export default class InterfaceControls {
 
 	#skipContent(event) {
 		event.preventDefault();
+		this.#controlsSection.tabIndex = -1;
+		this.#controlsSection.addEventListener('blur', ({ target }) => target.removeAttribute('tabindex'), { once: true });
 		this.#controlsSection.focus({ preventScroll: true });
 		this.#controlsSection.scrollIntoView({ behavior: 'smooth' });
 	}

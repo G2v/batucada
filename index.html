@@ -39,10 +39,10 @@
 	--track-col-3-width: 11.9em;
 	--track-col-4-width: 0px;
 
-	--step-gap: .3em;
+	--control-height: 2.5rem;
 	--step-width: 1.1em;
 	--step-height: 1.65em;
-	--control-height: 2.5rem;
+	--step-gap: .3em;
 
 	@media (min-width: 520px) {
 		--grid-lines: 1;
@@ -55,8 +55,9 @@
 		--track-col-4-width: 6em;
 	}
 
-	--color-primary:             hsl(215 20% 50%);
-	--color-secondary:           hsl(130 100% 50%);
+	--color-primary:   hsl(215 20% 50%);
+	--color-secondary: hsl(130 100% 50%);
+
 	--color-background-body:     light-dark(hsl(from var(--color-primary) h s 83%),        hsl(from var(--color-primary) h s 0%));
 	--color-background-base:     light-dark(hsl(from var(--color-primary) h s 100%),       hsl(from var(--color-primary) h s 15%));
 	--color-background-light:    light-dark(hsl(from var(--color-primary) h s 92%),        hsl(from var(--color-primary) h s 23%));
@@ -319,8 +320,15 @@ main {
 			display: block;
 		}
 
-		#saved, #unsaved { transition: visibility 0s .5s; }
-		#saved, &:has(#titled:empty) #unsaved { visibility: hidden; }
+		#saved,
+		#unsaved {
+			transition: visibility 0s .5s;
+		}
+
+		#saved,
+		&:has(#titled:empty) #unsaved {
+			visibility: hidden;
+		}
 
 		button {
 			z-index: 1;
@@ -355,10 +363,11 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot { display: none; }
 	display: grid;
 	position: relative;
 	contain: layout style;
+	reading-flow: grid-columns;
 	grid-template-rows: 1em var(--step-height) var(--step-gap) var(--step-height) 1fr;
 	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
 
-	[data-transitioning] & {
+	:active-view-transition-type(pistes) & {
 		view-transition-name: match-element;
 
 		&.moving { view-transition-name: moving; }
@@ -594,6 +603,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot { display: none; }
 
 	@media (min-width: 520px) {
 		grid-template-rows: 1em var(--step-height) 1fr;
+
 		.instrument, .settings, .volume { grid-area: 2 / auto; }
 	}
 }
@@ -629,6 +639,7 @@ hr {
 	position: sticky;
 	border-radius: 2px;
 	gap: var(--main-margin);
+	reading-flow: flex-visual;
 	view-transition-name: controls;
 	margin: .7em var(--main-margin);
 	background: var(--color-background-base);
@@ -648,12 +659,17 @@ hr {
 		&:not(:focus-visible) { outline: none; }
 	}
 
-	button, select { height: var(--control-height); }
+	button,
+	select {
+		height: var(--control-height);
+	}
 
 	#start {
 		order: 2;
 		width: var(--control-height);
-		&[aria-checked="true"]::before  { mask-image: var(--icon-start); }
+
+		&[aria-checked="true"]::before { mask-image: var(--icon-start); }
+
 		&[aria-checked="false"]::before { mask-image: var(--icon-stop); }
 	}
 
@@ -672,7 +688,8 @@ hr {
 			text-overflow: ellipsis;
 		}
 
-		select, button {
+		select,
+		button {
 			min-width: 9em;
 			grid-area: 1 / 1;
 			text-overflow: ellipsis;
@@ -837,6 +854,7 @@ dialog {
 			&:open {
 				overflow: clip;
 				height: calc(anchor-size(height) + 2px);
+
 				button[value="back"] { transform: translateX(.5em); }
 			}
 		}
@@ -860,6 +878,7 @@ dialog {
 		min-width: 16em;
 		position-area: center;
 		position-anchor: --nested;
+
 		p + p { font-size: .9em; }
 	}
 
@@ -938,6 +957,7 @@ dialog {
 
 	&:has([name="delete"]:checked) .actions button span {
 		display: none;
+
 		& + span { display: inline; }
 	}
 
@@ -1101,7 +1121,7 @@ dialog {
 	color: var(--color-text-contrast);
 	box-shadow: 0 0 .5em var(--color-shadow-medium);
 	background: color-mix(in srgb, var(--color-background-contrast), transparent 20%);
-	inset: auto 1em max(.6em, calc(100svh - anchor-size(height) - 5.2em - var(--body-margin)));
+	inset: auto 1em max(.8em, calc(100svh - anchor-size(height) - 5.2em - var(--body-margin)));
 
 	&:popover-open {
 		gap: 1em;
@@ -1173,7 +1193,10 @@ body > footer {
 
 	#light { display: none; }
 
-	#dark, #light { pointer-events: none; }
+	#dark,
+	#light {
+		pointer-events: none;
+	}
 }
 
 @media (pointer: fine) and (hover: hover) {
@@ -1225,6 +1248,7 @@ body > footer {
 		forced-color-adjust: none;
 	}
 }
+
 </style>
 </head>
 <body>
@@ -1242,7 +1266,7 @@ body > footer {
 			</tfoot>
 		</table>
 		<hr aria-hidden="true">
-		<section id="controls" aria-label="Boutons de contrôle" tabindex="-1">
+		<section id="controls" aria-label="Boutons de contrôle">
 			<div id="preset">
 				<span id="preset_label" aria-hidden="true">Morceaux enregistrés</span>
 				<select aria-labelledby="preset_label">
@@ -1278,7 +1302,7 @@ body > footer {
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
 				<span aria-hidden="true">+ Instrument</span>
 				<select name="instrument" aria-label="Ajouter un instrument" data-template data-template-aria-label-empty="Ajouter un instrument" data-template-aria-label-filled="Modifier l'instrument" autocomplete="off">
-					<button aria-label="Instrument">
+					<button aria-label="instrument">
 						<selectedcontent></selectedcontent>
 					</button>
 				</select>
