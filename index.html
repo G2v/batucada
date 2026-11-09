@@ -1286,7 +1286,7 @@ body > footer {
 		</section>
 	</main>
 	<footer>
-		<button commandfor="app-menu" command="show-modal" aria-label="Menu de l'application">Application</button>
+		<button commandfor="app-menu" command="show-modal" aria-label="Application, menu">Application</button>
 		<button id="theme">
 			<span id="light">Mode clair</span>
 			<span id="dark">Mode sombre</span>
@@ -1296,7 +1296,7 @@ body > footer {
 		<option value="30"></option>
 	</datalist>
 	<template>
-		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0" data-pan="0">
+		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
 			<td class="dropzone" aria-hidden="true"></td>
 			<th class="instrument" scope="row" draggable="true" aria-label="Piste sans instrument" data-template data-template-aria-label-empty="Piste sans instrument{{phrase}}" data-template-aria-label-filled="Piste {{instrument}}{{phrase}}" data-template-aria-label-phrase=", {{name}}">
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
@@ -1360,7 +1360,7 @@ body > footer {
 					</select>
 				</label>
 				<label>Temps
-					<select id="beats" name="beats">
+					<select name="beats">
 						<option value="2">2</option>
 						<option value="3">3</option>
 						<option value="4" selected>4</option>
@@ -1456,7 +1456,7 @@ body > footer {
 					<button commandfor="preferences" command="close" class="icon">Fermer</button>
 					<h2 id="preferences-title">Préférences</h2>
 				</div>
-				<form id="preferences-form" autocomplete="off">
+				<form autocomplete="off">
 					<label>Son&nbsp;à&nbsp;la&nbsp;saisie
 						<select name="strokePreview">
 							<option value="1" selected>Activé</option>
