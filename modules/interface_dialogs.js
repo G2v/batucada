@@ -12,18 +12,11 @@ export default class InterfaceDialogs {
 		this.#toastMessage      = document.querySelector(selectors.toastMessage);
 		const toastCancelButton = document.querySelector(selectors.toastCancelButton);
 
-		document.addEventListener('click',                (event) => this.#dismissModal(event));
 		document.addEventListener('cancel',               (event) => InterfaceDialogs.#cancelModal(event), { capture: true });
 		document.addEventListener('toggle',               (event) => this.#setModal(event), { capture: true });
 		toastCancelButton.addEventListener('click',       (event) => this.#cancelToast());
 		this.#toast.addEventListener('animationend',      (event) => this.#toast.hidePopover());
 		this.#toast.addEventListener('toggle',            (event) => this.#clearCancel(event));
-	}
-
-	#dismissModal({ target }) {
-		if (this.#modals.length > 0 && target.tagName === 'DIALOG' && 'dismiss' in target.dataset) {
-			target.close();
-		}
 	}
 
 	#setModal({ target, newState }) {
@@ -40,6 +33,7 @@ export default class InterfaceDialogs {
 	}
 
 	static #cancelModal(event) {
+		if (event.target.closedBy === 'any') return;
 		event.preventDefault();
 		event.target.close('back');
 	}
