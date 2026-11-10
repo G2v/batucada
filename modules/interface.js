@@ -177,7 +177,7 @@ export class Interface {
 
 	startViewTransition(callback, moving = null) {
 		moving?.classList.add(Interface.#movingClass);
-		document.startViewTransition({ update: callback, types: ['pistes'] })
+		document.startViewTransition({ update: callback, types: ['tracks'] })
 			.finished.finally(() => moving?.classList.remove(Interface.#movingClass));
 	}
 

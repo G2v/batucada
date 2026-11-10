@@ -367,10 +367,9 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot { display: none; }
 	grid-template-rows: 1em var(--step-height) var(--step-gap) var(--step-height) 1fr;
 	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
 
-	:active-view-transition-type(pistes) & {
+	:active-view-transition-type(tracks) & {
 		view-transition-name: match-element;
-
-		&.moving { view-transition-name: moving; }
+		&.moving { view-transition-class: moving; }
 	}
 
 	&.reseted { animation: reseted 250ms ease-out forwards; }
@@ -624,7 +623,6 @@ hr {
 	padding: .7em;
 	position: sticky;
 	margin: 0 0 -2.5em;
-	view-transition-name: hr;
 	background: var(--color-background-base);
 	box-shadow: 0 -.9px 0 var(--color-border-light), 0 -4px 8px var(--color-shadow-light);
 	bottom: calc(var(--control-height) * var(--grid-lines) - .2em + 1px + .7em * (var(--grid-lines) - 1));
@@ -639,7 +637,6 @@ hr {
 	border-radius: 2px;
 	gap: var(--main-margin);
 	reading-flow: flex-visual;
-	view-transition-name: controls;
 	margin: .7em var(--main-margin);
 	background: var(--color-background-base);
 
@@ -730,12 +727,13 @@ hr {
 	}
 }
 
-::view-transition-group(moving) { z-index: 1; }
-
-::view-transition-group(hr),
-::view-transition-group(controls) {
-	z-index: 2;
+hr, #controls {
+	view-transition-name: match-element;
+	view-transition-class: foreground;
 }
+
+::view-transition-group(*.moving)     { z-index: 1; }
+::view-transition-group(*.foreground) { z-index: 2; }
 
 @media (prefers-reduced-motion: reduce) {
 	::view-transition-group(*) { animation-name: none; }
