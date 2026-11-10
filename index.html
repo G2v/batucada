@@ -138,7 +138,7 @@ body {
 			position: fixed;
 			padding-top: 2em;
 			text-align: center;
-			content: 'Chargement de l\'application…';
+			content: attr(data-loading);
 			background: var(--color-background-body);
 		}
 	}
@@ -1039,9 +1039,9 @@ dialog {
 		display: grid;
 		line-height: 1.1;
 		grid-auto-rows: minmax(2lh, 1fr);
-		grid-template-columns: min-content 5.3em;
+		grid-template-columns: min-content 5.8em;
 
-		@media (min-width: 520px) { grid-template-columns: auto 5.3em; }
+		@media (min-width: 520px) { grid-template-columns: auto 5.8em; }
 	}
 
 	label {
@@ -1242,7 +1242,7 @@ body > footer {
 
 </style>
 </head>
-<body>
+<body data-loading="Chargement de l'application…">
 	<main>
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
 		<header>
@@ -1462,7 +1462,7 @@ body > footer {
 					</label>
 					<label>Lecture en arrière&#8209;plan
 						<select name="hiddenPlayDuration">
-							<option value="300">5 min</option>
+							<option value="0">Désactivée</option>
 							<option value="600" selected>10 min</option>
 							<option value="1800">30 min</option>
 							<option value="3600">1 heure</option>

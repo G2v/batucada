@@ -26,9 +26,12 @@ export default class InterfaceApp {
 		document.querySelector(selectors.aboutDialog).addEventListener('command', (event) => this.#aboutCommands(event));
 
 		const stored = JSON.parse(localStorage.preferences ?? '{}');
-		for (const [name, value] of Object.entries(this.#defaultPreferences)) preferencesForm.elements[name].value = stored[name] ?? value;
+		for (const [name, value] of Object.entries(this.#defaultPreferences)) {
+			preferencesForm.elements[name].value = stored[name] ?? value;
+			preferencesForm.elements[name].value ||= value;
+		}
+		this.#savePreferences(preferencesForm);
 		preferencesForm.addEventListener('change', () => this.#savePreferences(preferencesForm));
-
 	}
 
 	showUpdateButton() {
@@ -43,7 +46,8 @@ export default class InterfaceApp {
 			return;
 		}
 		this.#updateState = 'search';
-		const [found] = await Promise.all([this.#requestUpdate(), InterfaceApp.#wait(InterfaceApp.#searchMinDuration)]);
+		const wait = new Promise(resolve => setTimeout(resolve, InterfaceApp.#searchMinDuration));
+		const [found] = await Promise.all([this.#requestUpdate(), wait]);
 		this.#updateState = found ? 'available' : found === false ? 'none' : null;
 	}
 
@@ -61,10 +65,6 @@ export default class InterfaceApp {
 	set #updateState(state) {
 		if (state) this.#aboutUpdate.dataset.state = state;
 		else delete this.#aboutUpdate.dataset.state;
-	}
-
-	static #wait(duration) {
-		return new Promise(resolve => setTimeout(resolve, duration));
 	}
 
 	#aboutCommands(event) {
