@@ -556,16 +556,6 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot { display: none; }
 			--step-background: var(--color-stroke-set);
 			background-image: linear-gradient(var(--played), var(--played));
 
-			&[value="1"] { --current-icon: var(--icon-1, var(--icon-default)); }
-			&[value="2"] { --current-icon: var(--icon-2, var(--icon-default)); }
-			&[value="3"] { --current-icon: var(--icon-3, var(--icon-default)); }
-			&[value="4"] { --current-icon: var(--icon-4, var(--icon-default)); }
-			&[value="5"] { --current-icon: var(--icon-5, var(--icon-default)); }
-			&[value="6"] { --current-icon: var(--icon-6, var(--icon-default)); }
-			&[value="7"] { --current-icon: var(--icon-7, var(--icon-default)); }
-			&[value="8"] { --current-icon: var(--icon-8, var(--icon-default)); }
-			&[value="9"] { --current-icon: var(--icon-9, var(--icon-default)); }
-
 			&::before {
 				inset: .11em;
 				content: '';
@@ -573,7 +563,7 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot { display: none; }
 				mask-position: center;
 				mask-repeat: no-repeat;
 				background-color: white;
-				mask-image: var(--current-icon, linear-gradient(#0000, #0000));
+				mask-image: linear-gradient(#0000, #0000);
 			}
 		}
 
@@ -1268,7 +1258,7 @@ body > footer {
 				<button aria-labelledby="preset_label" data-message="Aucun morceau n'est enregistré."></button>
 			</div>
 			<div id="tempo">
-				<input aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
+				<input aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" autocomplete="off">
 				<output aria-hidden="true"><span>80</span> bpm</output>
 			</div>
 			<button id="reset" title="Effacer le morceau">Effacer</button>
@@ -1564,22 +1554,23 @@ body > footer {
 		</dialog>
 	</dialog>
 	<script type="module">
-		import { config }        from './modules/build-config.js';
-		import { decodeInitial } from './modules/navigation_decode.js';
-		import { Interface }     from './modules/interface.js';
-		import { Presets }       from './modules/presets.js';
-		import { Audio }         from './modules/audio.js';
-		import { Navigation }    from './modules/navigation.js';
-		import { SwClient }      from './modules/sw-client.js';
+		import { config }      from './modules/build-config.js';
+		import { Store }       from './modules/store.js';
+		import { decode }      from './modules/navigation_decode.js';
+		import { Interface }   from './modules/interface.js';
+		import { Presets }     from './modules/presets.js';
+		import { Audio }       from './modules/audio.js';
+		import { Navigation }  from './modules/navigation.js';
+		import { SwClient }    from './modules/sw-client.js';
 
-		const initial = decodeInitial(config, new URLSearchParams(location.search));
-		const params = { bus: new EventTarget(), config, initial };
+		const params     = new URLSearchParams(location.search)
+		const store      = new Store(config, decode(config, params));
+		const audio      = new Audio({ config, store });
+		const presets    = new Presets({ config, store });
+		const navigation = new Navigation({ config, store, presets, audio });
+		const swClient   = new SwClient();
 
-		new Audio(params);
-		new Interface(params);
-		new Presets(params);
-		new Navigation(params);
-		new SwClient(params);
+		new Interface({ config, store, audio, presets, navigation, swClient });
 	</script>
 </body>
 </html>

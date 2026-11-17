@@ -1,4 +1,5 @@
-import { buildStyles, buildTracks, buildInstruments, firstTracksCount } from './build-dom.js';
+import { normalizeName } from './utils.js';
+import { buildStyles, buildTracks, buildInstruments } from './build-dom.js';
 
 export class Interface {
 	static #movingClass = 'moving';
@@ -13,63 +14,54 @@ export class Interface {
 		{ name: 'app',         path: './interface_app.js' },
 	]);
 
+	#store;
 	#untitled;
 	#selectors;
 	#resolution;
-	#instrumentKey;
-	#trackProperties;
-	#defaultInstrument;
+	#trackKeys;
+	#emptyStroke;
 
 	#tracksReady     = Promise.withResolvers();
 	#nodes           = {};
-	#ready           = {};
 	#instances       = {};
-	#playing         = false;
 	#headTitlePrefix = `${document.title} - `;
 
 	constructor(params) {
-		const { bus, config }   = params;
-		const events            = config.events;
+		const { config, store, presets } = params;
+		this.#store             = store;
 		this.#selectors         = config.selectors;
 		this.#resolution        = config.resolution;
-		this.#instrumentKey     = config.trackKeys.instrument;
-		this.#trackProperties   = new Set(Object.values(config.trackKeys));
-		this.#defaultInstrument = config.defaultInstrument;
+		this.#trackKeys         = Object.keys(config.defaultTrack);
+		this.#emptyStroke       = config.emptyStroke;
 
-		bus.addEventListener(events.audioStop,                 ({ detail }) => this.#instances.animation?.stop());
-		bus.addEventListener(events.audioUpdateData,           ({ detail }) => this.#update(detail));
-		bus.addEventListener(events.audioPushAnimations,       ({ detail }) => this.#instances.animation?.start(detail));
-		bus.addEventListener(events.presetsUpdateData,         ({ detail }) => this.#update(detail));
-		bus.addEventListener(events.presetsInvalidName,        ({ detail }) => this.#instances.presets?.reportNameValidity(detail));
-		bus.addEventListener(events.swClientNewVersion,        ({ detail }) => this.#instances.app?.showUpdateButton(detail));
-		bus.addEventListener(events.navigationDecoded,         ({ detail }) => this.#update(detail));
-		// Autre morceau : les animations en attente visent l'ancien
-		bus.addEventListener(events.navigationSequenceChanged, () => this.#instances.animation?.clear());
-		bus.addEventListener(events.navigationCloseModal,      ({ detail }) => this.#instances.dialogs?.closeModal(detail));
+		store.addEventListener('change',   ({ detail }) => this.#render(detail));
+		presets.addEventListener('change', ({ detail }) => this.#presetsUpdated(detail));
 
 		this.#build(params);
 		this.#loadModules(params);
 	}
 
-	#build(params) {
-		const { config, initial } = params;
+	#build({ config }) {
+		const { state } = this.#store;
 		const addTracks = (start, end) => {
 			const { nodes, fragment } = buildTracks(config, this.trackTemplate, start, end);
 			for (const [key, list] of Object.entries(nodes)) (this.#nodes[key] ??= []).push(...list);
+			this.#renderTracks(start, this.#nodes.tracks.length);
 			buildInstruments(config, nodes).catch(reportError);
 			return fragment;
 		};
 
 		buildStyles(config).catch(reportError);
 
-		const firstCount = firstTracksCount(config, initial);
-		const fragment   = addTracks(0, firstCount);
-		this.#apply(initial);
+		const lastModified = state.tracks.findLastIndex((_, id) => this.#store.isModified(id));
+		const firstCount   = Math.min(config.tracksLength, lastModified + 2);
+		const fragment     = addTracks(0, firstCount);
+		this.#tempo = state.tempo;
+		this.#title = state.title;
 
 		document.documentElement.style.removeProperty('--untitled');
 		document.documentElement.style.removeProperty('--tracks-count');
 		this.trackList.appendChild(fragment);
-		if (initial.title === undefined) document.title = this.#headTitlePrefix + this.untitled;
 
 		requestAnimationFrame(() => setTimeout(() => {
 			this.trackList.appendChild(addTracks(firstCount));
@@ -79,41 +71,66 @@ export class Interface {
 
 	#loadModules(params) {
 		Interface.#modules.forEach(({ name, path }) => {
-			this.#ready[name] = Promise.all([import(path), this.#tracksReady.promise]).then(([module]) => {
+			Promise.all([import(path), this.#tracksReady.promise]).then(([module]) => {
 				this.#instances[name] = new module.default({ ...params, parent: this });
 			});
 		});
 	}
 
-	set #tracks(values) {
-		for (const { id, changes } of values) {
-			const trackData = this.#nodes.tracks[id].dataset;
-			for (const [item, value] of Object.entries(changes)) {
-				if (!this.#trackProperties.has(item)) continue;
-				trackData[item] = value;
-				if (item === this.#instrumentKey) {
-					this.#nodes.instruments[id].value = value;
-				}
+	#render({ tempo, title, tracks, steps, volumes, moved }) {
+		const { state } = this.#store;
+		if (tempo) this.#tempo = state.tempo;
+		if (title) this.#title = state.title;
+		tracks.forEach(id => this.#renderTrack(id));
+		steps.forEach(index => this.#renderStep(index));
+		volumes.forEach(id => this.#renderVolume(id));
+		if (moved !== undefined) this.#renderMove(moved);
+	}
+
+	#renderTracks(start, end) {
+		const { sheet } = this.#store.state;
+		const { track: stepsPerTrack } = this.#resolution;
+		for (let id = start; id < end; id++) {
+			this.#renderTrack(id);
+			this.#renderVolume(id);
+			for (let index = id * stepsPerTrack; index < (id + 1) * stepsPerTrack; index++) {
+				if (sheet[index] !== this.#emptyStroke) this.#renderStep(index);
 			}
 		}
 	}
 
-	set #sheet(values) {
-		for (const { stepIndex, value } of values) {
-			this.#nodes.steps[stepIndex].value = value;
+	#renderTrack(id) {
+		const track = this.#nodes.tracks[id];
+		if (!track) return;
+		const values = this.#store.state.tracks[id];
+		for (const key of this.#trackKeys) {
+			if (track.dataset[key] !== String(values[key])) track.dataset[key] = values[key];
 		}
+		this.#nodes.instruments[id].value = values.instrument;
 	}
 
-	set #volumes(values) {
-		for (const { id, value } of values) {
-			this.#nodes.volumes[id].value = value;
-		}
+	#renderStep(index) {
+		const step = this.#nodes.steps[index];
+		if (step) step.value = this.#store.state.sheet[index];
+	}
+
+	#renderVolume(id) {
+		const volume = this.#nodes.volumes[id];
+		const value  = this.#store.state.volumes[id];
+		if (volume && (volume.value | 0) !== value) volume.value = value;
+	}
+
+	#renderMove(id) {
+		const { order } = this.#store.state;
+		const next = order[order.indexOf(id) + 1];
+		this.trackList.insertBefore(this.#nodes.tracks[id], this.#nodes.tracks[next] ?? null);
 	}
 
 	set #title(value) {
-		const titleText = value.replace(/[\s\p{Z}​-‍﻿]+/gu, ' ').trim();
+		const titleText = normalizeName(value);
 		this.sequenceTitle.textContent = titleText;
 		document.title = this.#headTitlePrefix + (titleText || this.untitled);
+		if (navigator.mediaSession.metadata) navigator.mediaSession.metadata.title = titleText || this.untitled;
 	}
 
 	set #tempo(value) {
@@ -121,42 +138,14 @@ export class Interface {
 		this.tempoValue.textContent = value;
 	}
 
-	set #presets({ lastModified, values }) {
-		this.presetsSelect.options.length = 0;
-		this.presetsSelect.append(...values.map(({ name, value }) => new Option(name || this.untitled, value)));
-		this.presetsDate.dateTime = lastModified?.toJSON() ?? '';
-	}
-
-	set #index(index) {
-		this.presetsSelect.selectedIndex = index;
-	}
-
-	#apply({ tempo, title, sheet, tracks, volumes, presets, index }) {
-		if (tempo   !== undefined) this.#tempo   = tempo;
-		if (title   !== undefined) this.#title   = title;
-		if (sheet   !== undefined) this.#sheet   = sheet;
-		if (tracks  !== undefined) this.#tracks  = tracks;
-		if (volumes !== undefined) this.#volumes = volumes;
-		if (presets !== undefined) this.#presets = presets;
-		if (index   !== undefined) this.#index   = index;
-	}
-
-	async #updateAria({ tempo, title, sheet, tracks, volumes }) {
-		if (
-			tempo   === undefined &&
-			title   === undefined &&
-			sheet   === undefined &&
-			tracks  === undefined &&
-			volumes === undefined
-		) return;
-
-		await this.#ready.aria;
-		this.#instances.aria.update({ tempo, sheet, tracks, volumes });
-	}
-
-	#update(changes) {
-		this.#apply(changes);
-		this.#updateAria(changes);
+	#presetsUpdated({ presets, index }) {
+		if (presets !== undefined) {
+			const { lastModified, values } = presets;
+			this.presetsSelect.options.length = 0;
+			this.presetsSelect.append(...values.map(({ name, value }) => new Option(name || this.untitled, value)));
+			this.presetsDate.dateTime = lastModified?.toJSON() ?? '';
+		}
+		if (index !== undefined) this.presetsSelect.selectedIndex = index;
 	}
 
 	getStepIndex(step) {
@@ -172,21 +161,11 @@ export class Interface {
 
 	getTrack(child)           { return child.closest(this.#selectors.track); }
 	getTrackIndex(track)      { return track.dataset.index | 0; }
-	getTrackInstrument(track) { return track.dataset[this.#instrumentKey] | 0; }
-	isTrackEmpty(track)       { return this.getTrackInstrument(track) === this.#defaultInstrument; }
 
 	startViewTransition(callback, moving = null) {
 		moving?.classList.add(Interface.#movingClass);
 		document.startViewTransition({ update: callback, types: ['tracks'] })
 			.finished.finally(() => moving?.classList.remove(Interface.#movingClass));
-	}
-
-	set playing(status) {
-		this.#playing = status;
-		if (status) {
-			navigator.mediaSession.metadata.title = (this.sequenceTitle.textContent || this.untitled);
-		}
-		navigator.mediaSession.playbackState = status ? 'playing' : 'paused';
 	}
 
 	get steps()         { return this.#nodes.steps; }
@@ -206,7 +185,5 @@ export class Interface {
 	get untitled()      { return this.#untitled            ??= document.querySelector(this.#selectors.untitledLabel).textContent; }
 
 	get swap()          { return this.#instances.swap; }
-	get playing()       { return this.#playing; }
 	get dialogs()       { return this.#instances.dialogs; }
-	get tracksOrder()   { return [...this.trackList.children].map(track => track.dataset.index | 0); }
 }

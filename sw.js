@@ -1,20 +1,16 @@
-import version from './version.js'; 
-import config  from './config/core.js';
+import version from './version.js';
+import storage  from './config/storage.js';
 
-const appCache = `${config.appCache} ${version}`;
-const dataCache = config.dataCache;
+const appCache = `${storage.appCache} ${version}`;
+const dataCache = storage.dataCache;
 
 const assets = [
 	'./',
-	'./index.html',
 	'./version.js',
 	'./share.html',
 	'./manifest.json',
-	'./config/app.js',
-	'./config/core.js',
-	'./data/instruments-metadata.json',
-	'./data/instruments-sounds.json',
-	'./data/presets.json',
+	'./config/about.js',
+	'./config/storage.js',
 	'./modules/audio.js',
 	'./modules/audio_worker.js',
 	'./modules/build-config.js',
@@ -32,12 +28,16 @@ const assets = [
 	'./modules/navigation_decode.js',
 	'./modules/navigation_encode.js',
 	'./modules/presets.js',
+	'./modules/store.js',
 	'./modules/utils.js',
 	'./modules/sw-client.js',
 	'./icons/icon.svg',
 	'./icons/icon_512x512.png',
 	'./icons/icon_white-bg_512x512.png',
 	'./icons/favicon.svg',
+	storage.presetsFile,
+	storage.instrumentsSoundsFile,
+	storage.instrumentsMetadataFile,
 ];
 
 self.addEventListener('message', ({ data }) => {
@@ -47,8 +47,7 @@ self.addEventListener('message', ({ data }) => {
 self.addEventListener('install', event => {
 	event.waitUntil(
 		caches.open(appCache).then(cache =>
-			// 'reload' contourne le cache HTTP ; addAll échoue si un fichier manque
-			cache.addAll(assets.map(path => new Request(new URL(path, self.registration.scope), { cache: 'reload' })))
+			cache.addAll(assets.map(path => new Request(new URL(path, self.registration.scope), { cache: 'no-cache' })))
 		)
 	);
 });
@@ -71,7 +70,7 @@ self.addEventListener('fetch', event => {
 	canonical.search = '';
 	event.respondWith(
 		caches.match(event.request, { ignoreSearch: true, cacheName: appCache }).then(cached => {
-			const networkFirst = event.request.cache === 'no-cache';
+			const networkFirst = event.request.cache === 'no-cache' && event.request.destination === '';
 			if (cached && !networkFirst) return cached;
 			return fetch(event.request)
 				.then(response => {

@@ -6,16 +6,14 @@ export default class InterfaceSwap {
 	static #dropzoneClass = 'dropzone';
 
 	#ui;
-	#bus;
-	#events;
+	#store;
 	#trashZone;
 	#endDropZone;
 	#over = new Set();
 
-	constructor({ bus, parent, config }) {
+	constructor({ parent, config, store }) {
 		this.#ui                = parent;
-		this.#bus               = bus;
-		this.#events            = config.events;
+		this.#store             = store;
 		this.#trashZone         = document.querySelector(config.selectors.trashZone);
 		this.#endDropZone       = document.querySelector(config.selectors.endDropZone);
 
@@ -30,7 +28,7 @@ export default class InterfaceSwap {
 	#handleDragStart(event) {
 		const track = this.#ui.getTrack(event.target);
 		if (!track) return;
-		if (!this.#ui.isTrackEmpty(track)) {
+		if (!this.#store.isEmpty(this.#ui.getTrackIndex(track))) {
 			this.#ui.container.classList.add(InterfaceSwap.#swapClass);
 		}
 		this.#ui.container.classList.add(InterfaceSwap.#trashClass);
@@ -68,26 +66,17 @@ export default class InterfaceSwap {
 	#handleDrop(event) {
 		this.#removeOver();
 		const targetTrack = this.#ui.getTrack(event.target);
-		const targetIndex = targetTrack ? this.#ui.getTrackIndex(targetTrack) : null;
 		const sourceIndex = Number(event.dataTransfer.getData('text/plain'));
 
-		if (event.target === this.#endDropZone) {
-			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null), this.#ui.tracks[sourceIndex]);
-			return;
-		}
+		if (event.target === this.#endDropZone) this.#moveTrack(sourceIndex, null);
+		else if (targetTrack) this.#moveTrack(sourceIndex, this.#ui.getTrackIndex(targetTrack));
+		else this.trashTrack(sourceIndex);
+	}
 
-		if (targetIndex !== null) {
-			const order = this.#ui.tracksOrder;
-			const sourcePosition = order.indexOf(sourceIndex);
-			const targetPosition = order.indexOf(targetIndex);
-			if (sourcePosition === targetPosition || sourcePosition + 1 === targetPosition) return;
-		}
-
-		if (targetIndex === null) {
-			this.trashTrack(sourceIndex);
-		} else {
-			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, targetIndex), this.#ui.tracks[sourceIndex]);
-		}
+	#moveTrack(sourceIndex, targetIndex) {
+		const { order } = this.#store.state;
+		if (sourceIndex === targetIndex || (order[order.indexOf(sourceIndex) + 1] ?? null) === targetIndex) return;
+		this.#ui.startViewTransition(() => this.#store.moveTrack(sourceIndex, targetIndex), this.#ui.tracks[sourceIndex]);
 	}
 
 	#isDropZone(target) {
@@ -103,33 +92,21 @@ export default class InterfaceSwap {
 		this.#over.clear();
 	}
 
-	moveTrack(sourceIndex, targetIndex, isTrashed = false) {
-		if (sourceIndex === targetIndex) return;
-		const draggedTrack = this.#ui.tracks[sourceIndex];
-		const targetTrack  = targetIndex !== null ? this.#ui.tracks[targetIndex] : null;
-		if (!isTrashed && draggedTrack.nextElementSibling === targetTrack) return;
-		const trashed = isTrashed ? sourceIndex : null;
-		draggedTrack.parentNode.insertBefore(draggedTrack, targetTrack);
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceMoveTrack, {
-			detail: { trashed, order: this.#ui.tracksOrder }
-		}));
-	}
-
 	trashTrack(sourceIndex) {
 		const draggedTrack      = this.#ui.tracks[sourceIndex];
-		const isLastVisualTrack = sourceIndex === this.#ui.tracksOrder.at(-1)
-			|| this.#ui.isTrackEmpty(draggedTrack);
+		const isLastVisualTrack = sourceIndex === this.#store.state.order.at(-1)
+			|| this.#store.isEmpty(sourceIndex);
 
 		if (isLastVisualTrack) {
 			const target = draggedTrack.nextElementSibling || draggedTrack;
-			this.moveTrack(sourceIndex, null, true);
+			this.#store.trashTrack(sourceIndex);
 			target.classList.remove(InterfaceSwap.#resetedClass);
 			requestAnimationFrame(() => {
 				target.classList.add(InterfaceSwap.#resetedClass);
 				target.addEventListener('animationend', () => target.classList.remove(InterfaceSwap.#resetedClass), { once: true });
 			});
 		} else {
-			this.#ui.startViewTransition(() => this.moveTrack(sourceIndex, null, true));
+			this.#ui.startViewTransition(() => this.#store.trashTrack(sourceIndex));
 		}
 	}
 }

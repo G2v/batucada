@@ -1,127 +1,54 @@
-export function initialState(config, order = Array.from({ length: config.tracksLength }, (_, i) => i)) {
-	return {
-		tempo:   config.defaultTempo,
-		title:   '',
-		order,
-		sheet:   null,
-		tracks:  null,
-		volumes: null,
+export function decode(config, searchParams, order = Array.from({ length: config.tracksLength }, (_, id) => id)) {
+	const { tracksLength, resolution } = config;
+	const param = (key, fallback) => searchParams.get(key) ?? fallback;
+	const song  = {
+		tempo:   decodeTempo(config, param(config.tempoSearchParam, config.defaultTempo)),
+		title:   param(config.titleSearchParam, ''),
+		tracks:  [],
+		volumes: [],
+		sheet:   new Uint8Array(tracksLength * resolution.track),
 	};
+	decodeSet(config, order, param(config.setSearchParam, config.defaultSetValue), song);
+	decodeVolumes(config, order, param(config.volumeSearchParam, config.defaultVolume), song);
+	return song;
 }
 
-export function decode(config, searchParams, state) {
-	const params  = asObject(searchParams);
-	const changes = {};
-
-	const set    = params[config.setSearchParam];
-	const volume = params[config.volumeSearchParam];
-	const tempo  = params[config.tempoSearchParam];
-	const title  = params[config.titleSearchParam];
-
-	if (set    != null) decodeSet(config, state, set, changes);
-	if (volume != null) decodeVolumes(config, state, volume, changes);
-	if (tempo  != null) changes.tempo = decodeTempo(config, tempo);
-	if (title  != null) changes.title = title;
-
-	return Object.keys(changes).length === 0 ? null : changes;
-}
-
-export function decodeAll(config, searchParams, state) {
-	return decode(config, {
-		[config.setSearchParam]:    config.defaultSetValue,
-		[config.volumeSearchParam]: config.defaultVolume,
-		[config.tempoSearchParam]:  config.defaultTempo,
-		[config.titleSearchParam]:  '',
-		...asObject(searchParams),
-	}, state);
-}
-
-export function decodeInitial(config, searchParams) {
-	return decode(config, searchParams, initialState(config)) ?? {};
-}
-
-function decodeSet(config, state, encodedValues, changes) {
-	const sheetChanges  = [];
-	const tracksChanges = [];
-	const isVirginTrack = !state.tracks;
-	const isVirginSheet = !state.sheet;
+function decodeSet(config, order, encodedValues, song) {
 	const {
 		formatDigits: digits, trackFormatSeparator, trackFormatAllocation: allocation, trackHeaderLength,
-		defaultSetValue, barsValues, beatsValues, stepsValues, phraseValues,
-		defaultBars, defaultBeats, defaultSteps, defaultPhrase,
-		tracksLength, resolution: { maxBars, maxBeats, bar, beat },
+		defaultSetValue, defaultTrack, barsValues, beatsValues, stepsValues, phraseValues,
+		tracksLength, resolution: { bar, beat, track: trackSize },
 	} = config;
 
 	const allocationKeys = Object.keys(allocation);
 	const values         = encodedValues.split(trackFormatSeparator);
-	const limitTracks    = isVirginTrack ? Math.min(values.length, tracksLength) : tracksLength;
 
-	for (let i = 0; i < limitTracks; i++) {
-		const trackChanges = {};
-		const id    = state.order[i];
-		const track = state.tracks?.[id] || emptyTrack(config, id);
-		const data  = (values[i] || '').padEnd(trackHeaderLength, defaultSetValue);
-
-		const instrument   = fromDigits(data.slice(0, 1), digits);
-		const packedValues = fromDigits(data.slice(1, trackHeaderLength), digits);
-		const paramsValues = unpack(packedValues, allocation, allocationKeys);
-		const base         = BigInt(paramsValues.base + 2);
-
-		const params = {
-			bars:       fromCode(paramsValues.bars,   barsValues,   defaultBars),
-			beats:      fromCode(paramsValues.beats,  beatsValues,  defaultBeats),
-			steps:      fromCode(paramsValues.steps,  stepsValues,  defaultSteps),
-			phrase:     fromCode(paramsValues.phrase, phraseValues, defaultPhrase),
-			instrument,
+	for (let i = 0; i < tracksLength; i++) {
+		const id     = order[i];
+		const data   = (values[i] || '').padEnd(trackHeaderLength, defaultSetValue);
+		const packed = unpack(fromDigits(data.slice(1, trackHeaderLength), digits), allocation, allocationKeys);
+		const base   = BigInt(packed.base + 2);
+		const track  = {
+			bars:       fromCode(packed.bars,   barsValues,   defaultTrack.bars),
+			beats:      fromCode(packed.beats,  beatsValues,  defaultTrack.beats),
+			steps:      fromCode(packed.steps,  stepsValues,  defaultTrack.steps),
+			phrase:     fromCode(packed.phrase, phraseValues, defaultTrack.phrase),
+			instrument: fromDigits(data.slice(0, 1), digits),
 		};
+		song.tracks[id] = track;
 
-		for (const key in params) {
-			if (track[key] !== params[key]) {
-				trackChanges[key] = params[key];
-			}
-		}
-
-		let sheetNumber   = toBigInt(data.slice(trackHeaderLength), digits);
-		const limitBars   = isVirginTrack ? params.bars  : maxBars;
-		const limitBeats  = isVirginTrack ? params.beats : maxBeats;
-		const limitSteps  = isVirginTrack ? params.steps : beat;
-
-		loop:
-		for (let barIndex = 0; barIndex < limitBars; barIndex++) {
-			const barOffset   = track.sheetIndex + (barIndex * bar);
-			const isBarActive = barIndex < params.bars;
-
-			for (let beatIndex = 0; beatIndex < limitBeats; beatIndex++) {
-				const beatOffset   = barOffset + (beatIndex * beat);
-				const isBeatActive = isBarActive && beatIndex < params.beats;
-
-				for (let stepIndex = 0; stepIndex < limitSteps; stepIndex++) {
-					if (isVirginSheet && sheetNumber === 0n) break loop;
-
-					const bufferIndex = beatOffset + stepIndex;
-
-					let value = 0;
-					if (isBeatActive && stepIndex < params.steps && sheetNumber > 0n) {
-						value = Number(sheetNumber % base);
-						sheetNumber /= base;
-					}
-
-					const currentValue = state.sheet?.[bufferIndex] ?? 0;
-
-					if (value !== currentValue) {
-						sheetChanges.push({ stepIndex: bufferIndex, value });
-					}
+		// Les frappes sont rangées case par case, mesure par mesure, en base « base »
+		const start     = id * trackSize;
+		let sheetNumber = toBigInt(data.slice(trackHeaderLength), digits);
+		for (let barIndex = 0; barIndex < track.bars && sheetNumber > 0n; barIndex++) {
+			for (let beatIndex = 0; beatIndex < track.beats && sheetNumber > 0n; beatIndex++) {
+				for (let stepIndex = 0; stepIndex < track.steps && sheetNumber > 0n; stepIndex++) {
+					song.sheet[start + barIndex * bar + beatIndex * beat + stepIndex] = Number(sheetNumber % base);
+					sheetNumber /= base;
 				}
 			}
 		}
-
-		if (Object.keys(trackChanges).length) {
-			tracksChanges.push({ id, changes: trackChanges });
-		}
 	}
-
-	if (sheetChanges.length)  changes.sheet  = sheetChanges;
-	if (tracksChanges.length) changes.tracks = tracksChanges;
 }
 
 function decodeTempo({ defaultTempo, tempoMin, tempoMax, tempoStep }, value) {
@@ -131,36 +58,13 @@ function decodeTempo({ defaultTempo, tempoMin, tempoMax, tempoStep }, value) {
 	return Math.min(tempoMax, Math.max(tempoMin, snapped));
 }
 
-function decodeVolumes(config, state, encodedValues, changes) {
+function decodeVolumes(config, order, encodedValues, song) {
 	const { formatDigits: digits, tracksLength, defaultGain, defaultVolume, maxGain } = config;
-	const volumesChanges = [];
-
 	for (let index = 0; index < tracksLength; index++) {
 		const encodeVolume = (index < encodedValues.length) ? encodedValues[index] : defaultVolume;
 		const decoded      = digits.indexOf(encodeVolume);
-		const value        = (decoded >= 0 && decoded <= maxGain) ? decoded : defaultGain;
-		const id           = state.order[index];
-		const currentValue = state.volumes?.[id] ?? defaultGain;
-		if (value !== currentValue) {
-			volumesChanges.push({ id, value });
-		}
+		song.volumes[order[index]] = (decoded >= 0 && decoded <= maxGain) ? decoded : defaultGain;
 	}
-
-	if (volumesChanges.length > 0) {
-		changes.volumes = volumesChanges;
-	}
-}
-
-function emptyTrack(config, index) {
-	const { defaultBars, defaultBeats, defaultSteps, defaultPhrase, defaultInstrument, resolution } = config;
-	return {
-		bars:       defaultBars,
-		beats:      defaultBeats,
-		steps:      defaultSteps,
-		phrase:     defaultPhrase,
-		instrument: defaultInstrument,
-		sheetIndex: resolution.track * index,
-	};
 }
 
 function fromCode(code, values, defaultValue) {
@@ -188,10 +92,4 @@ function unpack(value, allocation, keys) {
 		value = (value / base) | 0;
 	}
 	return result;
-}
-
-function asObject(searchParams) {
-	return searchParams instanceof URLSearchParams
-		? Object.fromEntries(searchParams.entries())
-		: searchParams;
 }

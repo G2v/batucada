@@ -16,55 +16,16 @@ export function encodeUrl(config, { values, state, searchParams }) {
 		[titleSearchParam]:  () => state.title,
 	};
 
-	let changed = false;
-	const processedParams = new Set();
-
-	for (const item in values) {
-		const paramName = urlMap[item];
-		if (!paramName || processedParams.has(paramName)) continue;
-		const encodedValue = encoders[paramName]() || null;
-		const currentValue = searchParams[paramName] || null;
-		if (encodedValue !== currentValue) {
-			encodedValue ? (searchParams[paramName] = encodedValue) : delete searchParams[paramName];
-			changed = true;
-		}
-		processedParams.add(paramName);
+	const params = new URLSearchParams(searchParams);
+	let changed  = false;
+	for (const name of new Set(Object.keys(values).map(item => urlMap[item]).filter(Boolean))) {
+		const encoded = encoders[name]() || null;
+		if (encoded === (params.get(name) || null)) continue;
+		if (encoded) params.set(name, encoded);
+		else params.delete(name);
+		changed = true;
 	}
-
-	return changed ? searchParams : null;
-}
-
-export function moveTrack(config, { values: { trashed, order, previousOrder }, searchParams }) {
-	const { setSearchParam, volumeSearchParam, defaultVolume, trackFormatSeparator } = config;
-
-	const setSource   = (searchParams[setSearchParam] || '').split(trackFormatSeparator);
-	const volSource   = (searchParams[volumeSearchParam] || '');
-	const lastEncoded = Number(trashed !== null && previousOrder.indexOf(trashed) < setSource.length);
-	const setLength   = setSource.length - lastEncoded;
-
-	const newSetArray = new Array(setLength);
-	const newVolArray = new Array(setLength);
-	let lastVolIndex  = -1;
-
-	for (let i = 0; i < setLength; i++) {
-		const id        = order[i];
-		const oldIndex  = previousOrder.indexOf(id);
-		const isTrashed = id === trashed;
-		newSetArray[i] = isTrashed ? '' : (setSource[oldIndex] || '');
-		newVolArray[i] = isTrashed ? defaultVolume : (volSource[oldIndex] || defaultVolume);
-		if (newVolArray[i] !== defaultVolume) lastVolIndex = i;
-	}
-
-	const newSet = newSetArray.join(trackFormatSeparator);
-	const newVol = lastVolIndex === -1 ? '' : newVolArray.slice(0, lastVolIndex + 1).join('');
-
-	if (newSet) searchParams[setSearchParam] = newSet;
-	else delete searchParams[setSearchParam];
-
-	if (newVol) searchParams[volumeSearchParam] = newVol;
-	else delete searchParams[volumeSearchParam];
-
-	return searchParams;
+	return changed ? params : null;
 }
 
 function encodeSet(config, { tracks, sheet, order }) {
@@ -73,8 +34,7 @@ function encodeSet(config, { tracks, sheet, order }) {
 	const encodedParts = [];
 
 	for (const id of order) {
-		const track   = tracks?.[id] || emptyTrack(config, id);
-		const encoded = encodeTrack(config, track, sheet);
+		const encoded = encodeTrack(config, { ...tracks[id], sheetIndex: id * config.resolution.track }, sheet);
 		if (encoded === emptyValue) break;
 		encodedParts.push(encoded);
 	}
@@ -85,7 +45,7 @@ function encodeSet(config, { tracks, sheet, order }) {
 function encodeTrack(config, track, sheet) {
 	const {
 		formatDigits: digits, trackFormatAllocation: allocation, trackHeaderLength,
-		defaultSteps, defaultBeats, defaultBars, defaultPhrase,
+		defaultTrack: { steps: defaultSteps, beats: defaultBeats, bars: defaultBars, phrase: defaultPhrase },
 	} = config;
 	const strokes = readStrokes(config, track, sheet);
 	const base    = Math.max(1, ...strokes) + 1;
@@ -107,7 +67,6 @@ function encodeTrack(config, track, sheet) {
 
 function readStrokes({ resolution: { bar, beat } }, track, sheet) {
 	const strokes = [];
-	if (sheet === null) return strokes;
 	for (let barIndex = 0; barIndex < track.bars; barIndex++) {
 		const barOffset = track.sheetIndex + (barIndex * bar);
 		for (let beatIndex = 0; beatIndex < track.beats; beatIndex++) {
@@ -146,18 +105,6 @@ function encodeVolumes(config, { volumes, order }) {
 
 	if (last === -1) return '';
 	return parts.slice(0, last + 1).join('');
-}
-
-function emptyTrack(config, index) {
-	const { defaultBars, defaultBeats, defaultSteps, defaultPhrase, defaultInstrument, resolution } = config;
-	return {
-		bars:       defaultBars,
-		beats:      defaultBeats,
-		steps:      defaultSteps,
-		phrase:     defaultPhrase,
-		instrument: defaultInstrument,
-		sheetIndex: resolution.track * index,
-	};
 }
 
 function pack(values, allocation) {

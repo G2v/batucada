@@ -12,9 +12,8 @@ export default class InterfaceAria {
 	static #navigationKeys   = Object.freeze(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
 
 	#ui;
+	#store;
 	#names;
-	#events;
-	#trackKeys;
 	#resolution;
 	#emptyStroke;
 	#instruments;
@@ -29,25 +28,22 @@ export default class InterfaceAria {
 	#sheetNodes     = [];
 	#verticalRoving = null;
 
-	constructor({ bus, parent, config, initial = {} }) {
+	constructor({ parent, config, store, audio }) {
 		this.#ui                = parent;
-		this.#events            = config.events;
+		this.#store             = store;
 		this.#names             = config.names;
-		this.#trackKeys         = config.trackKeys;
 		this.#resolution        = config.resolution;
 		this.#emptyStroke       = config.emptyStroke;
-		this.#defaultPhrase     = config.defaultPhrase;
-		this.#defaultInstrument = config.defaultInstrument;
-		this.#init(config, initial);
-		bus.addEventListener(this.#events.audioStop,           () => this.#playing = false);
-		bus.addEventListener(this.#events.interfaceReset,      () => this.#resetAllRoving());
-		bus.addEventListener(this.#events.interfaceMoveTrack,  ({ detail }) => this.#resetMovedRoving(detail));
-		bus.addEventListener(this.#events.interfaceUpdateData, ({ detail }) => this.update(detail));
+		this.#defaultPhrase     = config.defaultTrack.phrase;
+		this.#defaultInstrument = config.defaultTrack.instrument;
+		this.#init(config);
+		store.addEventListener('change', ({ detail }) => this.#ready.then(() => this.#render(detail)));
+		audio.addEventListener('stop',   () => this.#ui.startButton.ariaChecked = false);
 		this.#ui.trackList.addEventListener('keydown', (event) => this.#navigate(event));
 		this.#ui.trackList.addEventListener('focusin', (event) => this.#syncTabIndex(event));
 	}
 
-	#init({ selectors, instrumentsLibraryReady }, initial) {
+	#init({ selectors, instrumentsLibraryReady }) {
 		const track      = this.#ui.trackTemplate;
 		const row        = track.querySelector(InterfaceAria.#scopeRowSelector);
 		const steps      = Array.from(track.querySelectorAll(selectors.stepButton));
@@ -78,9 +74,9 @@ export default class InterfaceAria {
 
 		this.#ready = instrumentsLibraryReady.then(({ instruments }) => {
 			this.#instruments = Object.fromEntries(instruments.map(instrument => [instrument.id, instrument]));
+			const modified = this.#store.state.tracks.flatMap((_, id) => this.#store.isModified(id) ? [id] : []);
+			this.#render({ tempo: true, tracks: modified, steps: [], volumes: modified });
 		});
-
-		this.update(initial);
 	}
 
 	static #readTemplate(element) {
@@ -103,8 +99,11 @@ export default class InterfaceAria {
 		return this.#instruments[instrument]?.strokes[value - 1]?.name || null;
 	}
 
-	#labelStep(stepIndex, value, instrument) {
-		const step     = this.#ui.steps[stepIndex];
+	#labelStep(stepIndex) {
+		const { sheet, tracks } = this.#store.state;
+		const value      = sheet[stepIndex];
+		const instrument = tracks[stepIndex / this.#resolution.track | 0].instrument;
+		const step       = this.#ui.steps[stepIndex];
 		const template = this.#templates.stepLabels[stepIndex % this.#resolution.beat];
 		const isEmpty  = value === this.#emptyStroke;
 		const stroke   = isEmpty ? null : this.#strokeName(instrument, value);
@@ -115,13 +114,9 @@ export default class InterfaceAria {
 			: template.empty;
 	}
 
-	#trackValue(trackIndex, key, changes) {
-		return changes[key] ?? this.#ui.tracks[trackIndex].dataset[key] | 0;
-	}
-
-	#labelTrack(trackIndex, changes) {
-		const instrument    = this.#trackValue(trackIndex, this.#trackKeys.instrument, changes);
-		const phraseName    = this.#phraseNames[this.#trackValue(trackIndex, this.#trackKeys.phrase, changes)];
+	#labelTrack(trackIndex) {
+		const { instrument, phrase: phraseValue } = this.#store.state.tracks[trackIndex];
+		const phraseName    = this.#phraseNames[phraseValue];
 		const hasInstrument = this.#hasInstrument(instrument);
 		const { empty, filled, phrase } = this.#templates.rowLabel;
 
@@ -133,11 +128,11 @@ export default class InterfaceAria {
 		});
 	}
 
-	#relabelSteps(trackIndex, instrument) {
+	#relabelSteps(trackIndex) {
+		const { sheet } = this.#store.state;
 		const offset = trackIndex * this.#resolution.track;
-		for (let local = 0; local < this.#resolution.track; local++) {
-			const value = this.#ui.steps[offset + local].value | 0;
-			if (value !== this.#emptyStroke) this.#labelStep(offset + local, value, instrument);
+		for (let index = offset; index < offset + this.#resolution.track; index++) {
+			if (sheet[index] !== this.#emptyStroke) this.#labelStep(index);
 		}
 	}
 
@@ -168,7 +163,7 @@ export default class InterfaceAria {
 			case 'ArrowDown': {
 				const isDown    = key === 'ArrowDown';
 				const nextTrack = isDown ? currentTrack.nextElementSibling : currentTrack.previousElementSibling;
-				if (!nextTrack || (isDown && this.#ui.isTrackEmpty(currentTrack))) return null;
+				if (!nextTrack || (isDown && this.#store.isEmpty(this.#ui.getTrackIndex(currentTrack)))) return null;
 				const verticalIndex = this.#verticalRoving ?? currentStepIndex;
 				return { nextTrack, nextStepIndex: this.#clampPosition(verticalIndex, nextTrack.dataset), verticalIndex };
 			}
@@ -212,10 +207,6 @@ export default class InterfaceAria {
 		this.#updateTabIndex(null, target, this.#ui.getTrackIndex(this.#ui.getTrack(target)));
 	}
 
-	#resetMovedRoving({ trashed }) {
-		if (trashed !== null) this.#resetRoving(trashed);
-	}
-
 	#resetAllRoving() {
 		this.#ui.tracks.forEach((_, index) => this.#resetRoving(index));
 	}
@@ -225,16 +216,11 @@ export default class InterfaceAria {
 		if (first.tabIndex !== 0) this.#updateTabIndex(null, first, trackIndex);
 	}
 
-	#clampRoving(trackIndex, changes = {}) {
-		const { bars, beats, steps } = this.#trackKeys;
+	#clampRoving(trackIndex) {
 		const roving = this.#roving(trackIndex);
 		const offset = trackIndex * this.#resolution.track;
 		const local  = roving ? this.#ui.getStepIndex(roving) - offset : 0;
-		const step   = this.#ui.steps[offset + this.#clampPosition(local, {
-			bars:  this.#trackValue(trackIndex, bars,  changes),
-			beats: this.#trackValue(trackIndex, beats, changes),
-			steps: this.#trackValue(trackIndex, steps, changes),
-		})];
+		const step   = this.#ui.steps[offset + this.#clampPosition(local, this.#store.state.tracks[trackIndex])];
 
 		if (step && step !== roving) this.#updateTabIndex(roving, step, trackIndex);
 	}
@@ -249,59 +235,34 @@ export default class InterfaceAria {
 		newTarget.tabIndex = 0;
 	}
 
-	update(changes) {
-		this.#ready.then(() => this.#apply(changes));
+	#render({ tempo, tracks, steps, volumes, trashed, reset }) {
+		if (tempo) this.#renderTempo();
+		tracks.forEach(id => this.#renderTrack(id));
+		steps.forEach(index => this.#labelStep(index));
+		volumes.forEach(id => this.#renderVolume(id));
+		if (trashed !== undefined) this.#resetRoving(trashed);
+		if (reset) this.#resetAllRoving();
 	}
 
-	#apply({ tempo, sheet, tracks, volumes, playing }) {
-		if (tempo   !== undefined) this.#tempo   = tempo;
-		if (tracks  !== undefined) this.#tracks  = tracks;
-		/* sheet doit être défini après tracks */
-		if (sheet   !== undefined) this.#sheet   = sheet;
-		if (volumes !== undefined) this.#volumes = volumes;
-		if (playing !== undefined) this.#playing = playing;
-	}
-
-	set #playing(value) {
-		this.#ui.startButton.ariaChecked = value;
-	}
-
-	set #tempo(value) {
+	#renderTempo() {
 		this.#ui.tempoSlider.ariaValueText = InterfaceAria.#format(this.#templates.tempoValuetext, {
-			[InterfaceAria.#bpmToken]: value
+			[InterfaceAria.#bpmToken]: this.#store.state.tempo
 		});
 	}
 
-	set #sheet(values) {
-		for (const { stepIndex, value } of values) {
-			const track = this.#ui.tracks[stepIndex / this.#resolution.track | 0];
-			this.#labelStep(stepIndex, value, this.#ui.getTrackInstrument(track));
-		}
+	#renderTrack(id) {
+		this.#ui.instruments[id].ariaLabel = this.#hasInstrument(this.#store.state.tracks[id].instrument)
+			? this.#templates.instrumentLabel.filled
+			: this.#templates.instrumentLabel.empty;
+		this.#relabelSteps(id);
+		this.#labelTrack(id);
+		this.#clampRoving(id);
 	}
 
-	set #tracks(values) {
-		for (const { id, changes } of values) {
-			const { instrument, phrase } = changes;
-
-			if (instrument !== undefined) {
-				this.#ui.instruments[id].ariaLabel = this.#hasInstrument(instrument)
-					? this.#templates.instrumentLabel.filled
-					: this.#templates.instrumentLabel.empty;
-				this.#relabelSteps(id, instrument);
-			}
-
-			if (instrument !== undefined || phrase !== undefined) this.#labelTrack(id, changes);
-			this.#clampRoving(id, changes);
-		}
-	}
-
-	set #volumes(values) {
-		for (const { id } of values) {
-			const volume  = this.#ui.volumes[id];
-			const percent = Math.round((volume.value | 0) * this.#volumeRatioPerCent);
-			volume.ariaValueText = InterfaceAria.#format(this.#templates.volumeValuetext, {
-				[InterfaceAria.#volumeToken]: percent
-			});
-		}
+	#renderVolume(id) {
+		const percent = Math.round(this.#store.state.volumes[id] * this.#volumeRatioPerCent);
+		this.#ui.volumes[id].ariaValueText = InterfaceAria.#format(this.#templates.volumeValuetext, {
+			[InterfaceAria.#volumeToken]: percent
+		});
 	}
 }

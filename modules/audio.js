@@ -1,3 +1,4 @@
+import storage from '../config/storage.js';
 import { defer, fetchFromCache } from './utils.js';
 
 const decodeBase64 = Uint8Array.fromBase64
@@ -18,25 +19,22 @@ const toMono = (buffer) => {
 	return mono;
 };
 
-export class Audio {
+export class Audio extends EventTarget {
 	static #detuneRange = 10;
 
-	#bus;
-	#mono;
-	#events;
-	#gains;
+	#store;
 	#worker;
 	#sounds;
 	#maxGain;
 	#panNodes;
 	#gainNodes;
+	#resolution;
 	#masterGain;
-	#workerReady;
 	#emptyStroke;
 	#audioStream;
 	#audioContext;
-	#strokePreview;
-	#hiddenPlayDuration;
+	#preferences;
+	#defaultPreferences;
 
 	#playing          = false;
 	#wakeLock         = null;
@@ -45,73 +43,112 @@ export class Audio {
 	#instruments      = [];
 	#activeSources    = new Set();
 	#panByInstrument  = {};
-	#trackInstruments;
 
-	constructor({ bus, config, initial = {} }) {
-		this.#bus                 = bus;
-		this.#events              = config.events;
-		this.#maxGain             = config.maxGain;
-		this.#emptyStroke         = config.emptyStroke;
-		this.#gains               = Array.from({ length: config.tracksLength }, () => config.defaultGain / config.maxGain * Math.SQRT2);
-		this.#trackInstruments    = new Array(config.tracksLength).fill(config.defaultInstrument);
+	constructor({ config, store }) {
+		super();
+		this.#store       = store;
+		this.#maxGain     = config.maxGain;
+		this.#resolution  = config.resolution;
+		this.#emptyStroke = config.emptyStroke;
 
-		this.#applyPreferences({ ...config.defaultPreferences, ...JSON.parse(localStorage.preferences ?? '{}') });
+		if (navigator.audioSession) navigator.audioSession.type = 'playback';
 
-		this.#bus.addEventListener(this.#events.navigationDecoded,         ({ detail }) => this.#updateData(detail, true));
-		this.#bus.addEventListener(this.#events.navigationSequenceChanged, () => this.#restart());
-		this.#bus.addEventListener(this.#events.interfaceReset,            () => this.#reset());
-		this.#bus.addEventListener(this.#events.interfaceChange,           ({ detail }) => this.#change(detail));
-		this.#bus.addEventListener(this.#events.interfaceMoveTrack,        ({ detail }) => this.#moveTrack(detail));
-		this.#bus.addEventListener(this.#events.interfaceSetStroke,        ({ detail }) => this.#setStroke(detail));
-		this.#bus.addEventListener(this.#events.interfaceUpdateData,       ({ detail }) => this.#updateData(detail));
-		this.#bus.addEventListener(this.#events.interfaceUserGesture,      () => this.#startAudio(), { once: true });
-		this.#bus.addEventListener(this.#events.interfacePreferences,      ({ detail }) => this.#applyPreferences(detail));
-		document.addEventListener('visibilitychange',                      () => this.#handleVisibilityChange());
-		document.addEventListener('freeze',                                () => this.#playing && this.#stopHiddenPlay());
+		this.#defaultPreferences = config.defaultPreferences;
+		this.#preferences        = { ...config.defaultPreferences, ...JSON.parse(localStorage.preferences ?? '{}') };
+		this.#applyPreferences();
+
+		document.addEventListener('visibilitychange', () => this.#handleVisibilityChange());
+		document.addEventListener('freeze',           () => this.#playing && this.#stopHiddenPlay());
 
 		this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 		this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
+		this.#worker.postMessage({ action: 'config', payload: { resolution: config.resolution } });
+		this.#postSong(true);
+		store.addEventListener('change', ({ detail }) => this.#storeChanged(detail));
 
-		this.#workerReady = this.#configureWorker(config);
-		this.#updateData(initial, true);
-
-		this.#sounds = this.#fetchInstrumentSounds(config.dataCache, config.instrumentsSoundsFile);
+		this.#loadInstrumentsLibrary(config.instrumentsLibraryReady).catch(() => {});
+		this.#sounds = this.#fetchInstrumentSounds();
 
 		defer(() => this.#ensureAudio());
-		defer(() => this.#ensureAudioStream());
+		defer(() => this.#preferences.hiddenPlayDuration && this.#ensureAudioStream());
 	}
 
-	async #configureWorker(config) {
-		const { instruments } = await config.instrumentsLibraryReady;
-		const instrumentsStrokes = Object.fromEntries(
-			instruments.map(({ id, strokes }) => [id, strokes.length])
-		);
-		this.#panByInstrument = Object.fromEntries(
-			instruments.map(({ id, pan = 0 }) => [id, pan])
-		);
-		this.#trackInstruments.forEach((_, id) => this.#updatePan(id));
-		this.#worker.postMessage({
-			action: 'config',
-			payload: {
-				tempo:         config.defaultTempo,
-				resolution:    config.resolution,
-				emptyStroke:   config.emptyStroke,
-				tracksLength:  config.tracksLength,
-				defaultData:   {
-					bars:       config.defaultBars,
-					beats:      config.defaultBeats,
-					steps:      config.defaultSteps,
-					phrase:     config.defaultPhrase,
-					volume:     config.defaultGain,
-					instrument: config.defaultInstrument,
-				},
-				instrumentsStrokes,
-			},
+	// Autre morceau ouvert : la lecture reprend au début
+	restart() {
+		this.#worker.postMessage({ action: 'restart' });
+		this.dispatchEvent(new Event('restart'));
+	}
+
+	unlock() {
+		this.#startAudio();
+	}
+
+	async preview(index, stroke) {
+		await this.#startAudio();
+		if (!this.#preferences.strokePreview || this.#playing || stroke <= this.#emptyStroke) return;
+		const id = index / this.#resolution.track | 0;
+		this.#playNote(this.#store.state.tracks[id].instrument, id, stroke);
+	}
+
+	get playing() {
+		return this.#playing;
+	}
+
+	get preferences() {
+		return { ...this.#preferences };
+	}
+
+	setPreferences(values) {
+		this.#preferences = { ...this.#preferences, ...values };
+		const changed = Object.entries(this.#defaultPreferences)
+			.filter(([name, initial]) => this.#preferences[name] !== initial)
+			.map(([name]) => [name, this.#preferences[name]]);
+		if (changed.length) localStorage.preferences = JSON.stringify(Object.fromEntries(changed));
+		else delete localStorage.preferences;
+		this.#applyPreferences();
+	}
+
+	#applyPreferences() {
+		this.#updatePans();
+		if (!this.#preferences.hiddenPlayDuration) this.#releaseAudioStream();
+		else if (this.#playing) this.#ensureAudioStream().play().catch(() => {});
+	}
+
+	#storeChanged({ tempo, tracks, steps, volumes, order, reset }) {
+		if (reset) this.#muteSchedulesNotes();
+		volumes.forEach((id) => this.#updateGain(id));
+		if (tracks.size) this.#updatePans();
+		if (tempo) this.#worker.postMessage({ action: 'song', payload: { tempo: this.#store.state.tempo } });
+		if (tracks.size || steps.size || order) this.#postSong();
+	}
+
+	#postSong(withTempo = false) {
+		const { state, activeTracks } = this.#store;
+		const active = new Set(activeTracks);
+		const sheet  = state.sheet.slice();
+		const tracks = state.tracks.map((track, id) => ({ ...track, sheetIndex: id * this.#resolution.track, active: active.has(id) }));
+		const payload = withTempo ? { tempo: state.tempo, tracks, sheet } : { tracks, sheet };
+		this.#worker.postMessage({ action: 'song', payload }, [sheet.buffer]);
+	}
+
+	async #loadInstrumentsLibrary(instrumentsLibraryReady) {
+		const { instruments } = await instrumentsLibraryReady;
+		this.#panByInstrument = Object.fromEntries(instruments.map(({ id, pan = 0 }) => [id, pan]));
+		this.#updatePans();
+	}
+
+	#gainOf(id) {
+		return this.#store.state.volumes[id] / this.#maxGain * Math.SQRT2;
+	}
+
+	#updateGain(id) {
+		if (this.#gainNodes) this.#gainNodes[id].gain.value = this.#gainOf(id);
+	}
+
+	#updatePans() {
+		this.#panNodes?.forEach((node, id) => {
+			node.pan.value = this.#preferences.audio === 'mono' ? 0 : this.#panByInstrument[this.#store.state.tracks[id].instrument] ?? 0;
 		});
-	}
-
-	#post(message) {
-		this.#workerReady.then(() => this.#worker.postMessage(message));
 	}
 
 	#ensureAudio() {
@@ -125,10 +162,12 @@ export class Audio {
 		this.#masterGain = new GainNode(this.#audioContext);
 		this.#masterGain.connect(this.#audioContext.destination);
 
-		this.#panNodes  = this.#trackInstruments.map((_, id) => new StereoPannerNode(this.#audioContext, { pan: this.#panOf(id) }));
-		this.#gainNodes = this.#gains.map((gain, index) => {
-			const gainNode = new GainNode(this.#audioContext, { gain });
-			gainNode.connect(this.#panNodes[index]).connect(this.#masterGain);
+		const tracks = this.#store.state.tracks;
+		this.#panNodes  = tracks.map(() => new StereoPannerNode(this.#audioContext));
+		this.#updatePans();
+		this.#gainNodes = tracks.map((_, id) => {
+			const gainNode = new GainNode(this.#audioContext, { gain: this.#gainOf(id) });
+			gainNode.connect(this.#panNodes[id]).connect(this.#masterGain);
 			return gainNode;
 		});
 
@@ -139,22 +178,24 @@ export class Audio {
 		return this.#audioStream ??= this.#createAudioStream();
 	}
 
+	#releaseAudioStream() {
+		if (!this.#audioStream) return;
+		URL.revokeObjectURL(this.#audioStream.src);
+		this.#audioStream.removeAttribute('src');
+		this.#audioStream.load();
+		this.#audioStream = null;
+	}
+
 	#createAudioStream() {
-		const volume = 1000;
-		const frequency = 20;
 		const sampleRate = 8000;
-		const length = sampleRate * 10;
-		const header = new ArrayBuffer(44);
-		const view = new DataView(header);
-		const writeString = (offset, string) => {
-			for (let i = 0; i < string.length; i++) {
-				view.setUint8(offset + i, string.charCodeAt(i));
-			}
-		};
-		writeString(0, 'RIFF');
+		const length     = sampleRate * 10;
+		const buffer     = new ArrayBuffer(44 + length * 2);
+		const view       = new DataView(buffer);
+		const samples    = new Int16Array(buffer, 44);
+		for (const [offset, tag] of [[0, 'RIFF'], [8, 'WAVE'], [12, 'fmt '], [36, 'data']]) {
+			for (let i = 0; i < 4; i++) view.setUint8(offset + i, tag.charCodeAt(i));
+		}
 		view.setUint32(4, 36 + length * 2, true);
-		writeString(8, 'WAVE');
-		writeString(12, 'fmt ');
 		view.setUint32(16, 16, true);
 		view.setUint16(20, 1, true);
 		view.setUint16(22, 1, true);
@@ -162,27 +203,14 @@ export class Audio {
 		view.setUint32(28, sampleRate * 2, true);
 		view.setUint16(32, 2, true);
 		view.setUint16(34, 16, true);
-		writeString(36, 'data');
 		view.setUint32(40, length * 2, true);
-		const samplesPerCycle = sampleRate / frequency;
-		const cycleData = new Int16Array(samplesPerCycle);
-		const step = (2 * Math.PI * frequency) / sampleRate;
-		for (let i = 0; i < samplesPerCycle; i++) {
-			cycleData[i] = Math.sin(i * step) * volume;
-		}
-		const pcmData = new Int16Array(length);
-		for (let i = 0; i < length; i += samplesPerCycle) {
-			pcmData.set(cycleData, i);
-		}
-		const blob = new Blob([header, pcmData.buffer], { type: 'audio/wav' });
-		const audioStream = new window.Audio(URL.createObjectURL(blob));
-		audioStream.loop = true;
-		audioStream.volume = 0.001;
-		return audioStream;
+		for (let i = 0; i < length; i++) samples[i] = Math.sin(2 * Math.PI * 20 * i / sampleRate) * 1000;
+		const url = URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+		return Object.assign(new window.Audio(url), { loop: true, volume: 0.001 });
 	}
 
-	async #fetchInstrumentSounds(cacheName, fileName) {
-		const response = await fetchFromCache(cacheName, fileName);
+	async #fetchInstrumentSounds() {
+		const response = await fetchFromCache(storage.instrumentsSoundsFile);
 		const json = await response.json();
 		return Object.entries(json).map(([id, sounds]) => [id, sounds.map(dataURIToBuffer)]);
 	}
@@ -197,37 +225,18 @@ export class Audio {
 		this.#instruments = Object.fromEntries(entries);
 	}
 
-	#handleWorkerMessage(data) {
-		data.forEach(({ action, payload }) => {
-			if (action === 'ticks') {
-				this.#playTicks(payload);
-			}
-			else if (action === 'stop') {
-				this.#stopAudio();
-			}
-			else if (action === 'updateData') {
-				this.#updateChannels(payload);
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.audioUpdateData, { detail: payload }));
-			}
-			else if (action === 'playNote') {
-				if (!this.#strokePreview) return;
-				const { instrument, gainIndex, stroke } = payload;
-				this.#playNote(instrument, gainIndex, stroke);
-			}
-			else if (action === 'changed') {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.audioChanged, { detail: payload }));
-			}
-			else if (action === 'state') {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.audioState, { detail: payload }));
-			}
-		});
+	#handleWorkerMessage({ action, payload }) {
+		if (action === 'ticks') this.#playTicks(payload);
+		else if (action === 'stop') this.#stopAudio();
 	}
 
-	async #start() {
+	// Lance la lecture
+	async play() {
 		await this.#startAudio();
-		this.#ensureAudioStream().play().catch(() => {});
-		this.#post({ action: 'start', payload: this.#audioContext.currentTime });
+		if (this.#preferences.hiddenPlayDuration) this.#ensureAudioStream().play().catch(() => {});
+		this.#worker.postMessage({ action: 'start', payload: this.#audioContext.currentTime });
 		this.#playing = true;
+		this.dispatchEvent(new Event('play'));
 		this.#handleVisibilityChange();
 	}
 
@@ -238,9 +247,10 @@ export class Audio {
 			: Promise.resolve();
 	}
 
-	#stop() {
+	// Arrête la lecture
+	stop() {
 		if (!this.#audioContext) return;
-		this.#post({ action: 'stop', payload: this.#audioContext.currentTime });
+		this.#worker.postMessage({ action: 'stop' });
 		this.#muteSchedulesNotes();
 		this.#stopAudio();
 	}
@@ -254,16 +264,7 @@ export class Audio {
 			this.#audioStream.pause();
 			this.#audioStream.currentTime = 0;
 		}
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.audioStop));
-	}
-
-	#reset() {
-		this.#post({ action: 'reset' });
-		this.#muteSchedulesNotes();
-	}
-
-	#restart() {
-		this.#post({ action: 'restart' });
+		this.dispatchEvent(new Event('stop'));
 	}
 
 	#playTicks(ticks) {
@@ -289,7 +290,7 @@ export class Audio {
 				stroke,
 			});
 		}
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.audioPushAnimations, { detail: { animations } }));
+		this.dispatchEvent(new CustomEvent('animations', { detail: { animations } }));
 	}
 
 	#audibleTimeDelta() {
@@ -299,76 +300,23 @@ export class Audio {
 		return performance.now() - (currentTime - baseLatency - outputLatency) * 1000;
 	}
 
-	async #setStroke(payload) {
-		await this.#startAudio();
-		this.#post({ action: 'setStroke', payload });
-	}
-
-	#change(payload) {
-		this.#post({ action: 'change', payload });
-	}
-
-	#moveTrack(indexes) {
-		this.#post({ action: 'moveTrack', payload: indexes });
-	}
-
-	#updateData(changes, sendState) {
-		const { tempo, sheet, tracks, volumes, playing } = changes;
-		if ((tempo ?? sheet ?? tracks ?? volumes ?? playing) === undefined) return;
-
-		if (playing === true) this.#start();
-		else if (playing === false) this.#stop();
-
-		const payload = { tempo, sheet, tracks, volumes };
-		payload.sendState = sendState === true;
-		this.#post({ action: 'updateData', payload });
-		this.#updateChannels(changes);
-	}
-
-	#updateChannels({ volumes = [], tracks = [] }) {
-		for (const { id, value } of volumes) {
-			this.#gains[id] = value / this.#maxGain * Math.SQRT2;
-			if (this.#gainNodes) this.#gainNodes[id].gain.value = this.#gains[id];
-		}
-		for (const { id, changes: { instrument } } of tracks) {
-			if (instrument === undefined) continue;
-			this.#trackInstruments[id] = instrument;
-			this.#updatePan(id);
-		}
-	}
-
-	#applyPreferences({ audio, strokePreview, hiddenPlayDuration }) {
-		this.#mono               = audio === 'mono';
-		this.#strokePreview      = strokePreview;
-		this.#hiddenPlayDuration = hiddenPlayDuration;
-		this.#trackInstruments.forEach((_, id) => this.#updatePan(id));
-	}
-
-	#panOf(id) {
-		return this.#mono ? 0 : this.#panByInstrument[this.#trackInstruments[id]] ?? 0;
-	}
-
-	#updatePan(id) {
-		if (this.#panNodes) this.#panNodes[id].pan.value = this.#panOf(id);
-	}
-
 	#handleVisibilityChange() {
 		clearTimeout(this.#hiddenTimer);
 		this.#hiddenTimer = null;
 		if (!this.#playing) return;
 
-		if (document.hidden) this.#hiddenTimer = setTimeout(() => this.#stopHiddenPlay(), this.#hiddenPlayDuration * 1000);
+		if (document.hidden) this.#hiddenTimer = setTimeout(() => this.#stopHiddenPlay(), this.#preferences.hiddenPlayDuration * 1000);
 		else this.#wakeLockRequest();
 	}
 
 	#stopHiddenPlay() {
-		this.#stop();
+		this.stop();
 		this.#audioContext.suspend();
 	}
 
 	#handleAudioStateChange() {
 		if (this.#audioContext.state !== 'running' && this.#hiddenTimer !== null) {
-			this.#stop();
+			this.stop();
 		}
 	}
 
@@ -412,5 +360,4 @@ export class Audio {
 		this.#wakeLock?.release().catch(() => {});
 		this.#wakeLock = null;
 	}
-
 }

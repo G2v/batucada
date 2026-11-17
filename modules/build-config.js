@@ -1,46 +1,9 @@
-import core_config from '../config/core.js';
+import storage from '../config/storage.js';
 
 const names = Object.freeze({
 	step:       'step',
 	volume:     'volume',
 	instrument: 'instrument',
-});
-
-const events = Object.freeze({
-	audioStop:           'audio:stop',
-	audioState:          'audio:state',
-	audioChanged:        'audio:changed',
-	audioUpdateData:     'audio:updateData',
-	audioPushAnimations: 'audio:pushAnimations',
-
-	interfaceReset:       'interface:reset',
-	interfaceChange:      'interface:change',
-	interfaceSetStroke:   'interface:setStroke',
-	interfaceMoveTrack:   'interface:moveTrack',
-	interfaceUpdateData:  'interface:updateData',
-	interfaceUserGesture: 'interface:userGesture',
-	interfaceInstall:     'interface:install',
-	interfaceFindUpdate:  'interface:findUpdate',
-
-	interfaceShare:          'interface:share',
-	interfaceExport:         'interface:export',
-	interfaceImport:         'interface:import',
-	interfaceEditSave:       'interface:editSave',
-	interfaceEditCancel:     'interface:editCancel',
-	interfacePreferences:    'interface:preferences',
-	interfacePresetsDelete:  'interface:presetsDelete',
-	interfacePresetSelected: 'interface:presetSelected',
-
-	navigationDecoded:         'navigation:decoded',
-	navigationChanged:         'navigation:changed',
-	navigationCloseModal:      'navigation:closeModal',
-	navigationSequenceChanged: 'navigation:sequenceChanged',
-
-	presetsUpdateData:     'presets:updateData',
-	presetsInvalidName:    'presets:invalidName',
-	presetsPresetSelected: 'presets:presetSelected',
-
-	swClientNewVersion: 'sw-client:newVersion',
 });
 
 const selectors = Object.freeze({
@@ -107,14 +70,6 @@ const selectors = Object.freeze({
 	toastCancelButton: '#toast button',
 });
 
-const trackKeys = Object.freeze({
-	bars:       'bars',
-	beats:      'beats',
-	steps:      'steps',
-	phrase:     'phrase',
-	instrument: 'instrument',
-});
-
 const emptyStroke  = 0;
 const tracksLength = 24;
 
@@ -130,9 +85,9 @@ const trackHeaderLength     = 4;
 const trackFormatAllocation = Object.freeze({ base: 9, steps: 9, beats: 9, bars: 9, phrase: 9, reserve: 4 });
 
 const instrumentsLibraryReady = (async () => {
-	const url     = new URL(core_config.instrumentsMetadataFile, location.href).href;
+	const url     = new URL(storage.instrumentsMetadataFile, location.href).href;
 	const network = fetch(url);
-	const custom  = caches?.match(url, { cacheName: core_config.dataCache }).catch(() => null);
+	const custom  = caches?.match(url, { cacheName: storage.dataCache }).catch(() => null);
 
 	const cached = await custom;
 	if (cached) {
@@ -159,22 +114,30 @@ const phraseValues  = optionsValues(query(selectors.phraseSelect));
 const maxBars       = Math.max(...barsValues);
 const maxBeats      = Math.max(...beatsValues);
 const maxSteps      = Math.max(...stepsValues);
+const tempoSlider   = query(selectors.tempoSlider);
+const defaultTempo  = tempoSlider.value | 0;
+const tempoMin      = tempoSlider.min   | 0;
+const tempoMax      = tempoSlider.max   | 0;
+const tempoStep     = tempoSlider.step  | 0 || 1;
+const defaultGain   = volumeSlider.value | 0;
+const maxGain       = volumeSlider.max   | 0;
+const defaultVolume = formatDigits[defaultGain];
 
 const { bars, beats, steps, phrase, instrument } = trackTemplate.dataset;
+const defaultTrack = Object.freeze({
+	bars:       bars       | 0,
+	beats:      beats      | 0,
+	steps:      steps      | 0,
+	phrase:     phrase     | 0,
+	instrument: instrument | 0,
+});
 
-const tempoSlider       = query(selectors.tempoSlider);
-const defaultTempo      = tempoSlider.value | 0;
-const tempoMin          = tempoSlider.min   | 0;
-const tempoMax          = tempoSlider.max   | 0;
-const tempoStep         = tempoSlider.step  | 0 || 1;
-const defaultGain       = volumeSlider.value | 0;
-const maxGain           = volumeSlider.max   | 0;
-const defaultBars       = bars       | 0;
-const defaultBeats      = beats      | 0;
-const defaultSteps      = steps      | 0;
-const defaultPhrase     = phrase     | 0;
-const defaultInstrument = instrument | 0;
-const defaultVolume     = formatDigits[defaultGain];
+const resolution = Object.freeze({
+	beat:  maxSteps,
+	bar:   maxSteps * maxBeats,
+	track: maxSteps * maxBeats * maxBars,
+	maxBars, maxBeats,
+});
 
 const defaultPreferences = Object.freeze(Object.fromEntries(
 	Array.from(query(selectors.preferencesForm).elements, ({ name, options }) => {
@@ -184,35 +147,19 @@ const defaultPreferences = Object.freeze(Object.fromEntries(
 ));
 
 export const config = Object.freeze({
-	...core_config,
 	names,
-	events,
-	trackKeys,
 	selectors,
+	resolution,
 	emptyStroke,
 	tracksLength,
-	setSearchParam,
-	tempoSearchParam,
-	titleSearchParam,
-	volumeSearchParam,
-	resolution: {
-		beat:  maxSteps,
-		bar:   maxSteps * maxBeats,
-		track: maxSteps * maxBeats * maxBars,
-		maxBars, maxBeats,
-	},
 	maxGain,
 	tempoMin,
 	tempoMax,
 	tempoStep,
 	defaultGain,
-	defaultBars,
-	defaultBeats,
-	defaultSteps,
 	defaultTempo,
-	defaultPhrase,
+	defaultTrack,
 	defaultVolume,
-	defaultInstrument,
 	defaultPreferences,
 	barsValues,
 	beatsValues,
@@ -220,6 +167,10 @@ export const config = Object.freeze({
 	phraseValues,
 	formatDigits,
 	defaultSetValue,
+	setSearchParam,
+	tempoSearchParam,
+	titleSearchParam,
+	volumeSearchParam,
 	trackHeaderLength,
 	trackFormatSeparator,
 	trackFormatAllocation,

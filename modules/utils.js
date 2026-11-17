@@ -1,3 +1,5 @@
+import storage from '../config/storage.js';
+
 export function defer(task, timeout = 3000) {
 	if (globalThis.scheduler?.postTask) {
 		scheduler.postTask(task, { priority: 'background' }).catch(reportError);
@@ -7,12 +9,12 @@ export function defer(task, timeout = 3000) {
 }
 
 export function normalizeName(name) {
-	return String(name).replace(/[\s\p{Z}\u200B-\u200D\uFEFF]+/gu, ' ').trim();
+	return String(name).replace(/[\s\u200B-\u200D]+/g, ' ').trim();
 }
 
-export async function fetchFromCache(cacheName, filename, cacheResponse = false) {
+export async function fetchFromCache(filename, cacheResponse = false) {
 	const url = new URL(filename, location.href).href;
-	const cached = await caches.match(url, { cacheName }).catch(() => null);
+	const cached = await caches.match(url, { cacheName: storage.dataCache }).catch(() => null);
 	if (cached) return cached;
 
 	const networkResponse = await fetch(url);
@@ -24,13 +26,13 @@ export async function fetchFromCache(cacheName, filename, cacheResponse = false)
 
 	if (cacheResponse) {
 		const clone = response.clone();
-		caches.open(cacheName).then(cache => cache.put(url, clone)).catch(() => {});
+		caches.open(storage.dataCache).then(cache => cache.put(url, clone)).catch(() => {});
 	}
 	return response;
 }
 
-export async function writeData(cacheName, filename, data, addLastModified = true) {
-	const cache = await caches.open(cacheName);
+export async function writeData(filename, data, addLastModified = true) {
+	const cache = await caches.open(storage.dataCache);
 	const response = new Response(JSON.stringify(data), {
 		status: 200,
 		headers: {

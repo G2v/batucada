@@ -5,17 +5,21 @@ export default class InterfaceAnimation {
 	#ui;
 	#queueLimit;
 	#emptyStroke;
+	#running        = false;
 	#playedSteps    = new Map();
-	#lastPlayed     = new Map();
 	#animationQueue = new Map();
 
-	constructor({ parent, config }) {
+	constructor({ parent, config, audio }) {
 		this.#ui          = parent;
 		this.#queueLimit  = config.resolution.beat * 3;
 		this.#emptyStroke = config.emptyStroke;
+
+		audio.addEventListener('animations', ({ detail }) => this.#start(detail));
+		audio.addEventListener('restart',    () => this.#clear());
+		audio.addEventListener('stop',       () => this.#stop());
 	}
 
-	start({ animations }) {
+	#start({ animations }) {
 		const endTime = animations.size
 			? Math.min(...Array.from(animations.values(), items => items[0].time))
 			: performance.now();
@@ -23,7 +27,6 @@ export default class InterfaceAnimation {
 			if (animations.has(trackIndex) || steps.at(-1).end) continue;
 			steps.push({ step: null, time: endTime, end: true });
 		}
-		//Ajout des animations à la pile animationQueue
 		for (const [trackIndex, items] of animations) {
 			let steps = this.#animationQueue.get(trackIndex);
 			// La piste rejoue avant la fin prévue : on retire le repère de fin
@@ -39,21 +42,19 @@ export default class InterfaceAnimation {
 			for (const { stepIndex, time, stroke } of items) {
 				steps.push({ step: this.#ui.steps[stepIndex], stepIndex, time, stroke });
 			}
-			//Évite l'accumulation d'animations non exécutées (onglet inactif, latence)
-			if (steps.length > this.#queueLimit) {
-				steps.splice(1, steps.length - this.#queueLimit);
-			}
+			// Évite l'accumulation d'animations non affichées (onglet inactif, latence)
+			if (steps.length > this.#queueLimit) this.#advance(trackIndex, steps, steps.length - this.#queueLimit);
 		}
 		this.#startLoop();
 	}
 
-	stop() {
-		this.#ui.playing = false;
+	#stop() {
+		this.#running = false;
 		delete this.#ui.container.dataset.playing;
-		this.clear();
+		this.#clear();
 	}
 
-	clear() {
+	#clear() {
 		for (const steps of this.#animationQueue.values()) {
 			steps[0]?.step?.classList.remove(InterfaceAnimation.#currentClass);
 		}
@@ -62,21 +63,18 @@ export default class InterfaceAnimation {
 		}
 		this.#animationQueue.clear();
 		this.#playedSteps.clear();
-		this.#lastPlayed.clear();
 	}
 
 	#startLoop() {
-		if (!this.#ui.playing) {
-			this.#ui.playing = true;
+		if (!this.#running) {
+			this.#running = true;
 			requestAnimationFrame(this.#loop);
 		}
 	}
 
 	#loop = () => {
-		if (!this.#ui.playing) return;
+		if (!this.#running) return;
 		const now = performance.now();
-		const playedClass  = InterfaceAnimation.#playedClass;
-		const currentClass = InterfaceAnimation.#currentClass;
 
 		for (const [trackIndex, steps] of this.#animationQueue) {
 			if (steps.length < 2 || now < steps[1].time) continue;
@@ -86,38 +84,34 @@ export default class InterfaceAnimation {
 				if (now < steps[i].time) break;
 				nextIndex = i;
 			}
-
-			const playedIndexes = this.#playedSteps.get(trackIndex);
-			for (let i = 0; i < nextIndex; i++) {
-				const { step, stepIndex, stroke } = steps[i];
-				if (!step) continue;
-				step.classList.remove(currentClass);
-				if (stroke > this.#emptyStroke) {
-					step.classList.add(playedClass);
-					playedIndexes.push(stepIndex);
-				}
-			}
-
-			// Repère de fin atteint : toutes les cases de la piste sont passées (et marquées), on la retire
-			if (steps[nextIndex].end) {
-				this.#animationQueue.delete(trackIndex);
-				this.#lastPlayed.delete(trackIndex);
-				continue;
-			}
-
-			const nextStepIndex = steps[nextIndex].stepIndex;
-			const lastStepIndex = this.#lastPlayed.get(trackIndex);
-			if (lastStepIndex !== undefined && nextStepIndex <= lastStepIndex) {
-				this.#clearPlayed(playedIndexes);
-			}
-			this.#lastPlayed.set(trackIndex, nextStepIndex);
-
-			steps[nextIndex].step?.classList.add(currentClass);
-			this.#ui.container.dataset.playing = this.#ui.tracks[trackIndex].dataset.phrase;
-			steps.splice(0, nextIndex);
+			this.#advance(trackIndex, steps, nextIndex);
 		}
 		requestAnimationFrame(this.#loop);
 	};
+
+	#advance(trackIndex, steps, nextIndex) {
+		const playedIndexes = this.#playedSteps.get(trackIndex);
+
+		for (let i = 0; i < nextIndex; i++) {
+			const { step, stepIndex, stroke } = steps[i];
+			step?.classList.remove(InterfaceAnimation.#currentClass);
+			if (step && stroke > this.#emptyStroke) {
+				step.classList.add(InterfaceAnimation.#playedClass);
+				playedIndexes.push(stepIndex);
+			}
+			// La case suivante revient en arrière : nouveau tour, les cases jouées sont effacées
+			if (steps[i + 1].stepIndex <= stepIndex) this.#clearPlayed(playedIndexes);
+		}
+
+		if (steps[nextIndex].end) {
+			this.#animationQueue.delete(trackIndex);
+			return;
+		}
+
+		steps[nextIndex].step?.classList.add(InterfaceAnimation.#currentClass);
+		this.#ui.container.dataset.playing = this.#ui.tracks[trackIndex].dataset.phrase;
+		steps.splice(0, nextIndex);
+	}
 
 	#clearPlayed(playedIndexes) {
 		for (let i = 0; i < playedIndexes.length; i++) {

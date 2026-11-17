@@ -1,3 +1,4 @@
+import storage from '../config/storage.js';
 import { fetchFromCache, downloadFile, getFileContent, writeData } from './utils.js';
 
 export default class InterfaceInstruments {
@@ -6,26 +7,18 @@ export default class InterfaceInstruments {
 	static #maxInstruments = 60;
 
 	#ui;
-	#bus;
-	#events;
-	#dataCache;
+	#swClient;
 	#instrumentsDialog;
 	#instrumentsLibraryName;
 	#instrumentsRestoreButton;
 	#importConfirmDialog;
 	#instrumentsLibraryReady;
-	#instrumentsSoundsFile;
-	#instrumentsMetadataFile;
 	#pendingImport = null;
 
-	constructor({ bus, parent, config }) {
-		this.#bus                     = bus;
-		this.#events                  = config.events;
+	constructor({ parent, config, swClient }) {
+		this.#swClient                = swClient;
 		this.#ui                      = parent;
-		this.#dataCache               = config.dataCache;
 		this.#instrumentsLibraryReady = config.instrumentsLibraryReady;
-		this.#instrumentsSoundsFile   = config.instrumentsSoundsFile;
-		this.#instrumentsMetadataFile = config.instrumentsMetadataFile;
 
 		const { selectors } = config;
 
@@ -51,8 +44,8 @@ export default class InterfaceInstruments {
 	async #updateLibraryName() {
 		const library = await this.#instrumentsLibraryReady;
 		this.#instrumentsLibraryName.textContent = `${library.name} ${library.version}`;
-		const cache = await caches.open(this.#dataCache);
-		const response = await cache.match(this.#instrumentsMetadataFile);
+		const cache = await caches.open(storage.dataCache);
+		const response = await cache.match(storage.instrumentsMetadataFile);
 		this.#instrumentsRestoreButton.hidden = !response;
 	}
 
@@ -70,7 +63,7 @@ export default class InterfaceInstruments {
 
 	async #instrumentsExport() {
 		const library = structuredClone(await this.#instrumentsLibraryReady);
-		const response = await fetchFromCache(this.#dataCache, this.#instrumentsSoundsFile);
+		const response = await fetchFromCache(storage.instrumentsSoundsFile);
 		const sounds = await response.json();
 		library.instruments.shift();
 		library.instruments.forEach(instrument => {
@@ -84,9 +77,9 @@ export default class InterfaceInstruments {
 
 	#instrumentsRestore(messages) {
 		return this.#replaceLibrary(async () => {
-			const cache = await caches.open(this.#dataCache);
-			await cache.delete(this.#instrumentsSoundsFile);
-			await cache.delete(this.#instrumentsMetadataFile);
+			const cache = await caches.open(storage.dataCache);
+			await cache.delete(storage.instrumentsSoundsFile);
+			await cache.delete(storage.instrumentsMetadataFile);
 		}, messages);
 	}
 
@@ -136,7 +129,7 @@ export default class InterfaceInstruments {
 			});
 			const currentLibrary = await this.#instrumentsLibraryReady;
 			const defaultInstrument = structuredClone(currentLibrary.instruments[0]);
-			const response = await fetchFromCache(this.#dataCache, this.#instrumentsSoundsFile);
+			const response = await fetchFromCache(storage.instrumentsSoundsFile);
 			const currentSounds = await response.json();
 			data.instruments.unshift(defaultInstrument);
 			sounds[defaultInstrument.id] = currentSounds[defaultInstrument.id];
@@ -154,8 +147,8 @@ export default class InterfaceInstruments {
 	#instrumentsImport(messages) {
 		const { sounds, metadata } = this.#pendingImport;
 		return this.#replaceLibrary(async () => {
-			await writeData(this.#dataCache, this.#instrumentsSoundsFile, sounds);
-			await writeData(this.#dataCache, this.#instrumentsMetadataFile, metadata);
+			await writeData(storage.instrumentsSoundsFile, sounds);
+			await writeData(storage.instrumentsMetadataFile, metadata);
 		}, messages);
 	}
 
@@ -168,7 +161,7 @@ export default class InterfaceInstruments {
 			return;
 		}
 		document.body.inert = true;
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
+		this.#swClient.install();
 	}
 
 	static async #validateAudio(dataUrl, audioContext) {

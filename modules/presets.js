@@ -1,63 +1,123 @@
+import storage from '../config/storage.js';
 import { fetchFromCache, writeData, normalizeName } from './utils.js';
 
-export class Presets {
+export class Presets extends EventTarget {
 	static #newNameActions = Object.freeze(['save', 'copy']);
 
-	#bus;
-	#events;
-	#params;
+	#store;
 	#digits;
+	#current;
 	#separator;
-	#cacheName;
 	#presetsDate;
-	#presetsFile;
-	#setSearchParam;
-	#titleSearchParam;
-	#tempoSearchParam;
-	#volumeSearchParam;
 	#defaultSetValue;
 	#index              = -1;
 	#presets            = null;
 	#lastAction         = null;
 	#persistRequested   = false;
 
-	constructor({ bus, config }) {
-		this.#bus               = bus;
-		this.#events            = config.events;
-		this.#params            = new Map(new URLSearchParams(location.search));
+	constructor({ config, store }) {
+		super();
+		this.#store             = store;
 		this.#digits            = config.formatDigits;
 		this.#separator         = config.trackFormatSeparator;
-		this.#cacheName         = config.dataCache;
-		this.#presetsFile       = config.presetsFile;
-		this.#setSearchParam    = config.setSearchParam;
-		this.#titleSearchParam  = config.titleSearchParam;
-		this.#tempoSearchParam  = config.tempoSearchParam;
-		this.#volumeSearchParam = config.volumeSearchParam;
 		this.#defaultSetValue   = config.defaultSetValue;
+		this.#current           = { value: config.defaultSetValue, name: '' };
 
 		this.#loadPresets([]);
 
-		this.#bus.addEventListener(this.#events.interfaceReset,          ({ detail }) => this.#reset(detail));
-		this.#bus.addEventListener(this.#events.interfaceShare,          ({ detail }) => this.#sharePreset(detail));
-		this.#bus.addEventListener(this.#events.interfaceImport,         ({ detail }) => this.#presetsImport(detail));
-		this.#bus.addEventListener(this.#events.interfaceExport,         ({ detail }) => this.#presetsExport(detail));
-		this.#bus.addEventListener(this.#events.interfaceEditSave,       ({ detail }) => this.#editSave(detail));
-		this.#bus.addEventListener(this.#events.interfaceEditCancel,     ({ detail }) => this.#editCancel(detail));
-		this.#bus.addEventListener(this.#events.interfacePresetSelected, ({ detail }) => this.#presetSelected(detail));
-		this.#bus.addEventListener(this.#events.interfacePresetsDelete,  ({ detail }) => this.#deleteData(detail));
-		this.#bus.addEventListener(this.#events.navigationChanged,       ({ detail }) => this.#updateParams(detail));
-		document.addEventListener('visibilitychange',                    () => this.#syncPresets());
+		document.addEventListener('visibilitychange', () => this.#syncPresets());
+	}
+
+	get list() {
+		return this.#presets.map(preset => ({ ...preset }));
+	}
+
+	select(index) {
+		const preset = this.#presets[index];
+		if (preset) this.#index = index;
+		return preset;
+	}
+
+	indexOf({ value, name }) {
+		return name ? this.#presets?.findIndex(preset => preset.value === value && preset.name === name) ?? -1 : -1;
+	}
+
+	has(name) {
+		return this.#presets?.some(preset => preset.name === name) ?? false;
+	}
+
+	validate(action, name) {
+		if (!Presets.#newNameActions.includes(action)) return null;
+		if (!name) return 'empty';
+		const ownName = action === 'save' ? this.#current.name : null;
+		return name !== ownName && this.has(name) ? 'duplicated' : null;
+	}
+
+	edit(action, name) {
+		return this.#applyModification(this.#presets, action, name);
+	}
+
+	async undo() {
+		const { data, title } = this.#lastAction;
+		if (data === undefined) throw new Error();
+		this.#lastAction = null;
+		await this.#saveData(data);
+		this.#update({ presets: data, title: title ?? null });
+	}
+
+	async deleteAll() {
+		await writeData(storage.presetsFile, [], false);
+		this.#presetsDate = null;
+		this.#update({ presets: [], title: '' });
+	}
+
+	async import(data) {
+		if (!Array.isArray(data)) throw new Error();
+		const currentData = this.#presets;
+		const newData     = currentData.map(preset => ({ ...preset }));
+		const values      = new Map(currentData.map(({ name, value }) => [name, value]));
+		const known       = new Set(currentData.map(({ name, value }) => `${name}\n${value}`));
+		let validCount    = 0;
+		let importedCount = 0;
+
+		for (const item of data) {
+			const originalName = typeof item?.name === 'string' ? normalizeName(item.name) : '';
+			const value        = item?.value;
+			if (!originalName || !this.#isValidValue(value)) continue;
+			validCount++;
+			if (known.has(`${originalName}\n${value}`)) continue;
+
+			const baseName = originalName.match(/^(.*) \(\d+\)$/)?.[1] ?? originalName;
+			let name = originalName;
+			for (let suffix = 1; values.has(name) && values.get(name) !== value; suffix++) {
+				name = `${baseName} (${suffix})`;
+			}
+			if (values.has(name)) continue;
+
+			values.set(name, value);
+			known.add(`${name}\n${value}`);
+			newData.push({ name, value });
+			importedCount++;
+		}
+
+		if (validCount === 0) throw new Error();
+
+		newData.sort((a, b) => a.name.localeCompare(b.name));
+		await this.#saveData(newData);
+		this.#lastAction = { data: currentData };
+		this.#update({ presets: newData });
+		return importedCount;
 	}
 
 	#loadPresets(fallback = null) {
-		return fetchFromCache(this.#cacheName, this.#presetsFile, true)
+		return fetchFromCache(storage.presetsFile, true)
 			.then(response => {
 				const lastModified = response.headers.get('last-modified');
 				this.#presetsDate  = lastModified ? new Date(lastModified) : null;
 				return response.json();
 			})
-			.then(presets => this.#updatePresets(presets, null, 'load'))
-			.catch(() => { if (fallback !== null) this.#updatePresets(fallback, null, 'load'); });
+			.then(presets => this.#update({ presets }))
+			.catch(() => { if (fallback !== null) this.#update({ presets: fallback }); });
 	}
 
 	#syncPresets() {
@@ -70,118 +130,47 @@ export class Presets {
 			this.#persistRequested = true;
 			navigator.storage?.persist?.().catch(() => {});
 		}
-		const response     = await writeData(this.#cacheName, this.#presetsFile, data);
+		const response     = await writeData(storage.presetsFile, data);
 		const lastModified = response.headers.get('last-modified');
 		this.#presetsDate  = lastModified ? new Date(lastModified) : new Date();
 	}
 
-	async #deleteData({ resolve, reject }) {
-		try {
-			await writeData(this.#cacheName, this.#presetsFile, [], false);
-			this.#presetsDate = null;
-			this.#updatePresets([], '', 'clear');
-			resolve();
-		} catch {
-			reject();
-		}
+	reset() {
+		this.#current = { value: this.#defaultSetValue, name: '' };
+		if (this.#index === -1) return;
+		this.#index = -1;
+		this.dispatchEvent(new CustomEvent('change', { detail: { index: -1 } }));
 	}
 
-	#presetSelected(index) {
-		const preset = this.#presets[index];
-		if (!preset) return;
-		this.#index = index;
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsPresetSelected, { detail: preset }));
+	setCurrent({ value, name }) {
+		if (value === this.#current.value && name === this.#current.name) return;
+		this.#current = { value, name };
+		this.#update();
 	}
 
-	#reset() {
-		const changes = {};
-		if (this.#index !== -1) {
-			this.#index = -1;
-			changes.index = this.#index;
-		}
-		if (this.#params.get(this.#titleSearchParam)) {
-			this.#params.delete(this.#titleSearchParam);
-			changes.title = '';
-		}
-		this.#params.delete(this.#setSearchParam);
-		this.#dispatchChanges(changes, 'reset');
-	}
-
-	#updateParams(params) {
-		if (
-			this.#params.get(this.#setSearchParam) !== params.get(this.#setSearchParam)
-			|| this.#params.get(this.#titleSearchParam) !== params.get(this.#titleSearchParam)
-		) {
-			this.#params = params;
-			this.#updatePresets(null, null, 'navigate');
-		}
-	}
-
-	#updatePresets(presets = null, title = null, source = 'load') {
+	#update({ presets = null, title = null } = {}) {
 		const changes = {};
 		if (presets !== null) {
 			this.#presets = presets;
-			changes.presets = { values: presets, lastModified: this.#presetsDate }
+			changes.presets = { values: presets, lastModified: this.#presetsDate };
 		}
-		const setValue    = this.#params.get(this.#setSearchParam)   || this.#defaultSetValue;
-		const titleValue  = this.#params.get(this.#titleSearchParam) || '';
-		const targetTitle = title ?? titleValue;
-		const index = (this.#presets === null || !targetTitle)
-			? -1
-			: this.#presets.findIndex(({ value, name }) => value === setValue && name === targetTitle);
-
-		if (source === 'navigate') source = index !== -1 ? 'set' : 'unset';
-
-		//on passe toujours l'index si presets a été modifié
-		if ('presets' in changes || index !== this.#index) {
+		if (title !== null && title !== this.#current.name) {
+			this.#current = { ...this.#current, name: title };
+			this.#store.setTitle(title);
+		}
+		const index = this.indexOf(this.#current);
+		// L'index est toujours annoncé si la liste a changé
+		if (presets !== null || index !== this.#index) {
 			this.#index = index;
 			changes.index = index;
 		}
-
-		if (title !== null && title !== titleValue) {
-			this.#params.set(this.#titleSearchParam, title);
-			changes.title = title;
-		}
-
-		this.#dispatchChanges(changes, source);
-	}
-
-	#dispatchChanges(changes, source) {
-		const isNavigation = source === 'set' || source === 'unset';
-		if (isNavigation || Object.keys(changes).length) {
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsUpdateData, { detail: { ...changes, source } }));
-		}
-	}
-
-	async #editSave({ action, name, promise }) {
-		try {
-			const data = this.#presets;
-			const allowedName  = action === 'save' ? this.#params.get(this.#titleSearchParam) : null;
-			const isDuplicated = Presets.#newNameActions.includes(action)
-				&& name !== allowedName
-				&& data.some(preset => preset.name === name);
-
-			if (isDuplicated) {
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.presetsInvalidName, { detail: 'duplicated' }));
-				promise.resolve(false);
-				return;
-			}
-
-			const result = this.#applyModification(data, action, name);
-			promise.resolve({ result });
-			await result;
-		}
-
-		catch (error) {
-			promise.reject(error);
-		}
+		if (Object.keys(changes).length) this.dispatchEvent(new CustomEvent('change', { detail: changes }));
 	}
 
 	async #applyModification(currentData, action, name) {
 		const data      = currentData.map(preset => ({ ...preset }));
 		const isNewName = Presets.#newNameActions.includes(action);
-		const value     = this.#params.get(this.#setSearchParam) || this.#defaultSetValue;
-		const title     = this.#params.get(this.#titleSearchParam) || '';
+		const { value, name: title } = this.#current;
 		const index     = data.findIndex(preset => preset.name === title);
 
 		switch (action) {
@@ -203,81 +192,11 @@ export class Presets {
 
 		await this.#saveData(data);
 		this.#lastAction = { data: currentData, title };
-		this.#updatePresets(data, action === 'delete' ? '' : name, action);
+		this.#update({ presets: data, title: action === 'delete' ? '' : name });
 	}
 
 	#isValidValue(value) {
 		return typeof value === 'string' && value.length > 0
 			&& [...value].every(char => char === this.#separator || this.#digits.includes(char));
-	}
-
-	async #editCancel(promise) {
-		try {
-			const { data, title } = this.#lastAction;
-			if (data === undefined) throw new Error();
-			this.#lastAction = null;
-			await this.#saveData(data);
-			this.#updatePresets(data, title ?? null, 'cancel')
-			promise.resolve();
-		}
-		catch (error) {
-			promise.reject(error);
-		}
-	}
-
-	#presetsExport(presets) {
-		presets.push(...this.#presets);
-	}
-
-	async #presetsImport({ data, promise }) {
-		try {
-			if (!Array.isArray(data)) throw new Error();
-			const currentData = this.#presets;
-			const newData     = currentData.map(preset => ({ ...preset }));
-			const values      = new Map(currentData.map(({ name, value }) => [name, value]));
-			const known       = new Set(currentData.map(({ name, value }) => `${name}\n${value}`));
-			let validCount    = 0;
-			let importedCount = 0;
-
-			for (const item of data) {
-				const originalName = typeof item?.name === 'string' ? normalizeName(item.name) : '';
-				const value        = item?.value;
-				if (!originalName || !this.#isValidValue(value)) continue;
-				validCount++;
-				if (known.has(`${originalName}\n${value}`)) continue;
-
-				const baseName = originalName.match(/^(.*) \(\d+\)$/)?.[1] ?? originalName;
-				let name = originalName;
-				for (let suffix = 1; values.has(name) && values.get(name) !== value; suffix++) {
-					name = `${baseName} (${suffix})`;
-				}
-				if (values.has(name)) continue;
-
-				values.set(name, value);
-				known.add(`${name}\n${value}`);
-				newData.push({ name, value });
-				importedCount++;
-			}
-
-			if (validCount === 0) throw new Error();
-
-			newData.sort((a, b) => a.name.localeCompare(b.name));
-			await this.#saveData(newData);
-			this.#lastAction = { data: currentData };
-			this.#updatePresets(newData, null, 'import');
-			promise.resolve(importedCount);
-		} catch (error) {
-			promise.reject(error);
-		}
-	}
-
-	#sharePreset({ url }) {
-		const currentParams = new URLSearchParams(location.search);
-		const keys = [this.#setSearchParam, this.#volumeSearchParam, this.#tempoSearchParam, this.#titleSearchParam];
-		for (const key of keys) {
-			if (currentParams.has(key)) {
-				url.searchParams.set(key, currentParams.get(key));
-			}
-		}
 	}
 }

@@ -1,17 +1,17 @@
-import version    from '../version.js';
-import app_config from '../config/app.js';
+import version from '../version.js';
+import about   from '../config/about.js';
 
 export default class InterfaceApp {
 	static #searchMinDuration = 1000;
 
-	#bus;
-	#events;
+	#audio;
+	#swClient;
 	#aboutUpdate;
 	#defaultPreferences;
 
-	constructor({ bus, config }) {
-		this.#bus                = bus;
-		this.#events             = config.events;
+	constructor({ config, audio, swClient }) {
+		this.#audio              = audio;
+		this.#swClient           = swClient;
 		this.#defaultPreferences = config.defaultPreferences;
 		const { selectors }      = config;
 
@@ -19,23 +19,20 @@ export default class InterfaceApp {
 		this.#aboutUpdate     = document.querySelector(selectors.aboutUpdate);
 
 		Object.assign(document.querySelector(selectors.aboutContactLink), {
-			href:        `mailto:${app_config.email}`,
-			textContent: app_config.email,
+			href:        `mailto:${about.email}`,
+			textContent: about.email,
 		});
 		document.querySelector(selectors.aboutVersionText).textContent = version;
 		document.querySelector(selectors.aboutDialog).addEventListener('command', (event) => this.#aboutCommands(event));
 
-		const stored = JSON.parse(localStorage.preferences ?? '{}');
+		const { preferences } = audio;
 		for (const [name, value] of Object.entries(this.#defaultPreferences)) {
-			preferencesForm.elements[name].value = stored[name] ?? value;
+			preferencesForm.elements[name].value = preferences[name];
 			preferencesForm.elements[name].value ||= value;
 		}
 		this.#savePreferences(preferencesForm);
 		preferencesForm.addEventListener('change', () => this.#savePreferences(preferencesForm));
-	}
-
-	showUpdateButton() {
-		this.#updateState = 'available';
+		swClient.addEventListener('update',        () => this.#updateState = 'available');
 	}
 
 	async #findUpdate() {
@@ -51,11 +48,8 @@ export default class InterfaceApp {
 		this.#updateState = found ? 'available' : found === false ? 'none' : null;
 	}
 
-
 	#requestUpdate() {
-		const { promise, resolve, reject } = Promise.withResolvers();
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceFindUpdate, { detail: { resolve, reject } }));
-		return promise.catch(() => null);
+		return this.#swClient.findUpdate().catch(() => null);
 	}
 
 	get #updateState() {
@@ -72,23 +66,18 @@ export default class InterfaceApp {
 			'show-modal': () => this.#findUpdate(),
 			'update':     () => {
 				document.body.inert = true;
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceInstall));
+				this.#swClient.install();
 			},
 		};
 		commands[event.source?.value || event.command]?.();
 	}
 
 	#savePreferences(form) {
-		const values  = {};
-		const changed = {};
+		const values = {};
 		for (const [name, initial] of Object.entries(this.#defaultPreferences)) {
 			const { value } = form.elements[name];
 			values[name] = typeof initial === 'number' ? Number(value) : value;
-			if (values[name] !== initial) changed[name] = values[name];
 		}
-		if (Object.keys(changed).length) localStorage.preferences = JSON.stringify(changed);
-		else delete localStorage.preferences;
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePreferences, { detail: values }));
+		this.#audio.setPreferences(values);
 	}
-
 }

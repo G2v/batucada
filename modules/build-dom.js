@@ -1,12 +1,3 @@
-export function firstTracksCount(config, { sheet = [], tracks = [], volumes = [] }) {
-	const { tracksLength, resolution } = config;
-	let last = -1;
-	for (const { id } of tracks)       last = Math.max(last, id);
-	for (const { id } of volumes)      last = Math.max(last, id);
-	for (const { stepIndex } of sheet) last = Math.max(last, stepIndex / resolution.track | 0);
-	return Math.min(tracksLength, last + 2);
-}
-
 function cloneIndexed(node, count, parent) {
 	const label = node.ariaLabel.replace(/\s*\d+$/, '');
 	for (let index = 1; index < count; index++) {
@@ -31,10 +22,9 @@ export function buildStyles({ instrumentsLibraryReady }) {
 
 	return instrumentsLibraryReady.then(({ instruments }) => {
 		const [first, ...rest] = instruments;
-		let rules = `[data-instrument] { --icon-default: url('${first.strokes[0].icon}') }`;
+		let rules = `.track [name="step"]:not([value="0"])::before { mask-image: url('${first.strokes[0].icon}') }`;
 		for (const { id, strokes } of rest) {
-			const icons = strokes.map(({ icon }, j) => `--icon-${j + 1}: url('${icon}')`).join('; ');
-			rules += `[data-instrument="${id}"] { ${icons} }`;
+			rules += strokes.map(({ icon }, j) => `.track[data-instrument="${id}"] [name="step"][value="${j + 1}"]::before { mask-image: url('${icon}') }`).join(' ');
 		}
 		stylesheet.replaceSync(rules);
 	});
@@ -73,14 +63,11 @@ export function buildTracks(config, template, start = 0, end = config.tracksLeng
 }
 
 export function buildInstruments(config, nodes) {
-	const instrumentKey = config.trackKeys.instrument;
-
 	return config.instrumentsLibraryReady.then(({ instruments }) => {
 		const values = instruments.slice(1);
-
 		nodes.instruments.forEach((select, index) => {
 			select.append(...values.map(({ name, id }) => new Option(name, id)));
-			select.value = nodes.tracks[index].dataset[instrumentKey];
+			select.value = nodes.tracks[index].dataset.instrument;
 		});
 	});
 }

@@ -1,7 +1,6 @@
 import { downloadFile, getFileContent, normalizeName } from './utils.js';
 
 export default class InterfacePresets {
-	static #newNameActions   = Object.freeze(['save', 'copy']);
 	static #enabledButtons   = 'button:not(:disabled)';
 	static #validityMessages = Object.freeze({
 		empty:      'invalidEmpty',
@@ -9,18 +8,22 @@ export default class InterfacePresets {
 	});
 
 	#ui;
-	#bus;
-	#events;
+	#store;
+	#presets;
+	#navigation;
+	#shareParams;
 	#presetsDialog;
 	#presetEditDialog;
 	#presetEditForm;
 	#presetEditButton;
 	#appMenuButton;
 
-	constructor({ bus, parent, config }) {
-		this.#ui     = parent;
-		this.#bus    = bus;
-		this.#events = config.events;
+	constructor({ parent, config, store, presets, navigation }) {
+		this.#ui          = parent;
+		this.#store       = store;
+		this.#presets     = presets;
+		this.#navigation  = navigation;
+		this.#shareParams = [config.setSearchParam, config.volumeSearchParam, config.tempoSearchParam, config.titleSearchParam];
 
 		const { selectors } = config;
 
@@ -38,7 +41,7 @@ export default class InterfacePresets {
 	}
 
 	#presetSelected(event) {
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetSelected, { detail: event.target.selectedIndex }));
+		this.#navigation.openPreset(event.target.selectedIndex);
 	}
 
 	#presetsDialogCommands(event) {
@@ -52,18 +55,14 @@ export default class InterfacePresets {
 
 	#confirmDialogCommands(event) {
 		if (event.source.value !== 'delete') return;
-		const { promise, resolve, reject } = Promise.withResolvers();
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfacePresetsDelete, { detail: { resolve, reject } }));
-		promise.catch(() => this.#ui.dialogs.showToast(event.source.dataset.failure));
+		this.#presets.deleteAll().catch(() => this.#ui.dialogs.showToast(event.source.dataset.failure));
 	}
-
 
 	#openEdit({ command }) {
 		if (command !== 'show-modal') return;
 		const { elements } = this.#presetEditForm;
-		const title = this.#ui.sequenceTitle.textContent.trim();
-		// Un morceau porte le nom du titre (enregistré ou modifié) : on peut le copier ou le supprimer
-		const known = Array.from(this.#ui.presetsSelect.options).some(option => option.text === title);
+		const title = normalizeName(this.#store.state.title);
+		const known = this.#presets.has(title);
 		elements.name.value = title;
 		elements.name.setCustomValidity('');
 		elements.copy.hidden   = !known;
@@ -72,11 +71,7 @@ export default class InterfacePresets {
 
 	#cancelEdit(messages, invoker = null) {
 		return {
-			action: () => {
-				const { promise, resolve, reject } = Promise.withResolvers();
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceEditCancel, { detail: { resolve, reject } }));
-				return promise;
-			},
+			action:  () => this.#presets.undo(),
 			success: messages.cancelSuccess,
 			failure: messages.cancelFailure,
 			invoker,
@@ -89,8 +84,7 @@ export default class InterfacePresets {
 		try {
 			if (action === 'share') {
 				this.#presetEditDialog.close();
-				const url = new URL(location.origin + location.pathname);
-				this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceShare, { detail: { url } }));
+				const url = this.#shareUrl;
 				if (navigator.share) {
 					try { await navigator.share({ url: url.toString() }); } catch {}
 				} else {
@@ -100,16 +94,12 @@ export default class InterfacePresets {
 				return;
 			}
 			event.preventDefault();
-			const isNewName = InterfacePresets.#newNameActions.includes(action);
-			const name = normalizeName(this.#presetEditForm.elements.name.value);
-			if (isNewName && !name) return this.reportNameValidity('empty');
+			const name    = normalizeName(this.#presetEditForm.elements.name.value);
+			const invalid = this.#presets.validate(action, name);
+			if (invalid) return this.#reportNameValidity(invalid);
 			actionButtons.forEach(button => button.disabled = true);
-			const saved = Promise.withResolvers();
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceEditSave, { detail: { action, name, promise: saved } }));
-			const request = await saved.promise;
-			if (request === false) return;
 			this.#presetEditDialog.close();
-			await request.result;
+			await this.#presets.edit(action, name);
 			const cancel = this.#cancelEdit(messages, this.#presetEditButton);
 			this.#ui.dialogs.showToast(messages.success, cancel);
 		}
@@ -122,7 +112,16 @@ export default class InterfacePresets {
 		}
 	}
 
-	reportNameValidity(status) {
+	get #shareUrl() {
+		const url     = new URL(location.origin + location.pathname);
+		const current = new URLSearchParams(location.search);
+		for (const key of this.#shareParams) {
+			if (current.has(key)) url.searchParams.set(key, current.get(key));
+		}
+		return url;
+	}
+
+	#reportNameValidity(status) {
 		const input = this.#presetEditForm.elements.name;
 		const validityMessage = input.dataset[InterfacePresets.#validityMessages[status]];
 		input.setCustomValidity(validityMessage);
@@ -139,16 +138,13 @@ export default class InterfacePresets {
 	}
 
 	async #presetsExport() {
-		const presets = [];
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceExport, { detail: presets }));
-		const content = JSON.stringify(presets, null, 2);
+		const content = JSON.stringify(this.#presets.list, null, 2);
 		const dateTimeStr = this.#ui.presetsDate.dateTime;
 
 		let dateSuffix = '';
 		if (dateTimeStr) {
 			const date = new Date(dateTimeStr);
 			const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-			// Sans « : », refusé dans les noms de fichiers sous Windows et Android
 			dateSuffix = `_${localDate.toISOString().slice(0, 19).replace('T', '_').replaceAll(':', '-')}`;
 		}
 		const filename = `presets${dateSuffix}.json`;
@@ -161,9 +157,7 @@ export default class InterfacePresets {
 			this.#presetsDialog.close();
 			const data = JSON.parse(content);
 			if (!data || typeof data !== 'object') throw new Error();
-			const imported = Promise.withResolvers();
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.interfaceImport, { detail: { data, promise: imported } }));
-			const number = await imported.promise;
+			const number = await this.#presets.import(data);
 			const message = number === 0 ? messages.successZero
 				: number === 1 ? messages.successOne
 				: messages.successOther.replace('{{number}}', number);

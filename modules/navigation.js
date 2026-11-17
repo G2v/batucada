@@ -1,33 +1,44 @@
-import { encodeUrl, moveTrack } from './navigation_encode.js';
-import { decode, decodeAll, initialState } from './navigation_decode.js';
+import { encodeUrl } from './navigation_encode.js';
+import { decode } from './navigation_decode.js';
 
 export class Navigation {
-	static #entrySources = new Set(['save', 'import', 'cancel', 'clear']);
-
-	#bus;
-	#state;
-	#events;
+	#audio;
+	#store;
 	#config;
+	#presets;
 	#searchParams;
 
-	constructor({ bus, config }) {
-		this.#bus             = bus;
+	constructor({ config, store, presets, audio }) {
+		this.#audio           = audio;
+		this.#store           = store;
 		this.#config          = config;
-		this.#events          = config.events;
-		this.#state           = initialState(config);
+		this.#presets         = presets;
 		this.#searchParams    = new URLSearchParams(location.search);
 
 		history.scrollRestoration = 'manual';
 		this.#saveLastSequence();
+		presets.setCurrent(this.#current);
 
-		navigation.addEventListener('currententrychange',              () => this.#saveLastSequence());
-		navigation.addEventListener('navigate',                        event => this.#handleNavigation(event));
-		this.#bus.addEventListener(this.#events.audioState,            ({ detail }) => this.#updateState(detail));
-		this.#bus.addEventListener(this.#events.audioChanged,          ({ detail }) => this.#encodeURL(detail));
-		this.#bus.addEventListener(this.#events.presetsUpdateData,     ({ detail }) => this.#presetsUpdated(detail));
-		this.#bus.addEventListener(this.#events.presetsPresetSelected, ({ detail }) => this.#presetSelected(detail));
-		this.#bus.addEventListener(this.#events.interfaceReset,        ({ detail }) => this.#reset());
-		this.#bus.addEventListener(this.#events.interfaceMoveTrack,    ({ detail }) => this.#moveTrack(detail));
+		navigation.addEventListener('currententrychange', () => this.#saveLastSequence());
+		navigation.addEventListener('navigate',           event => this.#handleNavigation(event));
+		store.addEventListener('change',                  ({ detail }) => this.#storeChanged(detail));
+	}
+
+	openPreset(index) {
+		const preset = this.#presets.select(index);
+		if (!preset) return;
+		const { name, value, tempo } = preset;
+		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue } = this.#config;
+		this.#searchParams.set(setSearchParam, value || defaultSetValue);
+		this.#searchParams.set(titleSearchParam, name || '');
+		if (this.#isDraft(navigation.currentEntry) && this.#isSamePreset(this.#previousEntry)) {
+			navigation.back();
+			return;
+		}
+		if (tempo) this.#searchParams.set(tempoSearchParam, tempo);
+		else this.#searchParams.delete(tempoSearchParam);
+		this.#searchParams.delete(volumeSearchParam);
+		this.#navigate('decodeAll');
 	}
 
 	#saveLastSequence() {
@@ -35,42 +46,28 @@ export class Navigation {
 		else delete localStorage.lastSequence;
 	}
 
-	#updateState(values) {
-		for (const [key, value] of Object.entries(values)) {
-			if (value !== undefined && value !== null) {
-				this.#state[key] = value;
-			}
-		}
-	}
-
-	#dispatchDecoded(changes) {
-		this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationDecoded, { detail: changes }));
-	}
-
-	#decodeAction(action) {
-		if (action === 'reset') {
-			this.#state = initialState(this.#config, this.#state.order);
+	#storeChanged(changes) {
+		if (changes.reset) {
+			this.#presets.reset();
+			this.#reset();
 			return;
 		}
-		const decoder = action === 'decodeAll' ? decodeAll : decode;
-		const changes = decoder(this.#config, this.#searchParams, this.#state);
-		if (changes) this.#dispatchDecoded(changes);
+		if (changes.transient || (changes.loaded && !changes.corrected)) return;
+		const values = {};
+		if (changes.steps.size) values.sheet   = true;
+		if (!changes.loaded) {
+			if (changes.tempo) values.tempo   = true;
+			if (changes.title) values.title   = true;
+			if (changes.tracks.size || changes.order)  values.tracks  = true;
+			if (changes.volumes.size || changes.order) values.volumes = true;
+		}
+		if (Object.keys(values).length) this.#encodeURL(values);
 	}
 
 	#handleNavigation(event) {
 		const { destination, navigationType, canIntercept, hashChange, downloadRequest } = event;
 		const url = new URL(destination.url);
-		const state = destination.getState() || {};
 		const isTraverse = navigationType === 'traverse';
-
-		if (isTraverse) {
-			const modal = { closed: false };
-			this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationCloseModal, { detail: modal }));
-			if (modal.closed) {
-				event.preventDefault();
-				return;
-			}
-		}
 
 		if (navigationType === 'reload' ||
 			url.protocol === 'blob:' ||
@@ -78,10 +75,8 @@ export class Navigation {
 			hashChange ||
 			downloadRequest) return;
 
-		const action = isTraverse ? 'decodeAll' : state.action;
-		const shouldDispatch = isTraverse || !!state.dispatch;
+		const action = isTraverse ? 'decodeAll' : event.info?.action;
 		const sequenceChanged = action === 'decodeAll' && !this.#isSameSequence(destination);
-		const keepScroll = Boolean(event.info?.keepScroll);
 
 		event.intercept({
 			scroll: 'manual',
@@ -89,57 +84,24 @@ export class Navigation {
 			handler: () => {
 				if (!event.info?.keepState) {
 					this.#searchParams = url.searchParams;
-					if (['reset', 'decode', 'decodeAll'].includes(action)) {
-						this.#decodeAction(action);
-						if (sequenceChanged) this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationSequenceChanged));
-						if (!keepScroll) requestAnimationFrame(() => window.scrollTo(0, 0));
+					// À l'effacement, le store est déjà remis à zéro
+					if (action === 'reset' || action === 'decodeAll') {
+						if (action === 'decodeAll') this.#store.load(decode(this.#config, this.#searchParams, this.#store.state.order));
+						if (sequenceChanged) this.#audio.restart();
+						if (sequenceChanged || action === 'reset') requestAnimationFrame(() => window.scrollTo(0, 0));
 					}
 				}
-				if (shouldDispatch) {
-					this.#bus.dispatchEvent(new CustomEvent(this.#events.navigationChanged, { detail: new Map(this.#searchParams) }));
-				}
+				this.#presets.setCurrent(this.#current);
 			}
 		});
 	}
 
-	#presetSelected({ name, value }) {
-		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue } = this.#config;
-		this.#searchParams.set(setSearchParam, value || defaultSetValue);
-		this.#searchParams.set(titleSearchParam, name || '');
-		if (this.#isUnsaved && this.#isSamePreset(this.#previousEntry)) {
-			navigation.back();
-			return;
-		}
-		this.#searchParams.delete(tempoSearchParam);
-		this.#searchParams.delete(volumeSearchParam);
-		this.#navigate({ action: 'decodeAll', dispatch: true });
-	}
-
-	#presetsUpdated({ source, title, index }) {
-		if (title !== undefined) this.#encodeURL({ title });
-		if (source === 'set' || source === 'unset') this.#updateEntry(source === 'unset');
-		else if (title === undefined && index !== undefined && Navigation.#entrySources.has(source)) this.#updateEntry(index === -1);
-	}
-
-	#updateEntry(isUnsaved) {
-		if (navigation.transition) {
-			navigation.transition.finished.then(() => this.#updateEntry(isUnsaved), () => {});
-			return;
-		}
-		if (this.#isUnsaved === isUnsaved) return;
-		navigation.updateCurrentEntry({ state: { ...navigation.currentEntry?.getState(), isUnsaved } });
-	}
-
 	#encodeURL(values) {
-		this.#updateState(values);
 		const replace = Object.keys(values).every(key => key === 'tempo' || key === 'volumes');
-		this.#encode(encodeUrl, values, replace);
-	}
-
-	#moveTrack(moved) {
-		const previousOrder = this.#state.order;
-		this.#state.order = moved.order;
-		this.#encode(moveTrack, { ...moved, previousOrder });
+		const searchParams = encodeUrl(this.#config, { searchParams: this.#searchParams, state: this.#store.state, values });
+		if (!searchParams) return;
+		this.#searchParams = searchParams;
+		this.#navigate('encoded', replace);
 	}
 
 	#reset() {
@@ -147,26 +109,26 @@ export class Navigation {
 		for (const param of [setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam]) {
 			this.#searchParams.delete(param);
 		}
-		this.#navigate({ action: 'reset', dispatch: false });
+		this.#navigate('reset');
 	}
 
-	#navigate(state, replace = false) {
+	#navigate(action, replace = false) {
 		const nextUrl   = this.#url;
 		const current   = navigation.currentEntry;
 		const previous  = this.#previousEntry;
-		const isUnsaved = this.#isUnsaved;
+		const isDraft   = this.#isDraft(current);
 
-		if ((replace || !isUnsaved) && current?.url === nextUrl) return;
+		if ((replace || !isDraft) && current?.url === nextUrl) return;
 
 		if (replace) {
-			navigation.navigate(nextUrl, { history: 'replace', state: { ...current?.getState(), ...state } });
+			navigation.navigate(nextUrl, { history: 'replace', info: { action } });
 			return;
 		}
 
-		if (isUnsaved && !previous?.getState()?.isUnsaved) {
-			if (state.action === 'encoded' && this.#isSamePreset(previous)) {
+		if (isDraft && !this.#isDraft(previous)) {
+			if (action === 'encoded' && this.#isSamePreset(previous)) {
 				navigation.back({ info: { keepState: true } }).finished
-					.then(() => this.#navigate(state, true), () => {});
+					.then(() => this.#navigate(action, true), () => {});
 				return;
 			}
 			if (previous?.url === nextUrl) {
@@ -175,18 +137,7 @@ export class Navigation {
 			}
 		}
 
-		navigation.navigate(nextUrl, { history: isUnsaved ? 'replace' : 'push', state });
-	}
-
-	#encode(encoder, values, replace = false) {
-		const searchParams = encoder(this.#config, {
-			searchParams: Object.fromEntries(this.#searchParams),
-			state: this.#state,
-			values,
-		});
-		if (!searchParams) return;
-		this.#searchParams = new URLSearchParams(searchParams);
-		this.#navigate({ action: 'encoded', dispatch: true }, replace);
+		navigation.navigate(nextUrl, { history: isDraft ? 'replace' : 'push', info: { action } });
 	}
 
 	#isSamePreset(entry) {
@@ -201,8 +152,23 @@ export class Navigation {
 		return !!title && title === URL.parse(navigation.currentEntry?.url)?.searchParams.get(titleSearchParam);
 	}
 
-	get #isUnsaved() {
-		return !!navigation.currentEntry?.getState()?.isUnsaved;
+	#songOf(searchParams) {
+		const { setSearchParam, titleSearchParam, defaultSetValue } = this.#config;
+		return {
+			value: searchParams.get(setSearchParam)   || defaultSetValue,
+			name:  searchParams.get(titleSearchParam) || '',
+		};
+	}
+
+	get #current() {
+		return this.#songOf(this.#searchParams);
+	}
+
+	#isDraft(entry) {
+		const searchParams = URL.parse(entry?.url)?.searchParams;
+		if (!searchParams) return false;
+		const song = this.#songOf(searchParams);
+		return song.value !== this.#config.defaultSetValue && this.#presets.indexOf(song) === -1;
 	}
 
 	get #previousEntry() {
