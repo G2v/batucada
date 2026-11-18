@@ -1,5 +1,5 @@
 import storage from '../config/storage.js';
-import { fetchFromCache, downloadFile, getFileContent, writeData } from './utils.js';
+import { fetchFromCache, downloadFile, getFileContent, writeAllData } from './utils.js';
 
 export default class InterfaceInstruments {
 	static #format = 1;
@@ -146,10 +146,10 @@ export default class InterfaceInstruments {
 
 	#instrumentsImport(messages) {
 		const { sounds, metadata } = this.#pendingImport;
-		return this.#replaceLibrary(async () => {
-			await writeData(storage.instrumentsSoundsFile, sounds);
-			await writeData(storage.instrumentsMetadataFile, metadata);
-		}, messages);
+		return this.#replaceLibrary(() => writeAllData({
+			[storage.instrumentsSoundsFile]:   sounds,
+			[storage.instrumentsMetadataFile]: metadata,
+		}), messages);
 	}
 
 	async #replaceLibrary(write, { failure }) {

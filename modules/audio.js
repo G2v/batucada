@@ -1,5 +1,5 @@
 import storage from '../config/storage.js';
-import { defer, fetchFromCache } from './utils.js';
+import { fetchFromCache } from './utils.js';
 
 const decodeBase64 = Uint8Array.fromBase64
 	? (base64) => Uint8Array.fromBase64(base64)
@@ -18,6 +18,14 @@ const toMono = (buffer) => {
 	}
 	return mono;
 };
+
+const defer = (task, timeout = 3000) => {
+	if (globalThis.scheduler?.postTask) {
+		scheduler.postTask(task, { priority: 'background' }).catch(reportError);
+	}
+	else if ('requestIdleCallback' in globalThis) requestIdleCallback(task, { timeout });
+	else setTimeout(task, 500);
+}
 
 export class Audio extends EventTarget {
 	static #detuneRange = 10;
@@ -342,7 +350,6 @@ export class Audio extends EventTarget {
 	async #wakeLockRequest() {
 		try {
 			const wakeLock = await navigator.wakeLock.request();
-			// La lecture a pu s'arrêter pendant la demande
 			if (this.#playing && !document.hidden) this.#wakeLock = wakeLock;
 			else wakeLock.release();
 		} catch {}

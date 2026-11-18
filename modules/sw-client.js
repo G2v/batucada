@@ -1,5 +1,3 @@
-import { defer } from './utils.js';
-
 export class SwClient extends EventTarget {
 	#registration;
 	#updateRequested = false;
@@ -13,7 +11,7 @@ export class SwClient extends EventTarget {
 			if (hadController || this.#updateRequested) location.reload();
 		});
 
-		defer(() => this.#init());
+		this.#init().catch(reportError);
 	}
 
 	async #init() {

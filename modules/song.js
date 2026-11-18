@@ -83,31 +83,23 @@ export class Song extends EventTarget {
 	}
 
 	setTrack(id, changes) {
-		const { order, tracks, volumes } = this.#state;
-		const ids            = new Set([id]);
-		const changedSteps   = new Set();
-		const changedVolumes = new Set();
-		const wasEmpty       = this.isEmpty(id);
-		const next           = order[order.indexOf(id) + 1];
+		const { order, tracks } = this.#state;
+		const ids          = new Set([id]);
+		const changedSteps = new Set();
+		const wasEmpty     = this.isEmpty(id);
+		const next         = order[order.indexOf(id) + 1];
 		Object.assign(tracks[id], changes);
 		this.#cleanTrack(id, changedSteps);
 
-		if (changes.instrument !== undefined && next !== undefined) {
-			if (wasEmpty && this.isEmpty(next)) {
-				const { beats, steps } = tracks[id];
-				if (tracks[next].beats !== beats || tracks[next].steps !== steps) {
-					Object.assign(tracks[next], { beats, steps });
-					this.#cleanTrack(next, changedSteps);
-					ids.add(next);
-				}
-			}
-			// Instrument retiré : la piste suivante redevient une piste vide, à volume par défaut
-			if (this.isEmpty(id) && volumes[next] !== this.#defaultGain) {
-				volumes[next] = this.#defaultGain;
-				changedVolumes.add(next);
+		if (changes.instrument !== undefined && wasEmpty && next !== undefined && this.isEmpty(next)) {
+			const { beats, steps } = tracks[id];
+			if (tracks[next].beats !== beats || tracks[next].steps !== steps) {
+				Object.assign(tracks[next], { beats, steps });
+				this.#cleanTrack(next, changedSteps);
+				ids.add(next);
 			}
 		}
-		this.#commit({ tracks: ids, steps: changedSteps, volumes: changedVolumes });
+		this.#commit({ tracks: ids, steps: changedSteps });
 	}
 
 	setVolume(id, value, { transient = false } = {}) {

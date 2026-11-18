@@ -181,7 +181,6 @@ export class SavedSongs extends EventTarget {
 			this.#song.setTitle(title);
 		}
 		const index = this.indexOf(this.#current);
-		// L'index est toujours annoncé si la liste a changé
 		if (savedSongs !== null || index !== this.#index) {
 			this.#index = index;
 			changes.index = index;

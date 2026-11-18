@@ -1,13 +1,5 @@
 import storage from '../config/storage.js';
 
-export function defer(task, timeout = 3000) {
-	if (globalThis.scheduler?.postTask) {
-		scheduler.postTask(task, { priority: 'background' }).catch(reportError);
-	}
-	else if ('requestIdleCallback' in globalThis) requestIdleCallback(task, { timeout });
-	else setTimeout(task, 500);
-}
-
 export function normalizeName(name) {
 	return String(name).replace(/[\s\u200B-\u200D]+/g, ' ').trim();
 }
@@ -54,6 +46,22 @@ export async function writeData(filename, data, addLastModified = true) {
 	});
 	await cache.put(filename, response);
 	return response;
+}
+
+export async function writeAllData(files) {
+	const cache   = await caches.open(storage.dataCache);
+	const written = [];
+	try {
+		for (const [filename, data] of Object.entries(files)) {
+			const previous = await cache.match(filename);
+			await writeData(filename, data);
+			written.push([filename, previous]);
+		}
+	}
+	catch (error) {
+		await Promise.all(written.map(([filename, previous]) => previous ? cache.put(filename, previous) : cache.delete(filename))).catch(() => {});
+		throw error;
+	}
 }
 
 export async function downloadFile(filename, content) {

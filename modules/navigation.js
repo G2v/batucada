@@ -53,10 +53,10 @@ export class Navigation {
 		}
 		if (changes.transient || (changes.loaded && !changes.corrected)) return;
 		const values = {};
-		if (changes.steps.size)                    values.sheet   = true;
+		if (changes.steps.size) values.sheet   = true;
 		if (!changes.loaded) {
-			if (changes.tempo)                     values.tempo   = true;
-			if (changes.title)                     values.title   = true;
+			if (changes.tempo) values.tempo   = true;
+			if (changes.title) values.title   = true;
 			if (changes.tracks.size || changes.order)  values.tracks  = true;
 			if (changes.volumes.size || changes.order) values.volumes = true;
 		}
@@ -83,7 +83,6 @@ export class Navigation {
 			handler: () => {
 				if (!event.info?.keepState) {
 					this.#searchParams = url.searchParams;
-					// À l'effacement, le morceau est déjà remis à zéro
 					if (action === 'reset' || action === 'decodeAll') {
 						if (action === 'decodeAll') this.#song.load(decode(this.#config, this.#searchParams, this.#song.order));
 						if (sequenceChanged) this.#audio.restart();
