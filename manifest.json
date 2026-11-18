@@ -1,6 +1,6 @@
 {
-	"name": "Les Zurbamateurs",
-	"short_name": "Zurbamateurs",
+	"name": "Batucada Sequencer",
+	"short_name": "Batucada",
 	"start_url": "./",
 	"display": "standalone",
 	"background_color": "#1f252e",
