@@ -1,48 +1,46 @@
-import { normalizeName } from './utils.js';
-
 export default class InterfaceControls {
 	#ui;
 	#audio;
-	#store;
+	#song;
 	#track;
 	#names;
 	#appTitle;
-	#skipButton;
-	#themeButton;
-	#resetButton;
 	#barsSelect;
 	#beatsSelect;
 	#stepsSelect;
 	#phraseSelect;
+	#skipButton;
+	#themeButton;
+	#resetButton;
 	#positionSelect;
 	#deleteCheckbox;
-	#controlsSection;
-	#presetsMenuButton;
 	#trackPositionText;
 	#trackSettingsDialog;
+	#savedSongsMenuButton;
+	#controlsSection;
 
-	constructor({ parent, config, store, audio }) {
+	constructor({ parent, config, song, audio }) {
 		this.#ui                = parent;
 		this.#audio             = audio;
-		this.#store             = store;
+		this.#song              = song;
 		this.#names             = config.names;
 
 		const { selectors } = config;
 
-		this.#appTitle            = document.querySelector(selectors.appTitle);
-		this.#barsSelect          = document.querySelector(selectors.barsSelect);
-		this.#beatsSelect         = document.querySelector(selectors.beatsSelect);
-		this.#stepsSelect         = document.querySelector(selectors.stepsSelect);
-		this.#phraseSelect        = document.querySelector(selectors.phraseSelect);
-		this.#skipButton          = document.querySelector(selectors.skipButton);
-		this.#themeButton         = document.querySelector(selectors.themeButton);
-		this.#resetButton         = document.querySelector(selectors.resetButton);
-		this.#presetsMenuButton   = document.querySelector(selectors.presetsMenuButton);
-		this.#trackSettingsDialog = document.querySelector(selectors.trackSettingsDialog);
-		this.#trackPositionText   = document.querySelector(selectors.trackPositionText);
-		this.#positionSelect      = document.querySelector(selectors.positionSelect);
-		this.#deleteCheckbox      = document.querySelector(selectors.deleteCheckbox);
-		this.#controlsSection     = document.querySelector(selectors.controlsSection);
+		this.#appTitle             = document.querySelector(selectors.appTitle);
+		this.#barsSelect           = document.querySelector(selectors.barsSelect);
+		this.#beatsSelect          = document.querySelector(selectors.beatsSelect);
+		this.#stepsSelect          = document.querySelector(selectors.stepsSelect);
+		this.#phraseSelect         = document.querySelector(selectors.phraseSelect);
+		this.#skipButton           = document.querySelector(selectors.skipButton);
+		this.#themeButton          = document.querySelector(selectors.themeButton);
+		this.#resetButton          = document.querySelector(selectors.resetButton);
+		this.#savedSongsMenuButton = document.querySelector(selectors.savedSongsMenuButton);
+		this.#trackSettingsDialog  = document.querySelector(selectors.trackSettingsDialog);
+		this.#trackPositionText    = document.querySelector(selectors.trackPositionText);
+		this.#positionSelect       = document.querySelector(selectors.positionSelect);
+		this.#deleteCheckbox       = document.querySelector(selectors.deleteCheckbox);
+		this.#controlsSection      = document.querySelector(selectors.controlsSection);
 
 		const options = Array.from({ length: config.tracksLength - 1 }, (_, i) => new Option(i + 2, i + 1));
 		this.#positionSelect.firstElementChild.after(...options);
@@ -51,6 +49,7 @@ export default class InterfaceControls {
 		document.addEventListener('click',                       () => this.#audio.unlock(), { once: true });
 		audio.addEventListener('play',                           () => this.#playbackChanged(true));
 		audio.addEventListener('stop',                           () => this.#playbackChanged(false));
+		song.addEventListener('change',                          ({ detail }) => detail.title && this.#renderMediaTitle());
 		this.#ui.container.addEventListener('input',             (event) => this.#handleInput(event));
 		this.#ui.container.addEventListener('change',            (event) => this.#handleChange(event));
 		this.#deleteCheckbox.addEventListener('change',          () => this.#toggleFields());
@@ -61,6 +60,7 @@ export default class InterfaceControls {
 
 	#initMediaSession() {
 		navigator.mediaSession.metadata = new MediaMetadata({
+			title: this.#mediaTitle,
 			artist: this.#appTitle.textContent,
 			artwork: [
 				{
@@ -83,7 +83,7 @@ export default class InterfaceControls {
 			return;
 		}
 
-		const { order, tracks } = this.#store.state;
+		const { order, tracks } = this.#song;
 		const newPosition = this.#positionSelect.value | 0;
 		const fields = {
 			bars:   this.#barsSelect.value,
@@ -103,10 +103,10 @@ export default class InterfaceControls {
 			: order[newPosition];
 		if (!hasChanges && !isMoved) return;
 
-		this.#ui.startViewTransition(() => this.#store.batch(() => {
-			if (isMoved) this.#store.moveTrack(trackIndex, targetIndex);
-			if (hasChanges) this.#store.setTrack(trackIndex, changes);
-		}), isMoved ? this.#track : null);
+		this.#ui.startViewTransition(() => {
+			if (isMoved) this.#song.moveTrack(trackIndex, targetIndex);
+			if (hasChanges) this.#song.setTrack(trackIndex, changes);
+		}, isMoved ? this.#track : null);
 	}
 
 	#handleClick(event) {
@@ -115,12 +115,12 @@ export default class InterfaceControls {
 			this.#changeNote(target);
 		}
 		else if (target === this.#resetButton) {
-			this.#store.reset();
+			this.#song.reset();
 		}
 		else if (target === this.#ui.startButton) {
 			this.#start();
 		}
-		else if (target === this.#presetsMenuButton) {
+		else if (target === this.#savedSongsMenuButton) {
 			this.#ui.dialogs.showToast(target.dataset.message);
 		}
 		else if (target === this.#themeButton) {
@@ -147,16 +147,16 @@ export default class InterfaceControls {
 	#setSlider(target, transient) {
 		const value = Number(target.value);
 		if (target === this.#ui.tempoSlider) {
-			this.#store.setTempo(value, { transient });
+			this.#song.setTempo(value, { transient });
 		}
 		else if (target.name === this.#names.volume) {
-			this.#store.setVolume(this.#ui.getTrackIndex(this.#ui.getTrack(target)), value, { transient });
+			this.#song.setVolume(this.#ui.getTrackIndex(this.#ui.getTrack(target)), value, { transient });
 		}
 	}
 
 	#changeNote(target) {
 		const index  = this.#ui.getStepIndex(target);
-		const stroke = this.#store.toggleStroke(index);
+		const stroke = this.#song.toggleStroke(index);
 		this.#audio.preview(index, stroke);
 	}
 
@@ -164,11 +164,11 @@ export default class InterfaceControls {
 		if (command !== 'show-modal') return;
 		const track = this.#ui.getTrack(source);
 		const index       = this.#ui.getTrackIndex(track);
-		const { order }   = this.#store.state;
-		const { bars, beats, steps, phrase } = this.#store.state.tracks[index];
+		const { order }   = this.#song;
+		const { bars, beats, steps, phrase } = this.#song.tracks[index];
 		const position    = order.indexOf(index);
-		const isLastTrack = this.#store.isEmpty(index);
-		const filledCount = this.#store.activeTracks.filter(id => !this.#store.isEmpty(id)).length;
+		const isLastTrack = this.#song.isEmpty(index);
+		const filledCount = this.#song.activeTracks.filter(id => !this.#song.isEmpty(id)).length;
 
 		for (const option of this.#positionSelect.options) {
 			const value = option.value | 0;
@@ -196,7 +196,7 @@ export default class InterfaceControls {
 	#inputInstrument(target) {
 		const index      = this.#ui.getTrackIndex(this.#ui.getTrack(target));
 		const instrument = Number(target.value);
-		this.#ui.startViewTransition(() => this.#store.setTrack(index, { instrument }));
+		this.#ui.startViewTransition(() => this.#song.setTrack(index, { instrument }));
 	}
 
 	#start(state = !this.#audio.playing) {
@@ -206,8 +206,15 @@ export default class InterfaceControls {
 
 	#playbackChanged(playing) {
 		this.#ui.startButton.ariaChecked = playing;
-		if (playing && !navigator.mediaSession.metadata.title) navigator.mediaSession.metadata.title = normalizeName(this.#store.state.title) || this.#ui.untitled;
 		navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+	}
+
+	#renderMediaTitle() {
+		navigator.mediaSession.metadata.title = this.#mediaTitle;
+	}
+
+	get #mediaTitle() {
+		return this.#song.title || this.#ui.untitled;
 	}
 
 	#changeTheme() {

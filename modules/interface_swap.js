@@ -6,14 +6,14 @@ export default class InterfaceSwap {
 	static #dropzoneClass = 'dropzone';
 
 	#ui;
-	#store;
+	#song;
 	#trashZone;
 	#endDropZone;
 	#over = new Set();
 
-	constructor({ parent, config, store }) {
+	constructor({ parent, config, song }) {
 		this.#ui                = parent;
-		this.#store             = store;
+		this.#song              = song;
 		this.#trashZone         = document.querySelector(config.selectors.trashZone);
 		this.#endDropZone       = document.querySelector(config.selectors.endDropZone);
 
@@ -21,14 +21,14 @@ export default class InterfaceSwap {
 		this.#ui.container.addEventListener('dragenter', (event) => this.#handleDragEnter(event));
 		this.#ui.container.addEventListener('dragover',  (event) => this.#handleDragOver(event));
 		this.#ui.container.addEventListener('dragleave', (event) => this.#handleDragLeave(event));
-		this.#ui.container.addEventListener('dragend',   (event) => this.#handleDragEnd(event));
+		this.#ui.container.addEventListener('dragend',   () => this.#handleDragEnd());
 		this.#ui.container.addEventListener('drop',      (event) => this.#handleDrop(event));
 	}
 
 	#handleDragStart(event) {
 		const track = this.#ui.getTrack(event.target);
 		if (!track) return;
-		if (!this.#store.isEmpty(this.#ui.getTrackIndex(track))) {
+		if (!this.#song.isEmpty(this.#ui.getTrackIndex(track))) {
 			this.#ui.container.classList.add(InterfaceSwap.#swapClass);
 		}
 		this.#ui.container.classList.add(InterfaceSwap.#trashClass);
@@ -58,7 +58,7 @@ export default class InterfaceSwap {
 		}
 	}
 
-	#handleDragEnd(event) {
+	#handleDragEnd() {
 		this.#ui.container.classList.remove(InterfaceSwap.#swapClass, InterfaceSwap.#trashClass);
 		this.#removeOver();
 	}
@@ -74,9 +74,9 @@ export default class InterfaceSwap {
 	}
 
 	#moveTrack(sourceIndex, targetIndex) {
-		const { order } = this.#store.state;
+		const { order } = this.#song;
 		if (sourceIndex === targetIndex || (order[order.indexOf(sourceIndex) + 1] ?? null) === targetIndex) return;
-		this.#ui.startViewTransition(() => this.#store.moveTrack(sourceIndex, targetIndex), this.#ui.tracks[sourceIndex]);
+		this.#ui.startViewTransition(() => this.#song.moveTrack(sourceIndex, targetIndex), this.#ui.tracks[sourceIndex]);
 	}
 
 	#isDropZone(target) {
@@ -94,19 +94,19 @@ export default class InterfaceSwap {
 
 	trashTrack(sourceIndex) {
 		const draggedTrack      = this.#ui.tracks[sourceIndex];
-		const isLastVisualTrack = sourceIndex === this.#store.state.order.at(-1)
-			|| this.#store.isEmpty(sourceIndex);
+		const isLastVisualTrack = sourceIndex === this.#song.order.at(-1)
+			|| this.#song.isEmpty(sourceIndex);
 
 		if (isLastVisualTrack) {
 			const target = draggedTrack.nextElementSibling || draggedTrack;
-			this.#store.trashTrack(sourceIndex);
+			this.#song.trashTrack(sourceIndex);
 			target.classList.remove(InterfaceSwap.#resetedClass);
 			requestAnimationFrame(() => {
 				target.classList.add(InterfaceSwap.#resetedClass);
 				target.addEventListener('animationend', () => target.classList.remove(InterfaceSwap.#resetedClass), { once: true });
 			});
 		} else {
-			this.#ui.startViewTransition(() => this.#store.trashTrack(sourceIndex));
+			this.#ui.startViewTransition(() => this.#song.trashTrack(sourceIndex));
 		}
 	}
 }

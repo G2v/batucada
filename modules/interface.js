@@ -1,4 +1,3 @@
-import { normalizeName } from './utils.js';
 import { buildStyles, buildTracks, buildInstruments } from './build-dom.js';
 
 export class Interface {
@@ -7,14 +6,14 @@ export class Interface {
 		{ name: 'controls',    path: './interface_controls.js' },
 		{ name: 'dialogs',     path: './interface_dialogs.js' },
 		{ name: 'animation',   path: './interface_animation.js' },
-		{ name: 'presets',     path: './interface_presets.js' },
+		{ name: 'savedSongs',  path: './interface_saved-songs.js' },
 		{ name: 'instruments', path: './interface_instruments.js' },
 		{ name: 'aria',        path: './interface_aria.js' },
 		{ name: 'swap',        path: './interface_swap.js' },
 		{ name: 'app',         path: './interface_app.js' },
 	]);
 
-	#store;
+	#song;
 	#untitled;
 	#selectors;
 	#resolution;
@@ -27,22 +26,21 @@ export class Interface {
 	#headTitlePrefix = `${document.title} - `;
 
 	constructor(params) {
-		const { config, store, presets } = params;
-		this.#store             = store;
+		const { config, song, savedSongs } = params;
+		this.#song              = song;
 		this.#selectors         = config.selectors;
 		this.#resolution        = config.resolution;
 		this.#trackKeys         = Object.keys(config.defaultTrack);
 		this.#emptyStroke       = config.emptyStroke;
 
-		store.addEventListener('change',   ({ detail }) => this.#render(detail));
-		presets.addEventListener('change', ({ detail }) => this.#presetsUpdated(detail));
+		song.addEventListener('change',       ({ detail }) => this.#render(detail));
+		savedSongs.addEventListener('change', ({ detail }) => this.#savedSongsUpdated(detail));
 
 		this.#build(params);
 		this.#loadModules(params);
 	}
 
 	#build({ config }) {
-		const { state } = this.#store;
 		const addTracks = (start, end) => {
 			const { nodes, fragment } = buildTracks(config, this.trackTemplate, start, end);
 			for (const [key, list] of Object.entries(nodes)) (this.#nodes[key] ??= []).push(...list);
@@ -53,18 +51,20 @@ export class Interface {
 
 		buildStyles(config).catch(reportError);
 
-		const lastModified = state.tracks.findLastIndex((_, id) => this.#store.isModified(id));
-		const firstCount   = Math.min(config.tracksLength, lastModified + 2);
-		const fragment     = addTracks(0, firstCount);
-		this.#tempo = state.tempo;
-		this.#title = state.title;
-
+		this.#tempo = this.#song.tempo;
+		this.#title = this.#song.title;
 		document.documentElement.style.removeProperty('--untitled');
-		document.documentElement.style.removeProperty('--tracks-count');
-		this.trackList.appendChild(fragment);
+
+		const activeCount = this.#song.activeTracks.length;
+		let firstCount = 0;
+		do {
+			this.trackList.appendChild(addTracks(firstCount, firstCount + 1));
+			firstCount++;
+		} while (firstCount < activeCount && this.#nodes.tracks[firstCount - 1].getBoundingClientRect().bottom < innerHeight);
 
 		requestAnimationFrame(() => setTimeout(() => {
 			this.trackList.appendChild(addTracks(firstCount));
+			document.documentElement.style.removeProperty('--tracks-count');
 			this.#tracksReady.resolve();
 		}));
 	}
@@ -78,9 +78,8 @@ export class Interface {
 	}
 
 	#render({ tempo, title, tracks, steps, volumes, moved }) {
-		const { state } = this.#store;
-		if (tempo) this.#tempo = state.tempo;
-		if (title) this.#title = state.title;
+		if (tempo) this.#tempo = this.#song.tempo;
+		if (title) this.#title = this.#song.title;
 		tracks.forEach(id => this.#renderTrack(id));
 		steps.forEach(index => this.#renderStep(index));
 		volumes.forEach(id => this.#renderVolume(id));
@@ -88,7 +87,7 @@ export class Interface {
 	}
 
 	#renderTracks(start, end) {
-		const { sheet } = this.#store.state;
+		const { sheet } = this.#song;
 		const { track: stepsPerTrack } = this.#resolution;
 		for (let id = start; id < end; id++) {
 			this.#renderTrack(id);
@@ -102,7 +101,7 @@ export class Interface {
 	#renderTrack(id) {
 		const track = this.#nodes.tracks[id];
 		if (!track) return;
-		const values = this.#store.state.tracks[id];
+		const values = this.#song.tracks[id];
 		for (const key of this.#trackKeys) {
 			if (track.dataset[key] !== String(values[key])) track.dataset[key] = values[key];
 		}
@@ -111,52 +110,44 @@ export class Interface {
 
 	#renderStep(index) {
 		const step = this.#nodes.steps[index];
-		if (step) step.value = this.#store.state.sheet[index];
+		if (step) step.value = this.#song.sheet[index];
 	}
 
 	#renderVolume(id) {
 		const volume = this.#nodes.volumes[id];
-		const value  = this.#store.state.volumes[id];
+		const value  = this.#song.volumes[id];
 		if (volume && (volume.value | 0) !== value) volume.value = value;
 	}
 
 	#renderMove(id) {
-		const { order } = this.#store.state;
+		const { order } = this.#song;
 		const next = order[order.indexOf(id) + 1];
 		this.trackList.insertBefore(this.#nodes.tracks[id], this.#nodes.tracks[next] ?? null);
 	}
 
 	set #title(value) {
-		const titleText = normalizeName(value);
-		this.sequenceTitle.textContent = titleText;
-		document.title = this.#headTitlePrefix + (titleText || this.untitled);
-		if (navigator.mediaSession.metadata) navigator.mediaSession.metadata.title = titleText || this.untitled;
+		this.#sequenceTitle.textContent = value;
+		document.title = this.#headTitlePrefix + (value || this.untitled);
 	}
 
 	set #tempo(value) {
 		this.tempoSlider.value = value;
-		this.tempoValue.textContent = value;
+		this.#tempoValue.textContent = value;
 	}
 
-	#presetsUpdated({ presets, index }) {
-		if (presets !== undefined) {
-			const { lastModified, values } = presets;
-			this.presetsSelect.options.length = 0;
-			this.presetsSelect.append(...values.map(({ name, value }) => new Option(name || this.untitled, value)));
-			this.presetsDate.dateTime = lastModified?.toJSON() ?? '';
+	get #sequenceTitle() { return this.#nodes.sequenceTitle ??= document.querySelector(this.#selectors.sequenceTitle); }
+	get #tempoValue()    { return this.#nodes.tempoValue    ??= document.querySelector(this.#selectors.tempoValue); }
+
+	#savedSongsUpdated({ savedSongs, index }) {
+		if (savedSongs !== undefined) {
+			this.savedSongsSelect.options.length = 0;
+			this.savedSongsSelect.append(...savedSongs.map(({ name }) => new Option(name || this.untitled)));
 		}
-		if (index !== undefined) this.presetsSelect.selectedIndex = index;
+		if (index !== undefined) this.savedSongsSelect.selectedIndex = index;
 	}
 
 	getStepIndex(step) {
-		const beat  = step.closest(this.#selectors.beat);
-		const bar   = beat.closest(this.#selectors.bar);
-		const track = bar.closest(this.#selectors.track);
-
-		return (track.dataset.index | 0) * this.#resolution.track
-			 + (bar.dataset.index   | 0) * this.#resolution.bar
-			 + (beat.dataset.index  | 0) * this.#resolution.beat
-			 + (step.dataset.index  | 0);
+		return this.#nodes.steps.indexOf(step);
 	}
 
 	getTrack(child)           { return child.closest(this.#selectors.track); }
@@ -173,16 +164,13 @@ export class Interface {
 	get volumes()       { return this.#nodes.volumes; }
 	get instruments()   { return this.#nodes.instruments; }
 
-	get tempoValue()    { return this.#nodes.tempoValue    ??= document.querySelector(this.#selectors.tempoValue); }
-	get tempoSlider()   { return this.#nodes.tempoSlider   ??= document.querySelector(this.#selectors.tempoSlider); }
-	get sequenceTitle() { return this.#nodes.sequenceTitle ??= document.querySelector(this.#selectors.sequenceTitle); }
-	get presetsSelect() { return this.#nodes.presetsSelect ??= document.querySelector(this.#selectors.presetsSelect); }
-	get container()     { return this.#nodes.container     ??= document.querySelector(this.#selectors.container); }
-	get startButton()   { return this.#nodes.startButton   ??= document.querySelector(this.#selectors.startButton); }
-	get trackList()     { return this.#nodes.trackList     ??= document.querySelector(this.#selectors.trackList); }
-	get trackTemplate() { return this.#nodes.trackTemplate ??= document.querySelector(this.#selectors.trackTemplate).content.querySelector(this.#selectors.track); }
-	get presetsDate()   { return this.#nodes.presetsDate   ??= document.querySelector(this.#selectors.presetsDate); }
-	get untitled()      { return this.#untitled            ??= document.querySelector(this.#selectors.untitledLabel).textContent; }
+	get tempoSlider()      { return this.#nodes.tempoSlider      ??= document.querySelector(this.#selectors.tempoSlider); }
+	get savedSongsSelect() { return this.#nodes.savedSongsSelect ??= document.querySelector(this.#selectors.savedSongsSelect); }
+	get container()        { return this.#nodes.container        ??= document.querySelector(this.#selectors.container); }
+	get startButton()      { return this.#nodes.startButton      ??= document.querySelector(this.#selectors.startButton); }
+	get trackList()        { return this.#nodes.trackList        ??= document.querySelector(this.#selectors.trackList); }
+	get trackTemplate()    { return this.#nodes.trackTemplate    ??= document.querySelector(this.#selectors.trackTemplate).content.querySelector(this.#selectors.track); }
+	get untitled()         { return this.#untitled               ??= document.querySelector(this.#selectors.untitledLabel).textContent; }
 
 	get swap()          { return this.#instances.swap; }
 	get dialogs()       { return this.#instances.dialogs; }

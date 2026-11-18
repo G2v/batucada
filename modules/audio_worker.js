@@ -1,5 +1,3 @@
-// Horloge de lecture : à chaque temps, environ lookAhead secondes à l'avance, calcule les cases à jouer
-// et leur heure sur l'horloge audio, puis les envoie à la page. Le morceau vient du store, via audio.js.
 const lookAhead   = 0.15;
 const startDelay  = 0.01;
 
@@ -22,18 +20,15 @@ self.onmessage = ({ data: { action, payload } }) => {
 	}
 };
 
-// Morceau à jouer : tempo, pistes (avec leur position dans la partition et active) et partition
 function song(payload) {
-	if (payload.tempo  !== undefined) tempo  = payload.tempo;
-	if (payload.tracks !== undefined) tracks = payload.tracks;
-	if (payload.sheet  !== undefined) sheet  = payload.sheet;
+	({ tempo, sheet } = payload);
+	tracks = payload.activeTracks.map(id => ({ ...payload.tracks[id], id }));
 }
 
 function start(time) {
 	if (timer !== null) return;
 	const startTime = time + startDelay;
-	beatCounter = 0;
-	phraseCounter = 1;
+	restart();
 	workerSyncDelta = (startTime * 1000) - performance.now();
 	scheduler(startTime);
 }
@@ -58,14 +53,13 @@ function scheduler(nextTickTime) {
 	const secondsPerBeat = 60 / tempo;
 	const ticksBuffer = new Float64Array(tracks.length * config.resolution.beat * 5);
 
-	for (const [trackIndex, track] of tracks.entries()) {
-		const { instrument, bars, beats, steps, active, phrase, sheetIndex } = track;
+	for (const { id, instrument, bars, beats, steps, phrase } of tracks) {
 		const totalBeats = bars * beats;
-		if (!active || phrase !== phraseCounter || (phrase !== 0 && beatCounter >= totalBeats)) continue;
+		if (phrase !== phraseCounter || (phrase !== 0 && beatCounter >= totalBeats)) continue;
 
 		const barCount = Math.floor((beatCounter % totalBeats) / beats);
 		const beatIndex = (barCount * config.resolution.maxBeats) + (beatCounter % beats);
-		const beatOffset = sheetIndex + (beatIndex * config.resolution.beat);
+		const beatOffset = (id * config.resolution.track) + (beatIndex * config.resolution.beat);
 		const secondsPerStep = secondsPerBeat / steps;
 
 		for (let stepOffset = 0; stepOffset < steps; stepOffset++) {
@@ -74,7 +68,7 @@ function scheduler(nextTickTime) {
 			ticksBuffer[offset]     = nextTickTime + (stepOffset * secondsPerStep);
 			ticksBuffer[offset + 1] = sheet[stepIndex];
 			ticksBuffer[offset + 2] = instrument;
-			ticksBuffer[offset + 3] = trackIndex;
+			ticksBuffer[offset + 3] = id;
 			ticksBuffer[offset + 4] = stepIndex;
 			noteCount++;
 		}
@@ -88,7 +82,7 @@ function scheduler(nextTickTime) {
 
 function phraseLength(phrase) {
 	const length = tracks
-		.filter(track => track.active && track.phrase === phrase)
+		.filter(track => track.phrase === phrase)
 		.reduce((max, track) => Math.max(max, track.bars * track.beats), 0);
 	return (phrase === 0 && length) ? Infinity : length;
 }
@@ -97,7 +91,7 @@ function updatePhrase() {
 	while (beatCounter >= phraseLength(phraseCounter)) {
 		if (phraseCounter === 0) return false;
 		const nextPhrase = tracks
-			.filter(track => track.active && track.phrase > phraseCounter)
+			.filter(track => track.phrase > phraseCounter)
 			.reduce((min, track) => Math.min(min, track.phrase), Infinity);
 		if (nextPhrase !== Infinity) phraseCounter = nextPhrase;
 		else if (phraseLength(0)) phraseCounter = 0;

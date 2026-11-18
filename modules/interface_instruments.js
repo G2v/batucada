@@ -170,7 +170,7 @@ export default class InterfaceInstruments {
 			const buffer = await response.arrayBuffer();
 			return await audioContext.decodeAudioData(buffer);
 		} catch {
-			throw new Error('Invalide Audio');
+			throw new Error('Invalid audio');
 		}
 	}
 
@@ -182,7 +182,7 @@ export default class InterfaceInstruments {
 		return new Promise((resolve, reject) => {
 			const img = new Image();
 			img.onload = () => resolve(img);
-			img.onerror = () => reject(new Error('Invalide Image'));
+			img.onerror = () => reject(new Error('Invalid image'));
 			img.src = dataUrl;
 		});
 	}

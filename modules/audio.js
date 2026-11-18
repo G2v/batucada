@@ -22,7 +22,7 @@ const toMono = (buffer) => {
 export class Audio extends EventTarget {
 	static #detuneRange = 10;
 
-	#store;
+	#song;
 	#worker;
 	#sounds;
 	#maxGain;
@@ -40,13 +40,13 @@ export class Audio extends EventTarget {
 	#wakeLock         = null;
 	#audioReady       = null;
 	#hiddenTimer      = null;
-	#instruments      = [];
+	#instruments      = {};
 	#activeSources    = new Set();
 	#panByInstrument  = {};
 
-	constructor({ config, store }) {
+	constructor({ config, song }) {
 		super();
-		this.#store       = store;
+		this.#song        = song;
 		this.#maxGain     = config.maxGain;
 		this.#resolution  = config.resolution;
 		this.#emptyStroke = config.emptyStroke;
@@ -63,8 +63,8 @@ export class Audio extends EventTarget {
 		this.#worker           = new Worker(new URL('./audio_worker.js', import.meta.url));
 		this.#worker.onmessage = (event) => this.#handleWorkerMessage(event.data);
 		this.#worker.postMessage({ action: 'config', payload: { resolution: config.resolution } });
-		this.#postSong(true);
-		store.addEventListener('change', ({ detail }) => this.#storeChanged(detail));
+		this.#postSong();
+		song.addEventListener('change', ({ detail }) => this.#songChanged(detail));
 
 		this.#loadInstrumentsLibrary(config.instrumentsLibraryReady).catch(() => {});
 		this.#sounds = this.#fetchInstrumentSounds();
@@ -73,7 +73,6 @@ export class Audio extends EventTarget {
 		defer(() => this.#preferences.hiddenPlayDuration && this.#ensureAudioStream());
 	}
 
-	// Autre morceau ouvert : la lecture reprend au début
 	restart() {
 		this.#worker.postMessage({ action: 'restart' });
 		this.dispatchEvent(new Event('restart'));
@@ -87,7 +86,7 @@ export class Audio extends EventTarget {
 		await this.#startAudio();
 		if (!this.#preferences.strokePreview || this.#playing || stroke <= this.#emptyStroke) return;
 		const id = index / this.#resolution.track | 0;
-		this.#playNote(this.#store.state.tracks[id].instrument, id, stroke);
+		this.#playNote(this.#song.tracks[id].instrument, id, stroke);
 	}
 
 	get playing() {
@@ -114,21 +113,16 @@ export class Audio extends EventTarget {
 		else if (this.#playing) this.#ensureAudioStream().play().catch(() => {});
 	}
 
-	#storeChanged({ tempo, tracks, steps, volumes, order, reset }) {
+	#songChanged({ tempo, tracks, steps, volumes, order, reset }) {
 		if (reset) this.#muteSchedulesNotes();
 		volumes.forEach((id) => this.#updateGain(id));
 		if (tracks.size) this.#updatePans();
-		if (tempo) this.#worker.postMessage({ action: 'song', payload: { tempo: this.#store.state.tempo } });
-		if (tracks.size || steps.size || order) this.#postSong();
+		if (tempo || tracks.size || steps.size || order) this.#postSong();
 	}
 
-	#postSong(withTempo = false) {
-		const { state, activeTracks } = this.#store;
-		const active = new Set(activeTracks);
-		const sheet  = state.sheet.slice();
-		const tracks = state.tracks.map((track, id) => ({ ...track, sheetIndex: id * this.#resolution.track, active: active.has(id) }));
-		const payload = withTempo ? { tempo: state.tempo, tracks, sheet } : { tracks, sheet };
-		this.#worker.postMessage({ action: 'song', payload }, [sheet.buffer]);
+	#postSong() {
+		const { tempo, tracks, sheet, activeTracks } = this.#song;
+		this.#worker.postMessage({ action: 'song', payload: { tempo, tracks, sheet, activeTracks } });
 	}
 
 	async #loadInstrumentsLibrary(instrumentsLibraryReady) {
@@ -138,7 +132,7 @@ export class Audio extends EventTarget {
 	}
 
 	#gainOf(id) {
-		return this.#store.state.volumes[id] / this.#maxGain * Math.SQRT2;
+		return this.#song.volumes[id] / this.#maxGain * Math.SQRT2;
 	}
 
 	#updateGain(id) {
@@ -147,7 +141,7 @@ export class Audio extends EventTarget {
 
 	#updatePans() {
 		this.#panNodes?.forEach((node, id) => {
-			node.pan.value = this.#preferences.audio === 'mono' ? 0 : this.#panByInstrument[this.#store.state.tracks[id].instrument] ?? 0;
+			node.pan.value = this.#preferences.audio === 'mono' ? 0 : this.#panByInstrument[this.#song.tracks[id].instrument] ?? 0;
 		});
 	}
 
@@ -162,7 +156,7 @@ export class Audio extends EventTarget {
 		this.#masterGain = new GainNode(this.#audioContext);
 		this.#masterGain.connect(this.#audioContext.destination);
 
-		const tracks = this.#store.state.tracks;
+		const tracks = this.#song.tracks;
 		this.#panNodes  = tracks.map(() => new StereoPannerNode(this.#audioContext));
 		this.#updatePans();
 		this.#gainNodes = tracks.map((_, id) => {
@@ -230,7 +224,6 @@ export class Audio extends EventTarget {
 		else if (action === 'stop') this.#stopAudio();
 	}
 
-	// Lance la lecture
 	async play() {
 		await this.#startAudio();
 		if (this.#preferences.hiddenPlayDuration) this.#ensureAudioStream().play().catch(() => {});
@@ -247,7 +240,6 @@ export class Audio extends EventTarget {
 			: Promise.resolve();
 	}
 
-	// Arrête la lecture
 	stop() {
 		if (!this.#audioContext) return;
 		this.#worker.postMessage({ action: 'stop' });

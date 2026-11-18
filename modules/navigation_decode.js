@@ -1,9 +1,11 @@
+import { normalizeName } from './utils.js';
+
 export function decode(config, searchParams, order = Array.from({ length: config.tracksLength }, (_, id) => id)) {
 	const { tracksLength, resolution } = config;
 	const param = (key, fallback) => searchParams.get(key) ?? fallback;
 	const song  = {
 		tempo:   decodeTempo(config, param(config.tempoSearchParam, config.defaultTempo)),
-		title:   param(config.titleSearchParam, ''),
+		title:   decodeTitle(config, searchParams),
 		tracks:  [],
 		volumes: [],
 		sheet:   new Uint8Array(tracksLength * resolution.track),
@@ -11,6 +13,10 @@ export function decode(config, searchParams, order = Array.from({ length: config
 	decodeSet(config, order, param(config.setSearchParam, config.defaultSetValue), song);
 	decodeVolumes(config, order, param(config.volumeSearchParam, config.defaultVolume), song);
 	return song;
+}
+
+export function decodeTitle({ titleSearchParam }, searchParams) {
+	return normalizeName(searchParams.get(titleSearchParam) ?? '');
 }
 
 function decodeSet(config, order, encodedValues, song) {
@@ -37,7 +43,6 @@ function decodeSet(config, order, encodedValues, song) {
 		};
 		song.tracks[id] = track;
 
-		// Les frappes sont rangées case par case, mesure par mesure, en base « base »
 		const start     = id * trackSize;
 		let sheetNumber = toBigInt(data.slice(trackHeaderLength), digits);
 		for (let barIndex = 0; barIndex < track.bars && sheetNumber > 0n; barIndex++) {

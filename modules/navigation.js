@@ -1,37 +1,37 @@
 import { encodeUrl } from './navigation_encode.js';
-import { decode } from './navigation_decode.js';
+import { decode, decodeTitle } from './navigation_decode.js';
 
 export class Navigation {
 	#audio;
-	#store;
+	#song;
 	#config;
-	#presets;
+	#savedSongs;
 	#searchParams;
 
-	constructor({ config, store, presets, audio }) {
+	constructor({ config, song, savedSongs, audio }) {
 		this.#audio           = audio;
-		this.#store           = store;
+		this.#song            = song;
 		this.#config          = config;
-		this.#presets         = presets;
+		this.#savedSongs      = savedSongs;
 		this.#searchParams    = new URLSearchParams(location.search);
 
 		history.scrollRestoration = 'manual';
 		this.#saveLastSequence();
-		presets.setCurrent(this.#current);
+		savedSongs.setCurrent(this.#current);
 
 		navigation.addEventListener('currententrychange', () => this.#saveLastSequence());
 		navigation.addEventListener('navigate',           event => this.#handleNavigation(event));
-		store.addEventListener('change',                  ({ detail }) => this.#storeChanged(detail));
+		song.addEventListener('change',                   ({ detail }) => this.#songChanged(detail));
 	}
 
-	openPreset(index) {
-		const preset = this.#presets.select(index);
-		if (!preset) return;
-		const { name, value, tempo } = preset;
+	openSavedSong(index) {
+		const savedSong = this.#savedSongs.at(index);
+		if (!savedSong) return;
+		const { name, value, tempo } = savedSong;
 		const { setSearchParam, titleSearchParam, tempoSearchParam, volumeSearchParam, defaultSetValue } = this.#config;
 		this.#searchParams.set(setSearchParam, value || defaultSetValue);
 		this.#searchParams.set(titleSearchParam, name || '');
-		if (this.#isDraft(navigation.currentEntry) && this.#isSamePreset(this.#previousEntry)) {
+		if (this.#isDraft(navigation.currentEntry) && this.#isSameSavedSong(this.#previousEntry)) {
 			navigation.back();
 			return;
 		}
@@ -46,18 +46,17 @@ export class Navigation {
 		else delete localStorage.lastSequence;
 	}
 
-	#storeChanged(changes) {
+	#songChanged(changes) {
 		if (changes.reset) {
-			this.#presets.reset();
 			this.#reset();
 			return;
 		}
 		if (changes.transient || (changes.loaded && !changes.corrected)) return;
 		const values = {};
-		if (changes.steps.size) values.sheet   = true;
+		if (changes.steps.size)                    values.sheet   = true;
 		if (!changes.loaded) {
-			if (changes.tempo) values.tempo   = true;
-			if (changes.title) values.title   = true;
+			if (changes.tempo)                     values.tempo   = true;
+			if (changes.title)                     values.title   = true;
 			if (changes.tracks.size || changes.order)  values.tracks  = true;
 			if (changes.volumes.size || changes.order) values.volumes = true;
 		}
@@ -84,21 +83,21 @@ export class Navigation {
 			handler: () => {
 				if (!event.info?.keepState) {
 					this.#searchParams = url.searchParams;
-					// À l'effacement, le store est déjà remis à zéro
+					// À l'effacement, le morceau est déjà remis à zéro
 					if (action === 'reset' || action === 'decodeAll') {
-						if (action === 'decodeAll') this.#store.load(decode(this.#config, this.#searchParams, this.#store.state.order));
+						if (action === 'decodeAll') this.#song.load(decode(this.#config, this.#searchParams, this.#song.order));
 						if (sequenceChanged) this.#audio.restart();
 						if (sequenceChanged || action === 'reset') requestAnimationFrame(() => window.scrollTo(0, 0));
 					}
 				}
-				this.#presets.setCurrent(this.#current);
+				this.#savedSongs.setCurrent(this.#current);
 			}
 		});
 	}
 
 	#encodeURL(values) {
 		const replace = Object.keys(values).every(key => key === 'tempo' || key === 'volumes');
-		const searchParams = encodeUrl(this.#config, { searchParams: this.#searchParams, state: this.#store.state, values });
+		const searchParams = encodeUrl(this.#config, { searchParams: this.#searchParams, song: this.#song, values });
 		if (!searchParams) return;
 		this.#searchParams = searchParams;
 		this.#navigate('encoded', replace);
@@ -126,7 +125,7 @@ export class Navigation {
 		}
 
 		if (isDraft && !this.#isDraft(previous)) {
-			if (action === 'encoded' && this.#isSamePreset(previous)) {
+			if (action === 'encoded' && this.#isSameSavedSong(previous)) {
 				navigation.back({ info: { keepState: true } }).finished
 					.then(() => this.#navigate(action, true), () => {});
 				return;
@@ -140,7 +139,7 @@ export class Navigation {
 		navigation.navigate(nextUrl, { history: isDraft ? 'replace' : 'push', info: { action } });
 	}
 
-	#isSamePreset(entry) {
+	#isSameSavedSong(entry) {
 		const params = URL.parse(entry?.url)?.searchParams;
 		const { setSearchParam, titleSearchParam } = this.#config;
 		return !!params && [setSearchParam, titleSearchParam].every(key => params.get(key) === this.#searchParams.get(key));
@@ -152,23 +151,23 @@ export class Navigation {
 		return !!title && title === URL.parse(navigation.currentEntry?.url)?.searchParams.get(titleSearchParam);
 	}
 
-	#songOf(searchParams) {
-		const { setSearchParam, titleSearchParam, defaultSetValue } = this.#config;
+	#savedSongOf(searchParams) {
+		const { setSearchParam, defaultSetValue } = this.#config;
 		return {
-			value: searchParams.get(setSearchParam)   || defaultSetValue,
-			name:  searchParams.get(titleSearchParam) || '',
+			value: searchParams.get(setSearchParam) || defaultSetValue,
+			name:  decodeTitle(this.#config, searchParams),
 		};
 	}
 
 	get #current() {
-		return this.#songOf(this.#searchParams);
+		return this.#savedSongOf(this.#searchParams);
 	}
 
 	#isDraft(entry) {
 		const searchParams = URL.parse(entry?.url)?.searchParams;
 		if (!searchParams) return false;
-		const song = this.#songOf(searchParams);
-		return song.value !== this.#config.defaultSetValue && this.#presets.indexOf(song) === -1;
+		const savedSong = this.#savedSongOf(searchParams);
+		return savedSong.value !== this.#config.defaultSetValue && this.#savedSongs.indexOf(savedSong) === -1;
 	}
 
 	get #previousEntry() {

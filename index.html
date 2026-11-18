@@ -283,7 +283,7 @@ main {
 		padding: .3em 1.2em;
 		visibility: var(--untitled, visible);
 
-		main:has(#preset option:checked) & {
+		main:has(#saved-song option:checked) & {
 			:is(#titled, #untitled)::after {
 				mask-image: var(--icon-saved);
 				background-color: var(--color-stroke-set);
@@ -659,11 +659,11 @@ hr {
 
 	#reset { order: 4; }
 
-	#preset {
+	#saved-song {
 		flex: 1.4;
 		display: grid;
 
-		#preset_label {
+		#saved-song_label {
 			overflow: clip;
 			grid-area: 1 / 1;
 			align-self: center;
@@ -960,7 +960,7 @@ dialog {
 	}
 }
 
-#preset-edit {
+#song-edit {
 	form {
 		gap: 1em;
 		margin: auto;
@@ -1092,7 +1092,7 @@ dialog {
 	}
 }
 
-#presets time:not(:empty) + span { display: none; }
+#saved-songs time:not(:empty) + span { display: none; }
 
 #toast {
 	border: none;
@@ -1238,7 +1238,7 @@ body > footer {
 		<header>
 			<h1 id="title" aria-live="polite"><span id="titled"></span><span id="untitled">Nouveau morceau</span></h1>
 			<span role="status"><span id="saved">Morceau enregistré</span><span id="unsaved">Morceau non enregistré</span></span>
-			<button title="Gérer le morceau" command="show-modal" commandfor="preset-edit">Gérer le morceau</button>
+			<button title="Gérer le morceau" command="show-modal" commandfor="song-edit">Gérer le morceau</button>
 		</header>
 		<table aria-labelledby="title">
 			<tbody></tbody>
@@ -1248,17 +1248,17 @@ body > footer {
 		</table>
 		<hr aria-hidden="true">
 		<section id="controls" aria-label="Boutons de contrôle">
-			<div id="preset">
-				<span id="preset_label" aria-hidden="true">Morceaux enregistrés</span>
-				<select aria-labelledby="preset_label">
+			<div id="saved-song">
+				<span id="saved-song_label" aria-hidden="true">Morceaux enregistrés</span>
+				<select aria-labelledby="saved-song_label">
 					<button aria-label="Morceau">
 						<selectedcontent></selectedcontent>
 					</button>
 				</select>
-				<button aria-labelledby="preset_label" data-message="Aucun morceau n'est enregistré."></button>
+				<button aria-labelledby="saved-song_label" data-message="Aucun morceau n'est enregistré."></button>
 			</div>
 			<div id="tempo">
-				<input aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" autocomplete="off">
+				<input aria-valuetext="80 BPM" data-template-aria-valuetext="{{bpm}} BPM" title="Tempo" type="range" value="80" min="60" max="140" step="4" autocomplete="off">
 				<output aria-hidden="true"><span>80</span> bpm</output>
 			</div>
 			<button id="reset" title="Effacer le morceau">Effacer</button>
@@ -1387,11 +1387,11 @@ body > footer {
 			</div>
 		</div>
 	</dialog>
-	<dialog id="preset-edit" aria-labelledby="preset-edit-title" closedby="any" autofocus>
+	<dialog id="song-edit" aria-labelledby="song-edit-title" closedby="any" autofocus>
 		<div>
 			<div>
-				<button commandfor="preset-edit" command="close" class="icon">Fermer</button>
-				<h2 id="preset-edit-title">Gérer le morceau</h2>
+				<button commandfor="song-edit" command="close" class="icon">Fermer</button>
+				<h2 id="song-edit-title">Gérer le morceau</h2>
 			</div>
 			<form method="dialog">
 				<label>Titre <input name="name" placeholder="Titre du morceau" autocomplete="off" autocapitalize="sentences"
@@ -1425,7 +1425,7 @@ body > footer {
 			</div>
 			<menu>
 				<li><button commandfor="preferences" command="show-modal">Préférences</button></li>
-				<li><button commandfor="presets" command="show-modal">Gérer les morceaux</button></li>
+				<li><button commandfor="saved-songs" command="show-modal">Gérer les morceaux</button></li>
 				<li><button commandfor="instruments" command="show-modal">Gérer les instruments</button></li>
 				<li><button commandfor="about" command="show-modal">À propos</button></li>
 			</menu>
@@ -1461,31 +1461,31 @@ body > footer {
 				</form>
 			</div>
 		</dialog>
-		<dialog id="presets" aria-labelledby="presets-title" class="nested" closedby="any" autofocus>
+		<dialog id="saved-songs" aria-labelledby="saved-songs-title" class="nested" closedby="any" autofocus>
 			<div>
 				<div>
-					<button commandfor="presets" command="close" class="icon" value="back">Retour</button>
-					<button commandfor="presets" command="close" class="icon">Fermer</button>
-					<h2 id="presets-title">Gérer les morceaux</h2>
+					<button commandfor="saved-songs" command="close" class="icon" value="back">Retour</button>
+					<button commandfor="saved-songs" command="close" class="icon">Fermer</button>
+					<h2 id="saved-songs-title">Gérer les morceaux</h2>
 				</div>
 				<div class="content">
 					<p>Dernière modification : <time></time><span>Aucune</span></p>
-					<button commandfor="presets" command="--export">Exporter les morceaux</button>
-					<button commandfor="presets" command="--import"
+					<button commandfor="saved-songs" command="--export">Exporter les morceaux</button>
+					<button commandfor="saved-songs" command="--import"
 						data-success-zero="Aucun nouveau morceau n'a été importé."
 						data-success-one="1 nouveau morceau a été importé."
 						data-success-other="{{number}} nouveaux morceaux ont été importés."
 						data-failure="⚠️ Impossible d'importer le fichier."
 						data-cancel-success="L'import a été annulé."
 						data-cancel-failure="⚠️ Impossible d'annuler l'import.">Importer des morceaux</button>
-					<button commandfor="presets-delete" command="show-modal">Supprimer tous les morceaux</button>
-					<dialog id="presets-delete" aria-label="Confirmation" class="confirm">
+					<button commandfor="saved-songs-delete" command="show-modal">Supprimer tous les morceaux</button>
+					<dialog id="saved-songs-delete" aria-label="Confirmation" class="confirm">
 						<div>
 							<p>Supprimer tous les morceaux ?</p>
 							<p>Cette action ne pourra pas être annulée.</p>
 							<div class="actions">
-								<button commandfor="presets-delete" command="close" value="back">Annuler</button>
-								<button commandfor="presets-delete" command="close" value="delete"
+								<button commandfor="saved-songs-delete" command="close" value="back">Annuler</button>
+								<button commandfor="saved-songs-delete" command="close" value="delete"
 									data-failure="⚠️ La suppression a échoué.">Supprimer</button>
 							</div>
 						</div>
@@ -1555,22 +1555,20 @@ body > footer {
 	</dialog>
 	<script type="module">
 		import { config }      from './modules/build-config.js';
-		import { Store }       from './modules/store.js';
+		import { Song }        from './modules/song.js';
 		import { decode }      from './modules/navigation_decode.js';
 		import { Interface }   from './modules/interface.js';
-		import { Presets }     from './modules/presets.js';
+		import { SavedSongs }  from './modules/saved-songs.js';
 		import { Audio }       from './modules/audio.js';
 		import { Navigation }  from './modules/navigation.js';
 		import { SwClient }    from './modules/sw-client.js';
 
-		const params     = new URLSearchParams(location.search)
-		const store      = new Store(config, decode(config, params));
-		const audio      = new Audio({ config, store });
-		const presets    = new Presets({ config, store });
-		const navigation = new Navigation({ config, store, presets, audio });
+		const song       = new Song(config, decode(config, new URLSearchParams(location.search)));
+		const audio      = new Audio({ config, song });
+		const savedSongs = new SavedSongs({ config, song });
+		const navigation = new Navigation({ config, song, savedSongs, audio });
 		const swClient   = new SwClient();
-
-		new Interface({ config, store, audio, presets, navigation, swClient });
+		new Interface({ config, song, audio, savedSongs, navigation, swClient });
 	</script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-export function encodeUrl(config, { values, state, searchParams }) {
+export function encodeUrl(config, { values, song, searchParams }) {
 	const { setSearchParam, volumeSearchParam, tempoSearchParam, titleSearchParam } = config;
 
 	const urlMap = {
@@ -10,10 +10,10 @@ export function encodeUrl(config, { values, state, searchParams }) {
 	};
 
 	const encoders = {
-		[setSearchParam]:    () => encodeSet(config, state),
-		[volumeSearchParam]: () => encodeVolumes(config, state),
-		[tempoSearchParam]:  () => state.tempo === config.defaultTempo ? '' : `${state.tempo}`,
-		[titleSearchParam]:  () => state.title,
+		[setSearchParam]:    () => encodeSet(config, song),
+		[volumeSearchParam]: () => encodeVolumes(config, song),
+		[tempoSearchParam]:  () => song.tempo === config.defaultTempo ? '' : `${song.tempo}`,
+		[titleSearchParam]:  () => song.title,
 	};
 
 	const params = new URLSearchParams(searchParams);
@@ -34,7 +34,8 @@ function encodeSet(config, { tracks, sheet, order }) {
 	const encodedParts = [];
 
 	for (const id of order) {
-		const encoded = encodeTrack(config, { ...tracks[id], sheetIndex: id * config.resolution.track }, sheet);
+		const start   = id * config.resolution.track;
+		const encoded = encodeTrack(config, tracks[id], sheet.subarray(start, start + config.resolution.track));
 		if (encoded === emptyValue) break;
 		encodedParts.push(encoded);
 	}
@@ -42,12 +43,12 @@ function encodeSet(config, { tracks, sheet, order }) {
 	return encodedParts.join(trackFormatSeparator);
 }
 
-function encodeTrack(config, track, sheet) {
+function encodeTrack(config, track, trackSheet) {
 	const {
 		formatDigits: digits, trackFormatAllocation: allocation, trackHeaderLength,
 		defaultTrack: { steps: defaultSteps, beats: defaultBeats, bars: defaultBars, phrase: defaultPhrase },
 	} = config;
-	const strokes = readStrokes(config, track, sheet);
+	const strokes = readStrokes(config, track, trackSheet);
 	const base    = Math.max(1, ...strokes) + 1;
 
 	const params = {
@@ -65,14 +66,14 @@ function encodeTrack(config, track, sheet) {
 		+ encodeSheet(strokes, base, digits);
 }
 
-function readStrokes({ resolution: { bar, beat } }, track, sheet) {
+function readStrokes({ resolution: { bar, beat } }, track, trackSheet) {
 	const strokes = [];
 	for (let barIndex = 0; barIndex < track.bars; barIndex++) {
-		const barOffset = track.sheetIndex + (barIndex * bar);
+		const barOffset = barIndex * bar;
 		for (let beatIndex = 0; beatIndex < track.beats; beatIndex++) {
 			const beatOffset = barOffset + (beatIndex * beat);
 			for (let stepIndex = 0; stepIndex < track.steps; stepIndex++) {
-				strokes.push(sheet[beatOffset + stepIndex]);
+				strokes.push(trackSheet[beatOffset + stepIndex]);
 			}
 		}
 	}
@@ -92,19 +93,8 @@ function toCode(value, defaultValue) {
 	return value === defaultValue ? 0 : value;
 }
 
-function encodeVolumes(config, { volumes, order }) {
-	const { formatDigits: digits, defaultVolume } = config;
-	const parts = [];
-	let last = -1;
-
-	for (let i = 0; i < order.length; i++) {
-		const encoded = digits[volumes[order[i]]];
-		parts.push(encoded);
-		if (encoded !== defaultVolume) last = i;
-	}
-
-	if (last === -1) return '';
-	return parts.slice(0, last + 1).join('');
+function encodeVolumes({ formatDigits: digits, defaultVolume }, { volumes, order }) {
+	return order.map(id => digits[volumes[id]]).join('').replace(new RegExp(`${defaultVolume}+$`), '');
 }
 
 function pack(values, allocation) {

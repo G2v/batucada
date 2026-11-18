@@ -13,8 +13,8 @@ export default class InterfaceDialogs {
 
 		document.addEventListener('cancel',            (event) => InterfaceDialogs.#cancelModal(event), { capture: true });
 		document.addEventListener('toggle',            (event) => this.#setModal(event), { capture: true });
-		toastCancelButton.addEventListener('click',    (event) => this.#cancelToast());
-		this.#toast.addEventListener('animationend',   (event) => this.#toast.hidePopover());
+		toastCancelButton.addEventListener('click',    () => this.#cancelToast());
+		this.#toast.addEventListener('animationend',   () => this.#toast.hidePopover());
 		this.#toast.addEventListener('toggle',         (event) => this.#clearCancel(event));
 		window.navigation.addEventListener('navigate', ({ navigationType }) => navigationType === 'traverse' && this.#closeAll());
 	}
@@ -26,9 +26,7 @@ export default class InterfaceDialogs {
 			target.returnValue = '';
 		} else {
 			this.#modals = this.#modals.filter(modal => modal !== target);
-			if (this.#modals.length > 0 && target.returnValue !== 'back') {
-				this.#modals.forEach(modal => modal.close('back'));
-			}
+			if (target.returnValue !== 'back') this.#closeAll();
 		}
 	}
 

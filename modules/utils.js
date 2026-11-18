@@ -14,7 +14,8 @@ export function normalizeName(name) {
 
 export async function fetchFromCache(filename, cacheResponse = false) {
 	const url = new URL(filename, location.href).href;
-	const cached = await caches.match(url, { cacheName: storage.dataCache }).catch(() => null);
+	const cached = await caches.match(url, { cacheName: storage.dataCache }).catch(() => null)
+		?? await renameLegacySongs(url).catch(() => null);
 	if (cached) return cached;
 
 	const networkResponse = await fetch(url);
@@ -28,6 +29,17 @@ export async function fetchFromCache(filename, cacheResponse = false) {
 		const clone = response.clone();
 		caches.open(storage.dataCache).then(cache => cache.put(url, clone)).catch(() => {});
 	}
+	return response;
+}
+
+async function renameLegacySongs(url) {
+	if (url !== new URL(storage.songsFile, location.href).href) return null;
+	const cache    = await caches.open(storage.dataCache);
+	const legacy   = new URL(storage.legacySongsFile, location.href).href;
+	const response = await cache.match(legacy);
+	if (!response) return null;
+	await cache.put(url, response.clone());
+	await cache.delete(legacy);
 	return response;
 }
 
