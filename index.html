@@ -1556,14 +1556,14 @@ body > footer {
 	<script type="module">
 		import { config }      from './modules/build-config.js';
 		import { Song }        from './modules/song.js';
-		import { decode }      from './modules/navigation_decode.js';
+		import { decodeSong }  from './modules/song-url.js';
 		import { Interface }   from './modules/interface.js';
 		import { SavedSongs }  from './modules/saved-songs.js';
 		import { Audio }       from './modules/audio.js';
 		import { Navigation }  from './modules/navigation.js';
 		import { SwClient }    from './modules/sw-client.js';
 
-		const song       = new Song(config, decode(config, new URLSearchParams(location.search)));
+		const song       = new Song(config, decodeSong(config, new URLSearchParams(location.search)));
 		const audio      = new Audio({ config, song });
 		const savedSongs = new SavedSongs({ config, song });
 		const navigation = new Navigation({ config, song, savedSongs, audio });

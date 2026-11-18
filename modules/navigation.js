@@ -1,5 +1,4 @@
-import { encodeUrl } from './navigation_encode.js';
-import { decode, decodeTitle } from './navigation_decode.js';
+import { encodeSong, decodeSong, decodeTitle } from './song-url.js';
 
 export class Navigation {
 	#audio;
