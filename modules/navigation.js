@@ -83,7 +83,7 @@ export class Navigation {
 				if (!event.info?.keepState) {
 					this.#searchParams = url.searchParams;
 					if (action === 'reset' || action === 'decodeAll') {
-						if (action === 'decodeAll') this.#song.load(decode(this.#config, this.#searchParams, this.#song.order));
+						if (action === 'decodeAll') this.#song.load(decodeSong(this.#config, this.#searchParams, this.#song.order));
 						if (sequenceChanged) this.#audio.restart();
 						if (sequenceChanged || action === 'reset') requestAnimationFrame(() => window.scrollTo(0, 0));
 					}
@@ -95,7 +95,7 @@ export class Navigation {
 
 	#encodeURL(values) {
 		const replace = Object.keys(values).every(key => key === 'tempo' || key === 'volumes');
-		const searchParams = encodeUrl(this.#config, { searchParams: this.#searchParams, song: this.#song, values });
+		const searchParams = encodeSong(this.#config, { searchParams: this.#searchParams, song: this.#song, values });
 		if (!searchParams) return;
 		this.#searchParams = searchParams;
 		this.#navigate('encoded', replace);
