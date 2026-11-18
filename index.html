@@ -225,6 +225,8 @@ select:has(:checked) { background-color: var(--color-background-base); }
 
 input:user-invalid:focus-visible { outline-color: var(--color-invalid); }
 
+:is(button, select, [type="checkbox"], [type="range"], [type="checkbox"]):enabled { cursor: pointer; }
+
 a { color: var(--color-stroke-set); }
 
 :focus-visible,
