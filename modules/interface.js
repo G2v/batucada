@@ -1,4 +1,4 @@
-import { buildStyles, buildTracks, buildInstruments } from './build-dom.js';
+import { buildStyles, buildTracks, buildInstruments } from './interface_tracks.js';
 
 export class Interface {
 	static #movingClass = 'moving';
