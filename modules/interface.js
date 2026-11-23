@@ -44,7 +44,16 @@ export class Interface {
 		const addTracks = (start, end) => {
 			const { nodes, fragment } = buildTracks(config, this.trackTemplate, start, end);
 			for (const [key, list] of Object.entries(nodes)) (this.#nodes[key] ??= []).push(...list);
-			this.#renderTracks(start, this.#nodes.tracks.length);
+			const { sheet }     = this.#song;
+			const trackCount    = this.#nodes.tracks.length;
+			const stepsPerTrack = this.#resolution.track;
+			for (let id = start; id < trackCount; id++) {
+				this.#renderTrack(id);
+				this.#renderVolume(id);
+			}
+			for (let index = start * stepsPerTrack; index < trackCount * stepsPerTrack; index++) {
+				if (sheet[index] !== this.#emptyStroke) this.#renderStep(index);
+			}
 			buildInstruments(config, nodes).catch(reportError);
 			return fragment;
 		};
@@ -62,11 +71,14 @@ export class Interface {
 			firstCount++;
 		} while (firstCount < activeCount && this.#nodes.tracks[firstCount - 1].getBoundingClientRect().bottom < innerHeight);
 
-		requestAnimationFrame(() => setTimeout(() => {
+		const addOtherTracks = () => {
 			this.trackList.appendChild(addTracks(firstCount));
 			document.documentElement.style.removeProperty('--tracks-count');
 			this.#tracksReady.resolve();
-		}));
+		};
+		requestAnimationFrame(() => globalThis.scheduler?.postTask
+			? scheduler.postTask(addOtherTracks, { priority: 'background' })
+			: setTimeout(addOtherTracks));
 	}
 
 	#loadModules(params) {
@@ -84,18 +96,6 @@ export class Interface {
 		steps.forEach(index => this.#renderStep(index));
 		volumes.forEach(id => this.#renderVolume(id));
 		if (moved !== undefined) this.#renderMove(moved);
-	}
-
-	#renderTracks(start, end) {
-		const { sheet } = this.#song;
-		const { track: stepsPerTrack } = this.#resolution;
-		for (let id = start; id < end; id++) {
-			this.#renderTrack(id);
-			this.#renderVolume(id);
-			for (let index = id * stepsPerTrack; index < (id + 1) * stepsPerTrack; index++) {
-				if (sheet[index] !== this.#emptyStroke) this.#renderStep(index);
-			}
-		}
 	}
 
 	#renderTrack(id) {
@@ -146,12 +146,9 @@ export class Interface {
 		if (index !== undefined) this.savedSongsSelect.selectedIndex = index;
 	}
 
-	getStepIndex(step) {
-		return this.#nodes.steps.indexOf(step);
-	}
-
-	getTrack(child)           { return child.closest(this.#selectors.track); }
-	getTrackIndex(track)      { return track.dataset.index | 0; }
+	getTrack(child)      { return child.closest(this.#selectors.track); }
+	getStepIndex(step)   { return this.#nodes.steps.indexOf(step); }
+	getTrackIndex(track) { return this.#nodes.tracks.indexOf(track); }
 
 	startViewTransition(callback, moving = null) {
 		moving?.classList.add(Interface.#movingClass);
@@ -159,11 +156,10 @@ export class Interface {
 			.finished.finally(() => moving?.classList.remove(Interface.#movingClass));
 	}
 
-	get steps()         { return this.#nodes.steps; }
-	get tracks()        { return this.#nodes.tracks; }
-	get volumes()       { return this.#nodes.volumes; }
-	get instruments()   { return this.#nodes.instruments; }
-
+	get steps()            { return this.#nodes.steps; }
+	get tracks()           { return this.#nodes.tracks; }
+	get volumes()          { return this.#nodes.volumes; }
+	get instruments()      { return this.#nodes.instruments; }
 	get tempoSlider()      { return this.#nodes.tempoSlider      ??= document.querySelector(this.#selectors.tempoSlider); }
 	get savedSongsSelect() { return this.#nodes.savedSongsSelect ??= document.querySelector(this.#selectors.savedSongsSelect); }
 	get container()        { return this.#nodes.container        ??= document.querySelector(this.#selectors.container); }
@@ -172,6 +168,6 @@ export class Interface {
 	get trackTemplate()    { return this.#nodes.trackTemplate    ??= document.querySelector(this.#selectors.trackTemplate).content.querySelector(this.#selectors.track); }
 	get untitled()         { return this.#untitled               ??= document.querySelector(this.#selectors.untitledLabel).textContent; }
 
-	get swap()          { return this.#instances.swap; }
-	get dialogs()       { return this.#instances.dialogs; }
+	get swap()             { return this.#instances.swap; }
+	get dialogs()          { return this.#instances.dialogs; }
 }

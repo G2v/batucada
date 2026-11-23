@@ -2,7 +2,6 @@ function cloneIndexed(node, count, parent) {
 	const label = node.ariaLabel.replace(/\s*\d+$/, '');
 	for (let index = 1; index < count; index++) {
 		const clone = node.cloneNode(true);
-		clone.dataset.index = index;
 		clone.ariaLabel = `${label} ${index + 1}`;
 		parent.appendChild(clone);
 	}
@@ -30,28 +29,31 @@ export function buildStyles({ instrumentsLibraryReady }) {
 	});
 }
 
-export function buildTracks(config, template, start = 0, end = config.tracksLength) {
-	const { selectors, resolution } = config;
+let masterTrack = null;
 
-	const masterTrack = template.cloneNode(true);
-	const firstBar    = masterTrack.querySelector(selectors.bar);
-	const firstBeat   = firstBar.querySelector(selectors.beat);
-
+function buildMasterTrack({ selectors, resolution }, template) {
+	const track     = template.cloneNode(true);
+	const firstBar  = track.querySelector(selectors.bar);
+	const firstBeat = firstBar.querySelector(selectors.beat);
 	cleanTemplates(firstBar);
 	cloneIndexed(firstBeat, resolution.maxBeats, firstBar);
 	cloneIndexed(firstBar, resolution.maxBars, firstBar.parentNode);
-	cleanTemplates(masterTrack);
+	cleanTemplates(track);
+	return track;
+}
+
+export function buildTracks(config, template, start = 0, end = config.tracksLength) {
+	const { selectors } = config;
+
+	masterTrack ??= buildMasterTrack(config, template);
 
 	const nodes = { tracks: [], instruments: [], volumes: [], steps: [] };
 	const fragment = new DocumentFragment();
 
-	for (let index = start; index < end; index++) {
+	for (let count = end - start; count > 0; count--) {
 		const track  = masterTrack.cloneNode(true);
 		const steps  = track.querySelectorAll(selectors.stepButton);
-
-		track.dataset.index = index;
 		steps[0].tabIndex = 0;
-
 		nodes.tracks.push(track);
 		nodes.instruments.push(track.querySelector(selectors.instrumentSelect));
 		nodes.volumes.push(track.querySelector(selectors.volumeSlider));

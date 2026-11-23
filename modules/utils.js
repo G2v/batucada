@@ -4,7 +4,13 @@ export function normalizeName(name) {
 	return String(name).replace(/[\s\u200B-\u200D]+/g, ' ').trim();
 }
 
-export async function fetchFromCache(filename, cacheResponse = false) {
+export async function fetchFromCache(filename, cacheResponse = false, onResponse = null) {
+	const response = await readData(filename, cacheResponse);
+	await onResponse?.(response);
+	return response;
+}
+
+async function readData(filename, cacheResponse) {
 	const url = new URL(filename, location.href).href;
 	const cached = await caches.match(url, { cacheName: storage.dataCache }).catch(() => null)
 		?? await renameLegacySongs(url).catch(() => null);

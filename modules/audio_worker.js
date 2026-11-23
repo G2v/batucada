@@ -13,17 +13,12 @@ let workerSyncDelta = 0;
 self.onmessage = ({ data: { action, payload } }) => {
 	switch (action) {
 		case 'config':  config = payload; break;
-		case 'song':    song(payload); break;
+		case 'song':    { tracks, tempo, sheet } = payload; break;
 		case 'start':   start(payload); break;
 		case 'stop':    stop(); break;
 		case 'restart': restart(); break;
 	}
 };
-
-function song(payload) {
-	({ tempo, sheet } = payload);
-	tracks = payload.activeTracks.map(id => ({ ...payload.tracks[id], id }));
-}
 
 function start(time) {
 	if (timer !== null) return;

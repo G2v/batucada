@@ -36,16 +36,14 @@ export class Audio extends EventTarget {
 	#maxGain;
 	#panNodes;
 	#gainNodes;
-	#resolution;
 	#masterGain;
+	#preferences;
 	#emptyStroke;
 	#audioStream;
 	#audioContext;
-	#preferences;
-	#defaultPreferences;
+	#trackResolution;
 
 	#playing          = false;
-	#wakeLock         = null;
 	#audioReady       = null;
 	#hiddenTimer      = null;
 	#instruments      = {};
@@ -54,16 +52,13 @@ export class Audio extends EventTarget {
 
 	constructor({ config, song }) {
 		super();
-		this.#song        = song;
-		this.#maxGain     = config.maxGain;
-		this.#resolution  = config.resolution;
-		this.#emptyStroke = config.emptyStroke;
+		this.#song            = song;
+		this.#maxGain         = config.maxGain;     //a optimiser
+		this.#emptyStroke     = config.emptyStroke;
+		this.#preferences     = { ...config.defaultPreferences };
+		this.#trackResolution = config.resolution.track;
 
 		if (navigator.audioSession) navigator.audioSession.type = 'playback';
-
-		this.#defaultPreferences = config.defaultPreferences;
-		this.#preferences        = { ...config.defaultPreferences, ...JSON.parse(localStorage.preferences ?? '{}') };
-		this.#applyPreferences();
 
 		document.addEventListener('visibilitychange', () => this.#handleVisibilityChange());
 		document.addEventListener('freeze',           () => this.#playing && this.#stopHiddenPlay());
@@ -78,7 +73,6 @@ export class Audio extends EventTarget {
 		this.#sounds = this.#fetchInstrumentSounds();
 
 		defer(() => this.#ensureAudio());
-		defer(() => this.#preferences.hiddenPlayDuration && this.#ensureAudioStream());
 	}
 
 	restart() {
@@ -93,7 +87,7 @@ export class Audio extends EventTarget {
 	async preview(index, stroke) {
 		await this.#startAudio();
 		if (!this.#preferences.strokePreview || this.#playing || stroke <= this.#emptyStroke) return;
-		const id = index / this.#resolution.track | 0;
+		const id = index / this.#trackResolution | 0;
 		this.#playNote(this.#song.tracks[id].instrument, id, stroke);
 	}
 
@@ -101,36 +95,25 @@ export class Audio extends EventTarget {
 		return this.#playing;
 	}
 
-	get preferences() {
-		return { ...this.#preferences };
-	}
-
 	setPreferences(values) {
 		this.#preferences = { ...this.#preferences, ...values };
-		const changed = Object.entries(this.#defaultPreferences)
-			.filter(([name, initial]) => this.#preferences[name] !== initial)
-			.map(([name]) => [name, this.#preferences[name]]);
-		if (changed.length) localStorage.preferences = JSON.stringify(Object.fromEntries(changed));
-		else delete localStorage.preferences;
-		this.#applyPreferences();
-	}
-
-	#applyPreferences() {
 		this.#updatePans();
 		if (!this.#preferences.hiddenPlayDuration) this.#releaseAudioStream();
 		else if (this.#playing) this.#ensureAudioStream().play().catch(() => {});
+		else defer(() => this.#preferences.hiddenPlayDuration && this.#ensureAudioStream());
 	}
 
-	#songChanged({ tempo, tracks, steps, volumes, order, reset }) {
+	#songChanged({ tempo, tracks, steps, volumes, reset }) {
 		if (reset) this.#muteSchedulesNotes();
 		volumes.forEach((id) => this.#updateGain(id));
 		if (tracks.size) this.#updatePans();
-		if (tempo || tracks.size || steps.size || order) this.#postSong();
+		if (tempo || tracks.size || steps.size) this.#postSong();
 	}
 
 	#postSong() {
 		const { tempo, tracks, sheet, activeTracks } = this.#song;
-		this.#worker.postMessage({ action: 'song', payload: { tempo, tracks, sheet, activeTracks } });
+		const songTracks = activeTracks.map(id => ({ ...tracks[id], id }));
+		this.#worker.postMessage({ action: 'song', payload: { tempo, tracks: songTracks, sheet } });
 	}
 
 	async #loadInstrumentsLibrary(instrumentsLibraryReady) {
@@ -165,7 +148,7 @@ export class Audio extends EventTarget {
 		this.#masterGain.connect(this.#audioContext.destination);
 
 		const tracks = this.#song.tracks;
-		this.#panNodes  = tracks.map(() => new StereoPannerNode(this.#audioContext));
+		this.#panNodes = tracks.map(() => new StereoPannerNode(this.#audioContext));
 		this.#updatePans();
 		this.#gainNodes = tracks.map((_, id) => {
 			const gainNode = new GainNode(this.#audioContext, { gain: this.#gainOf(id) });
@@ -197,7 +180,7 @@ export class Audio extends EventTarget {
 		for (const [offset, tag] of [[0, 'RIFF'], [8, 'WAVE'], [12, 'fmt '], [36, 'data']]) {
 			for (let i = 0; i < 4; i++) view.setUint8(offset + i, tag.charCodeAt(i));
 		}
-		view.setUint32(4, 36 + length * 2, true);
+		view.setUint32(4,  36 + length * 2, true);
 		view.setUint32(16, 16, true);
 		view.setUint16(20, 1, true);
 		view.setUint16(22, 1, true);
@@ -234,11 +217,11 @@ export class Audio extends EventTarget {
 
 	async play() {
 		await this.#startAudio();
-		if (this.#preferences.hiddenPlayDuration) this.#ensureAudioStream().play().catch(() => {});
 		this.#worker.postMessage({ action: 'start', payload: this.#audioContext.currentTime });
 		this.#playing = true;
 		this.dispatchEvent(new Event('play'));
 		this.#handleVisibilityChange();
+		if (this.#preferences.hiddenPlayDuration) this.#ensureAudioStream().play().catch(() => {});
 	}
 
 	#startAudio() {
@@ -259,7 +242,6 @@ export class Audio extends EventTarget {
 		this.#playing = false;
 		clearTimeout(this.#hiddenTimer);
 		this.#hiddenTimer = null;
-		this.#wakeLockRelease();
 		if (this.#audioStream) {
 			this.#audioStream.pause();
 			this.#audioStream.currentTime = 0;
@@ -303,10 +285,7 @@ export class Audio extends EventTarget {
 	#handleVisibilityChange() {
 		clearTimeout(this.#hiddenTimer);
 		this.#hiddenTimer = null;
-		if (!this.#playing) return;
-
-		if (document.hidden) this.#hiddenTimer = setTimeout(() => this.#stopHiddenPlay(), this.#preferences.hiddenPlayDuration * 1000);
-		else this.#wakeLockRequest();
+		if (this.#playing && document.hidden) this.#hiddenTimer = setTimeout(() => this.#stopHiddenPlay(), this.#preferences.hiddenPlayDuration * 1000);
 	}
 
 	#stopHiddenPlay() {
@@ -345,18 +324,5 @@ export class Audio extends EventTarget {
 		this.#activeSources.clear();
 		this.#masterGain.gain.setValueAtTime(0, now + fadeOut + 0.01);
 		this.#masterGain.gain.linearRampToValueAtTime(1, now + fadeOut + 0.02);
-	}
-
-	async #wakeLockRequest() {
-		try {
-			const wakeLock = await navigator.wakeLock.request();
-			if (this.#playing && !document.hidden) this.#wakeLock = wakeLock;
-			else wakeLock.release();
-		} catch {}
-	}
-
-	#wakeLockRelease() {
-		this.#wakeLock?.release().catch(() => {});
-		this.#wakeLock = null;
 	}
 }

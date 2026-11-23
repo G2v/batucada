@@ -139,14 +139,14 @@ export class SavedSongs extends EventTarget {
 	}
 
 	#load(fallback = null) {
-		return fetchFromCache(storage.songsFile, true)
-			.then(response => {
-				const lastModified = response.headers.get('last-modified');
-				this.#lastModified = lastModified ? new Date(lastModified) : null;
-				return response.json();
-			})
-			.then(savedSongs => this.#update({ savedSongs }))
+		return fetchFromCache(storage.songsFile, true, response => this.#read(response))
 			.catch(() => { if (fallback !== null) this.#update({ savedSongs: fallback }); });
+	}
+
+	async #read(response) {
+		const lastModified = response.headers.get('last-modified');
+		this.#lastModified = lastModified ? new Date(lastModified) : null;
+		this.#update({ savedSongs: await response.json() });
 	}
 
 	#sync() {

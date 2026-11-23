@@ -19,11 +19,13 @@ export default class InterfaceControls {
 	#savedSongsMenuButton;
 	#controlsSection;
 
+	#wakeLock = null;
+
 	constructor({ parent, config, song, audio }) {
-		this.#ui                = parent;
-		this.#audio             = audio;
-		this.#song              = song;
-		this.#names             = config.names;
+		this.#ui    = parent;
+		this.#audio = audio;
+		this.#song  = song;
+		this.#names = config.names;
 
 		const { selectors } = config;
 
@@ -45,16 +47,17 @@ export default class InterfaceControls {
 		const options = Array.from({ length: config.tracksLength - 1 }, (_, i) => new Option(i + 2, i + 1));
 		this.#positionSelect.firstElementChild.after(...options);
 
-		document.addEventListener('click',                       (event) => this.#handleClick(event));
-		document.addEventListener('click',                       () => this.#audio.unlock(), { once: true });
-		audio.addEventListener('play',                           () => this.#playbackChanged(true));
-		audio.addEventListener('stop',                           () => this.#playbackChanged(false));
-		song.addEventListener('change',                          ({ detail }) => detail.title && this.#renderMediaTitle());
-		this.#ui.container.addEventListener('input',             (event) => this.#handleInput(event));
-		this.#ui.container.addEventListener('change',            (event) => this.#handleChange(event));
-		this.#deleteCheckbox.addEventListener('change',          () => this.#toggleFields());
-		this.#trackSettingsDialog.addEventListener('submit',     () => this.#setTrack());
-		this.#trackSettingsDialog.addEventListener('command',    (event) => this.#showTrackSettings(event));
+		document.addEventListener('click',                    (event) => this.#handleClick(event));
+		document.addEventListener('click',                    () => this.#audio.unlock(), { once: true });
+		document.addEventListener('visibilitychange',         () => this.#wakeLockRequest());
+		audio.addEventListener('play',                        () => this.#playbackChanged(true));
+		audio.addEventListener('stop',                        () => this.#playbackChanged(false));
+		song.addEventListener('change',                       ({ detail }) => detail.title && this.#renderMediaTitle());
+		this.#ui.container.addEventListener('input',          (event) => this.#handleInput(event));
+		this.#ui.container.addEventListener('change',         (event) => this.#handleChange(event));
+		this.#deleteCheckbox.addEventListener('change',       () => this.#toggleFields());
+		this.#trackSettingsDialog.addEventListener('submit',  () => this.#setTrack());
+		this.#trackSettingsDialog.addEventListener('command', (event) => this.#showTrackSettings(event));
 		this.#initMediaSession();
 	}
 
@@ -162,13 +165,14 @@ export default class InterfaceControls {
 
 	#showTrackSettings({ command, source }) {
 		if (command !== 'show-modal') return;
-		const track = this.#ui.getTrack(source);
+		const track       = this.#ui.getTrack(source);
 		const index       = this.#ui.getTrackIndex(track);
 		const { order }   = this.#song;
 		const { bars, beats, steps, phrase } = this.#song.tracks[index];
 		const position    = order.indexOf(index);
 		const isLastTrack = this.#song.isEmpty(index);
-		const filledCount = this.#song.activeTracks.filter(id => !this.#song.isEmpty(id)).length;
+		const tracks      = this.#song.activeTracks;
+		const filledCount = tracks.length - (this.#song.isEmpty(tracks.at(-1)) ? 1 : 0);
 
 		for (const option of this.#positionSelect.options) {
 			const value = option.value | 0;
@@ -207,6 +211,23 @@ export default class InterfaceControls {
 	#playbackChanged(playing) {
 		this.#ui.startButton.ariaChecked = playing;
 		navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+		if (playing) this.#wakeLockRequest();
+		else this.#wakeLockRelease();
+	}
+
+	async #wakeLockRequest() {
+		if (!this.#audio.playing || document.hidden) return;
+		try {
+			const wakeLock = await navigator.wakeLock.request();
+			this.#wakeLockRelease();
+			if (this.#audio.playing && !document.hidden) this.#wakeLock = wakeLock;
+			else wakeLock.release().catch(() => {});
+		} catch {}
+	}
+
+	#wakeLockRelease() {
+		this.#wakeLock?.release().catch(() => {});
+		this.#wakeLock = null;
 	}
 
 	#renderMediaTitle() {

@@ -18,6 +18,8 @@
 	applyTheme();
 	colorSchemeQuery.addEventListener('change', applyTheme);
 
+	if (!('navigation' in window && 'commandForElement' in HTMLButtonElement.prototype)) document.documentElement.classList.add('unsupported');
+
 	if (!location.search && localStorage.lastSequence) history.replaceState(null, '', localStorage.lastSequence);
 
 	const params = new URLSearchParams(location.search);
@@ -55,28 +57,28 @@
 		--track-col-4-width: 6em;
 	}
 
-	--color-primary:   hsl(215 20% 50%);
+	--color-primary:   oklch(.51 .19 260);
 	--color-secondary: hsl(130 100% 50%);
 
-	--color-background-body:     light-dark(hsl(from var(--color-primary) h s 83%),        hsl(from var(--color-primary) h s 0%));
-	--color-background-base:     light-dark(hsl(from var(--color-primary) h s 100%),       hsl(from var(--color-primary) h s 15%));
-	--color-background-light:    light-dark(hsl(from var(--color-primary) h s 92%),        hsl(from var(--color-primary) h s 23%));
-	--color-background-strong:   light-dark(hsl(from var(--color-primary) h s 83%),        hsl(from var(--color-primary) h s 30%));
-	--color-background-contrast: light-dark(hsl(from var(--color-primary) h s 20%),        hsl(from var(--color-primary) h s 90%));
-	--color-text-main:           light-dark(hsl(from var(--color-primary) h s 0%),         hsl(from var(--color-primary) h s 90%));
-	--color-text-faded:          light-dark(hsl(from var(--color-primary) h s 20%),        hsl(from var(--color-primary) h s 70%));
-	--color-text-muted:          light-dark(hsl(from var(--color-primary) h s 70%),        hsl(from var(--color-primary) h s 65%));
-	--color-text-contrast:       light-dark(hsl(from var(--color-primary) h s 100%),       hsl(from var(--color-primary) h s 0%));
-	--color-stroke-set:          light-dark(hsl(from var(--color-primary) h 100% 43%),     hsl(from var(--color-primary) h 100% 60%));
-	--color-stroke-played:       hsl(from var(--color-primary) h s 100% / .4);
-	--color-stroke-current:      light-dark(hsl(from var(--color-secondary) h 100% 25%),   hsl(from var(--color-secondary) h 100% 40%));
-	--color-step-current:        light-dark(hsl(from var(--color-secondary) h 30% 70%),    hsl(from var(--color-secondary) h 30% 40%));
-	--color-border-light:        light-dark(hsl(from var(--color-primary) h s 50%),        hsl(from var(--color-primary) h s 70%));
-	--color-border-strong:       light-dark(hsl(from var(--color-primary) h s 20%),        hsl(from var(--color-primary) h s 100%));
-	--color-shadow-light:        light-dark(hsl(from var(--color-primary) h 50% 10% / .1), hsl(from var(--color-primary) h 50% 10% / .4));
-	--color-shadow-medium:       light-dark(hsl(from var(--color-primary) h 50% 10% / .2), hsl(from var(--color-primary) h 50% 10% / .6));
-	--color-shadow-strong:       hsl(from var(--color-primary) h 50% 10% / .4);
-	--color-invalid:             hsl(from var(--color-stroke-set) 0 s l);
+	--color-background-body:     light-dark(oklch(from var(--color-primary) .86 .016 h),     oklch(from var(--color-primary) 0 0 h));
+	--color-background-base:     light-dark(oklch(from var(--color-primary) 1 0 h),          oklch(from var(--color-primary) .26 .019 h));
+	--color-background-light:    light-dark(oklch(from var(--color-primary) .94 .007 h),     oklch(from var(--color-primary) .34 .028 h));
+	--color-background-strong:   light-dark(oklch(from var(--color-primary) .86 .016 h),     oklch(from var(--color-primary) .4 .034 h));
+	--color-background-contrast: light-dark(oklch(from var(--color-primary) .31 .024 h),     oklch(from var(--color-primary) .92 .009 h));
+	--color-text-main:           light-dark(oklch(from var(--color-primary) 0 0 h),          oklch(from var(--color-primary) .92 .009 h));
+	--color-text-faded:          light-dark(oklch(from var(--color-primary) .31 .024 h),     oklch(from var(--color-primary) .75 .029 h));
+	--color-text-muted:          light-dark(oklch(from var(--color-primary) .75 .029 h),     oklch(from var(--color-primary) .71 .035 h));
+	--color-text-contrast:       light-dark(oklch(from var(--color-primary) 1 0 h),          oklch(from var(--color-primary) 0 0 h));
+	--color-stroke-set:          light-dark(oklch(from var(--color-primary) .51 c h),        oklch(from var(--color-primary) .64 c h));
+	--color-stroke-played:       oklch(from var(--color-primary) 1 0 h / .4);
+	--color-stroke-current:      light-dark(hsl(from var(--color-secondary) h 100% 25%),     hsl(from var(--color-secondary) h 100% 40%));
+	--color-step-current:        light-dark(hsl(from var(--color-secondary) h 30% 70%),      hsl(from var(--color-secondary) h 30% 40%));
+	--color-border-light:        light-dark(oklch(from var(--color-primary) .58 .052 h),     oklch(from var(--color-primary) .75 .029 h));
+	--color-border-strong:       light-dark(oklch(from var(--color-primary) .31 .024 h),     oklch(from var(--color-primary) 1 0 h));
+	--color-shadow-light:        light-dark(oklch(from var(--color-primary) .2 .034 h / .1), oklch(from var(--color-primary) .2 .034 h / .4));
+	--color-shadow-medium:       light-dark(oklch(from var(--color-primary) .2 .034 h / .2), oklch(from var(--color-primary) .2 .034 h / .6));
+	--color-shadow-strong:       oklch(from var(--color-primary) .2 .034 h / .4);
+	--color-invalid:             light-dark(hsl(0 100% 43%),                                 hsl(0 100% 60%));
 
 	--icon-back:       url('data:image/svg+xml,<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="m27.5 20h-15m5 5l-5-5l5-5" fill="none" stroke-width="2" stroke="black" stroke-linecap="round"/></svg>');
 	--icon-menu:       url('data:image/svg+xml,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m4 6h16m-16 6h16m-16 6h16" stroke-width="2" stroke="black" stroke-linecap="round"/></svg>');
@@ -106,13 +108,13 @@
 	scroll-padding-bottom: calc(var(--control-height) * var(--grid-lines) + (.7 * (var(--grid-lines) - 1) + 1.2) * var(--font-size));
 }
 
-:root:has(#controls:focus-within) {
-	scroll-padding-bottom: 0;
-}
-
 :root.dark {
 	color-scheme: dark;
 	--icon-arrow-down: url('data:image/svg+xml,<svg viewBox="0 0 14 30" xmlns="http://www.w3.org/2000/svg"><path d="m4 14l3 4 3 -4" fill="none" stroke-width="1" stroke="white" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+}
+
+:root:has(#controls:focus-within) {
+	scroll-padding-bottom: 0;
 }
 
 html {
@@ -133,19 +135,19 @@ body {
 	grid-template-columns: minmax(0, 780px);
 	background: var(--color-background-body);
 
-	&[inert] {
-		overflow: clip;
+	&[inert], .unsupported & { overflow: clip; }
 
-		&::after {
-			inset: 0;
-			z-index: 3;
-			position: fixed;
-			padding-top: 2em;
-			text-align: center;
-			content: attr(data-loading);
-			background: var(--color-background-body);
-		}
+	&[inert]::after, .unsupported &::after {
+		inset: 0;
+		z-index: 3;
+		position: fixed;
+		text-align: center;
+		padding: 2em 1em 0;
+		content: attr(data-loading);
+		background: var(--color-background-body);
 	}
+
+	.unsupported &::after { content: attr(data-unsupported); }
 
 	h1, h2 {
 		margin: 0;
@@ -197,7 +199,7 @@ select {
 
 	&::picker-icon { display: none; }
 
-	&::picker(select) { overscroll-behavior: contain; }
+	/*&::picker(select) { overscroll-behavior: contain; }*/
 
 	selectedcontent {
 		min-width: 0;
@@ -218,7 +220,7 @@ option {
 	&:checked { background: var(--color-background-light); }
 }
 
-::picker(select) {
+select::picker(select) {
 	border-radius: 4px;
 	scrollbar-width: thin;
 	appearance: base-select;
@@ -288,7 +290,8 @@ main {
 		visibility: var(--untitled, visible);
 
 		main:has(#saved-song option:checked) & {
-			:is(#titled, #untitled)::after {
+			#titled::after,
+			#untitled::after {
 				mask-image: var(--icon-saved);
 				background-color: var(--color-stroke-set);
 			}
@@ -302,15 +305,14 @@ main {
 			text-wrap: balance;
 
 			#titled,
-			#untitled {
-				anchor-name: --title;
+			#untitled { anchor-name: --title; }
 
-				&::after {
-					content: '';
-					padding-left: 1.2em;
-					background-color: currentColor;
-					mask: var(--icon-unsaved) no-repeat left center / 1.6em;
-				}
+			#titled::after,
+			#untitled::after {
+				content: '';
+				padding-left: 1.2em;
+				background-color: currentColor;
+				mask: var(--icon-unsaved) no-repeat left center / 1.6em;
 			}
 
 			#titled:empty,
@@ -370,11 +372,6 @@ main:is(:not(.swap), :has(.track[data-instrument="0"])) tfoot { display: none; }
 	reading-flow: grid-columns;
 	grid-template-rows: 1em var(--step-height) var(--step-gap) var(--step-height) 1fr;
 	grid-template-columns: var(--track-col-1-width) var(--track-col-2-width) var(--track-col-3-width) var(--track-col-4-width);
-
-	:active-view-transition-type(tracks) & {
-		view-transition-name: match-element;
-		&.moving { view-transition-class: moving; }
-	}
 
 	&.reseted { animation: reseted 250ms ease-out forwards; }
 
@@ -721,16 +718,14 @@ hr {
 	}
 }
 
-hr, #controls {
-	view-transition-name: match-element;
-	view-transition-class: foreground;
+:active-view-transition-type(tracks) {
+	:is(hr, #controls, .track) { view-transition-name: match-element; }
+	:is(hr, #controls, .track.moving) { view-transition-class: foreground; }
 }
-
-::view-transition-group(*.moving)     { z-index: 1; }
-::view-transition-group(*.foreground) { z-index: 2; }
+html::view-transition-group(*.foreground) { z-index: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-	::view-transition-group(*) { animation-name: none; }
+	html::view-transition-group(*) { animation-name: none; }
 }
 
 #trash {
@@ -1070,7 +1065,7 @@ dialog {
 	#update {
 		justify-self: center;
 
-		> * {
+		> span, > button {
 			height: 1.7em;
 			white-space: nowrap;
 			margin-block: -.35em;
@@ -1199,7 +1194,9 @@ body > footer {
 
 	[name="step"]:hover { background-color: color-mix(in lab, var(--step-background), currentColor 10%); }
 
-	:is(button, select, [type="checkbox"], [type="range"], [type="checkbox"]):enabled { cursor: pointer; }
+	button:enabled,
+	select:enabled,
+	input:is([type="checkbox"], [type="range"]):enabled { cursor: pointer; }
 
 	dialog .icon:hover { color: var(--color-text-main); }
 
@@ -1238,7 +1235,9 @@ body > footer {
 
 </style>
 </head>
-<body data-loading="Chargement de l'application…">
+<body 
+	data-loading="Chargement de l'application…"
+	data-unsupported="Votre navigateur n'est pas compatible avec cette application.">
 	<main>
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
 		<header>
@@ -1283,7 +1282,7 @@ body > footer {
 		<option value="30"></option>
 	</datalist>
 	<template>
-		<tr class="track" data-index="0" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
+		<tr class="track" data-instrument="0" data-bars="1" data-beats="4" data-steps="4" data-phrase="0">
 			<td class="dropzone" aria-hidden="true"></td>
 			<th class="instrument" scope="row" draggable="true" aria-label="Piste sans instrument" data-template data-template-aria-label-empty="Piste sans instrument{{phrase}}" data-template-aria-label-filled="Piste {{instrument}}{{phrase}}" data-template-aria-label-phrase=", {{name}}">
 				<div class="handle" title="Déplacer" aria-hidden="true"></div>
@@ -1299,17 +1298,17 @@ body > footer {
 			</td>
 			<td class="sheet">
 				<div role="toolbar" aria-label="Partition">
-					<span class="bar" role="group" aria-label="Mesure 1" data-index="0">
-						<span class="beat" role="group" aria-label="Temps 1" data-index="0">
-							<button name="step" data-index="0" value="0" tabindex="-1" aria-label="Subdivision 1" data-template data-template-aria-label-empty="Subdivision 1" data-template-aria-label-filled="Subdivision 1, {{stroke}}" aria-pressed="false"></button>
+					<span class="bar" role="group" aria-label="Mesure 1">
+						<span class="beat" role="group" aria-label="Temps 1">
+							<button name="step" value="0" tabindex="-1" aria-label="Subdivision 1" data-template data-template-aria-label-empty="Subdivision 1" data-template-aria-label-filled="Subdivision 1, {{stroke}}" aria-pressed="false"></button>
 							<span class="grid">
-								<button name="step" data-index="1" value="0" tabindex="-1" aria-label="Subdivision 2" data-template data-template-aria-label-empty="Subdivision 2" data-template-aria-label-filled="Subdivision 2, {{stroke}}" aria-pressed="false"></button>
-								<button name="step" data-index="2" value="0" tabindex="-1" aria-label="Subdivision 3" data-template data-template-aria-label-empty="Subdivision 3" data-template-aria-label-filled="Subdivision 3, {{stroke}}" aria-pressed="false"></button>
-								<button name="step" data-index="3" value="0" tabindex="-1" aria-label="Subdivision 4" data-template data-template-aria-label-empty="Subdivision 4" data-template-aria-label-filled="Subdivision 4, {{stroke}}" aria-pressed="false"></button>
-								<button name="step" data-index="4" value="0" tabindex="-1" aria-label="Subdivision 5" data-template data-template-aria-label-empty="Subdivision 5" data-template-aria-label-filled="Subdivision 5, {{stroke}}" aria-pressed="false"></button>
-								<button name="step" data-index="5" value="0" tabindex="-1" aria-label="Subdivision 6" data-template data-template-aria-label-empty="Subdivision 6" data-template-aria-label-filled="Subdivision 6, {{stroke}}" aria-pressed="false"></button>
-								<button name="step" data-index="6" value="0" tabindex="-1" aria-label="Subdivision 7" data-template data-template-aria-label-empty="Subdivision 7" data-template-aria-label-filled="Subdivision 7, {{stroke}}" aria-pressed="false"></button>
-								<button name="step" data-index="7" value="0" tabindex="-1" aria-label="Subdivision 8" data-template data-template-aria-label-empty="Subdivision 8" data-template-aria-label-filled="Subdivision 8, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" value="0" tabindex="-1" aria-label="Subdivision 2" data-template data-template-aria-label-empty="Subdivision 2" data-template-aria-label-filled="Subdivision 2, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" value="0" tabindex="-1" aria-label="Subdivision 3" data-template data-template-aria-label-empty="Subdivision 3" data-template-aria-label-filled="Subdivision 3, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" value="0" tabindex="-1" aria-label="Subdivision 4" data-template data-template-aria-label-empty="Subdivision 4" data-template-aria-label-filled="Subdivision 4, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" value="0" tabindex="-1" aria-label="Subdivision 5" data-template data-template-aria-label-empty="Subdivision 5" data-template-aria-label-filled="Subdivision 5, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" value="0" tabindex="-1" aria-label="Subdivision 6" data-template data-template-aria-label-empty="Subdivision 6" data-template-aria-label-filled="Subdivision 6, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" value="0" tabindex="-1" aria-label="Subdivision 7" data-template data-template-aria-label-empty="Subdivision 7" data-template-aria-label-filled="Subdivision 7, {{stroke}}" aria-pressed="false"></button>
+								<button name="step" value="0" tabindex="-1" aria-label="Subdivision 8" data-template data-template-aria-label-empty="Subdivision 8" data-template-aria-label-filled="Subdivision 8, {{stroke}}" aria-pressed="false"></button>
 							</span>
 						</span>
 					</span>

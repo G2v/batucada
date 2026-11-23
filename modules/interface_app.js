@@ -25,9 +25,9 @@ export default class InterfaceApp {
 		document.querySelector(selectors.aboutVersionText).textContent = version;
 		document.querySelector(selectors.aboutDialog).addEventListener('command', (event) => this.#aboutCommands(event));
 
-		const { preferences } = audio;
+		const saved = JSON.parse(localStorage.preferences ?? '{}');
 		for (const [name, value] of Object.entries(this.#defaultPreferences)) {
-			preferencesForm.elements[name].value = preferences[name];
+			preferencesForm.elements[name].value = saved[name] ?? value;
 			preferencesForm.elements[name].value ||= value;
 		}
 		this.#savePreferences(preferencesForm);
@@ -73,11 +73,15 @@ export default class InterfaceApp {
 	}
 
 	#savePreferences(form) {
-		const values = {};
+		const values  = {};
+		const changed = {};
 		for (const [name, initial] of Object.entries(this.#defaultPreferences)) {
 			const { value } = form.elements[name];
 			values[name] = typeof initial === 'number' ? Number(value) : value;
+			if (values[name] !== initial) changed[name] = values[name];
 		}
+		if (Object.keys(changed).length) localStorage.preferences = JSON.stringify(changed);
+		else delete localStorage.preferences;
 		this.#audio.setPreferences(values);
 	}
 }

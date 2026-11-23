@@ -32,7 +32,7 @@ export default class InterfaceSwap {
 			this.#ui.container.classList.add(InterfaceSwap.#swapClass);
 		}
 		this.#ui.container.classList.add(InterfaceSwap.#trashClass);
-		event.dataTransfer.setData('text/plain', track.dataset.index);
+		event.dataTransfer.setData('text/plain', this.#ui.getTrackIndex(track));
 		event.dataTransfer.setDragImage(event.target, 0, 15);
 		event.dataTransfer.effectAllowed = 'move';
 	}
@@ -94,9 +94,7 @@ export default class InterfaceSwap {
 
 	trashTrack(sourceIndex) {
 		const draggedTrack      = this.#ui.tracks[sourceIndex];
-		const isLastVisualTrack = sourceIndex === this.#song.order.at(-1)
-			|| this.#song.isEmpty(sourceIndex);
-
+		const isLastVisualTrack = sourceIndex === this.#song.order.at(-1) || this.#song.isEmpty(sourceIndex);
 		if (isLastVisualTrack) {
 			const target = draggedTrack.nextElementSibling || draggedTrack;
 			this.#song.trashTrack(sourceIndex);
