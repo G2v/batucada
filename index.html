@@ -120,7 +120,7 @@
 html {
 	user-select: none;
 	scrollbar-gutter: stable;
-	overscroll-behavior: contain;
+	overscroll-behavior: none;
 }
 
 body {
@@ -199,7 +199,13 @@ select {
 
 	&::picker-icon { display: none; }
 
-	&::picker(select) { overscroll-behavior: contain; }
+	&::picker(select) { 
+		border-radius: 4px;
+		scrollbar-width: thin;
+		appearance: base-select;
+		overscroll-behavior: none;
+		box-shadow: 0 0 .5em var(--color-shadow-medium);
+	}
 
 	selectedcontent {
 		min-width: 0;
@@ -221,10 +227,7 @@ option {
 }
 
 select::picker(select) {
-	border-radius: 4px;
-	scrollbar-width: thin;
-	appearance: base-select;
-	box-shadow: 0 0 .5em var(--color-shadow-medium);
+
 }
 
 select:has(:checked) { background-color: var(--color-background-base); }
@@ -792,7 +795,7 @@ dialog {
 	border-radius: .5em;
 	box-sizing: border-box;
 	width: calc(100% - 2em);
-	overscroll-behavior: contain;
+	overscroll-behavior: none;
 	max-height: calc(100dvh - 2em);
 	background: var(--color-background-base);
 	border: 1px solid var(--color-border-strong);
