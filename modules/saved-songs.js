@@ -86,8 +86,8 @@ export class SavedSongs extends EventTarget {
 	}
 
 	async undo() {
+		if (!this.#lastAction) throw new Error();
 		const { data, title } = this.#lastAction;
-		if (data === undefined) throw new Error();
 		this.#lastAction = null;
 		await this.#saveData(data);
 		this.#update({ savedSongs: data, title: title ?? null });

@@ -62,7 +62,6 @@ export class Interface {
 
 		this.#tempo = this.#song.tempo;
 		this.#title = this.#song.title;
-		document.documentElement.style.removeProperty('--untitled');
 
 		const activeCount = this.#song.activeTracks.length;
 		let firstCount = 0;

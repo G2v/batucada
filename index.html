@@ -21,11 +21,6 @@
 	if (!('navigation' in window && 'commandForElement' in HTMLButtonElement.prototype)) document.documentElement.classList.add('unsupported');
 
 	if (!location.search && localStorage.lastSequence) history.replaceState(null, '', localStorage.lastSequence);
-
-	const params = new URLSearchParams(location.search);
-	const tracks = params.get('set')?.split('-').filter(s => s && s[0] !== '0').length;
-	if (tracks) document.documentElement.style.setProperty('--tracks-count', tracks);
-	if (params.get('title')?.trim()) document.documentElement.style.setProperty('--untitled', 'hidden');
 }
 </script>
 <style>
@@ -199,12 +194,14 @@ select {
 
 	&::picker-icon { display: none; }
 
-	&::picker(select) { 
+	&::picker(select) {
+		margin: 2px;
 		border-radius: 4px;
 		scrollbar-width: thin;
 		appearance: base-select;
 		overscroll-behavior: none;
-		box-shadow: 0 0 .5em var(--color-shadow-medium);
+		border: 2px solid transparent;
+		box-shadow: 0 0 0 1px currentColor, 0 0 .5em var(--color-shadow-medium);
 	}
 
 	selectedcontent {
@@ -224,10 +221,6 @@ option {
 	&::checkmark { display: none; }
 
 	&:checked { background: var(--color-background-light); }
-}
-
-select::picker(select) {
-
 }
 
 select:has(:checked) { background-color: var(--color-background-base); }
@@ -290,7 +283,6 @@ main {
 
 	header {
 		padding: .3em 1.2em;
-		visibility: var(--untitled, visible);
 
 		main:has(#saved-song option:checked) & {
 			#titled::after,
@@ -721,9 +713,9 @@ hr {
 	}
 }
 
-:active-view-transition-type(tracks) {
-	:is(hr, #controls, .track) { view-transition-name: match-element; }
-	:is(hr, #controls, .track.moving) { view-transition-class: foreground; }
+html:active-view-transition-type(tracks) {
+	hr, #controls, .track { view-transition-name: match-element; }
+	hr, #controls, .track.moving { view-transition-class: foreground; }
 }
 html::view-transition-group(*.foreground) { z-index: 1; }
 
@@ -803,8 +795,8 @@ dialog {
 
 	&::backdrop {
 		overflow: hidden;
+		overscroll-behavior: none;
 		backdrop-filter: blur(2px);
-		overscroll-behavior: contain;
 		background: var(--color-shadow-strong);
 	}
 
@@ -1245,6 +1237,14 @@ body > footer {
 		<a id="skip" href="#controls">Accéder aux boutons de contrôle</a>
 		<header>
 			<h1 id="title" aria-live="polite"><span id="titled"></span><span id="untitled">Nouveau morceau</span></h1>
+			<script>
+			{
+				const params = new URLSearchParams(location.search);
+				document.getElementById('titled').textContent = params.get('title')?.trim() ?? '';
+				const tracks = params.get('set')?.split('-').filter(s => s && s[0] !== '0').length;
+				if (tracks) document.documentElement.style.setProperty('--tracks-count', tracks);
+			}
+			</script>
 			<span role="status"><span id="saved">Morceau enregistré</span><span id="unsaved">Morceau non enregistré</span></span>
 			<button title="Gérer le morceau" command="show-modal" commandfor="song-edit">Gérer le morceau</button>
 		</header>
@@ -1569,14 +1569,12 @@ body > footer {
 		import { SavedSongs }  from './modules/saved-songs.js';
 		import { Audio }       from './modules/audio.js';
 		import { Navigation }  from './modules/navigation.js';
-		import { SwClient }    from './modules/sw-client.js';
 
 		const song       = new Song(config, decodeSong(config, new URLSearchParams(location.search)));
 		const audio      = new Audio({ config, song });
 		const savedSongs = new SavedSongs({ config, song });
 		const navigation = new Navigation({ config, song, savedSongs, audio });
-		const swClient   = new SwClient();
-		new Interface({ config, song, audio, savedSongs, navigation, swClient });
+		new Interface({ config, song, audio, savedSongs, navigation });
 	</script>
 </body>
 </html>

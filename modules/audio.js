@@ -33,7 +33,7 @@ export class Audio extends EventTarget {
 	#song;
 	#worker;
 	#sounds;
-	#maxGain;
+	#volumeToGain;
 	#panNodes;
 	#gainNodes;
 	#masterGain;
@@ -53,7 +53,7 @@ export class Audio extends EventTarget {
 	constructor({ config, song }) {
 		super();
 		this.#song            = song;
-		this.#maxGain         = config.maxGain;     //a optimiser
+		this.#volumeToGain    = Math.SQRT2 / config.maxGain;
 		this.#emptyStroke     = config.emptyStroke;
 		this.#preferences     = { ...config.defaultPreferences };
 		this.#trackResolution = config.resolution.track;
@@ -96,8 +96,9 @@ export class Audio extends EventTarget {
 	}
 
 	setPreferences(values) {
+		const oldPreferences = this.#preferences;
 		this.#preferences = { ...this.#preferences, ...values };
-		this.#updatePans();
+		if (this.#preferences.audio !== oldPreferences.audio) this.#updatePans();
 		if (!this.#preferences.hiddenPlayDuration) this.#releaseAudioStream();
 		else if (this.#playing) this.#ensureAudioStream().play().catch(() => {});
 		else defer(() => this.#preferences.hiddenPlayDuration && this.#ensureAudioStream());
@@ -106,8 +107,8 @@ export class Audio extends EventTarget {
 	#songChanged({ tempo, tracks, steps, volumes, reset }) {
 		if (reset) this.#muteSchedulesNotes();
 		volumes.forEach((id) => this.#updateGain(id));
-		if (tracks.size) this.#updatePans();
 		if (tempo || tracks.size || steps.size) this.#postSong();
+		if (tracks.size) this.#updatePans();
 	}
 
 	#postSong() {
@@ -123,7 +124,7 @@ export class Audio extends EventTarget {
 	}
 
 	#gainOf(id) {
-		return this.#song.volumes[id] / this.#maxGain * Math.SQRT2;
+		return this.#song.volumes[id] * this.#volumeToGain;
 	}
 
 	#updateGain(id) {

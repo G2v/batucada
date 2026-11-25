@@ -9,7 +9,7 @@ export default class InterfaceSwap {
 	#song;
 	#trashZone;
 	#endDropZone;
-	#over = new Set();
+	#over = null;
 
 	constructor({ parent, config, song }) {
 		this.#ui                = parent;
@@ -28,11 +28,12 @@ export default class InterfaceSwap {
 	#handleDragStart(event) {
 		const track = this.#ui.getTrack(event.target);
 		if (!track) return;
-		if (!this.#song.isEmpty(this.#ui.getTrackIndex(track))) {
+		const index = this.#ui.getTrackIndex(track);
+		if (!this.#song.isEmpty(index)) {
 			this.#ui.container.classList.add(InterfaceSwap.#swapClass);
 		}
 		this.#ui.container.classList.add(InterfaceSwap.#trashClass);
-		event.dataTransfer.setData('text/plain', this.#ui.getTrackIndex(track));
+		event.dataTransfer.setData('text/plain', index);
 		event.dataTransfer.setDragImage(event.target, 0, 15);
 		event.dataTransfer.effectAllowed = 'move';
 	}
@@ -43,12 +44,10 @@ export default class InterfaceSwap {
 		}
 	}
 
-	#handleDragEnter(event) {
+	#handleDragEnter({ target }) {
 		this.#removeOver();
-		if (!this.#isDropZone(event.target)) return;
-		const target = event.target;
-		if (this.#over.has(target)) return;
-		this.#over.add(target);
+		if (!this.#isDropZone(target)) return;
+		this.#over = target;
 		target.classList.add(InterfaceSwap.#overClass);
 	}
 
@@ -86,16 +85,13 @@ export default class InterfaceSwap {
 	}
 
 	#removeOver() {
-		for (const target of this.#over) {
-			target.classList.remove(InterfaceSwap.#overClass);
-		}
-		this.#over.clear();
+		this.#over?.classList.remove(InterfaceSwap.#overClass);
+		this.#over = null;
 	}
 
 	trashTrack(sourceIndex) {
-		const draggedTrack      = this.#ui.tracks[sourceIndex];
-		const isLastVisualTrack = sourceIndex === this.#song.order.at(-1) || this.#song.isEmpty(sourceIndex);
-		if (isLastVisualTrack) {
+		const draggedTrack = this.#ui.tracks[sourceIndex];
+		if (this.#song.activeTracks.at(-1) === sourceIndex) {
 			const target = draggedTrack.nextElementSibling || draggedTrack;
 			this.#song.trashTrack(sourceIndex);
 			target.classList.remove(InterfaceSwap.#resetedClass);

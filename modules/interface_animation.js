@@ -58,8 +58,8 @@ export default class InterfaceAnimation {
 		for (const steps of this.#animationQueue.values()) {
 			steps[0]?.step?.classList.remove(InterfaceAnimation.#currentClass);
 		}
-		for (const playedIndexes of this.#playedSteps.values()) {
-			this.#clearPlayed(playedIndexes);
+		for (const played of this.#playedSteps.values()) {
+			this.#clearPlayed(played);
 		}
 		this.#animationQueue.clear();
 		this.#playedSteps.clear();
@@ -90,17 +90,17 @@ export default class InterfaceAnimation {
 	};
 
 	#advance(trackIndex, steps, nextIndex) {
-		const playedIndexes = this.#playedSteps.get(trackIndex);
+		const played = this.#playedSteps.get(trackIndex);
 
 		for (let i = 0; i < nextIndex; i++) {
 			const { step, stepIndex, stroke } = steps[i];
 			step?.classList.remove(InterfaceAnimation.#currentClass);
 			if (step && stroke > this.#emptyStroke) {
 				step.classList.add(InterfaceAnimation.#playedClass);
-				playedIndexes.push(stepIndex);
+				played.push(step);
 			}
 			// La case suivante revient en arrière : nouveau tour, les cases jouées sont effacées
-			if (steps[i + 1].stepIndex <= stepIndex) this.#clearPlayed(playedIndexes);
+			if (steps[i + 1].stepIndex <= stepIndex) this.#clearPlayed(played);
 		}
 
 		if (steps[nextIndex].end) {
@@ -113,10 +113,8 @@ export default class InterfaceAnimation {
 		steps.splice(0, nextIndex);
 	}
 
-	#clearPlayed(playedIndexes) {
-		for (let i = 0; i < playedIndexes.length; i++) {
-			this.#ui.steps[playedIndexes[i]].classList.remove(InterfaceAnimation.#playedClass);
-		}
-		playedIndexes.length = 0;
+	#clearPlayed(played) {
+		for (const step of played) step.classList.remove(InterfaceAnimation.#playedClass);
+		played.length = 0;
 	}
 }

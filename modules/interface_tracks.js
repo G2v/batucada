@@ -1,4 +1,4 @@
-function cloneIndexed(node, count, parent) {
+function cloneSteps(node, count, parent) {
 	const label = node.ariaLabel.replace(/\s*\d+$/, '');
 	for (let index = 1; index < count; index++) {
 		const clone = node.cloneNode(true);
@@ -36,8 +36,8 @@ function buildMasterTrack({ selectors, resolution }, template) {
 	const firstBar  = track.querySelector(selectors.bar);
 	const firstBeat = firstBar.querySelector(selectors.beat);
 	cleanTemplates(firstBar);
-	cloneIndexed(firstBeat, resolution.maxBeats, firstBar);
-	cloneIndexed(firstBar, resolution.maxBars, firstBar.parentNode);
+	cloneSteps(firstBeat, resolution.maxBeats, firstBar);
+	cloneSteps(firstBar, resolution.maxBars, firstBar.parentNode);
 	cleanTemplates(track);
 	return track;
 }

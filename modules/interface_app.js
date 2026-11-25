@@ -5,13 +5,13 @@ export default class InterfaceApp {
 	static #searchMinDuration = 1000;
 
 	#audio;
-	#swClient;
 	#aboutUpdate;
 	#defaultPreferences;
+	#registration    = null;
+	#updateRequested = false;
 
-	constructor({ config, audio, swClient }) {
+	constructor({ config, audio }) {
 		this.#audio              = audio;
-		this.#swClient           = swClient;
 		this.#defaultPreferences = config.defaultPreferences;
 		const { selectors }      = config;
 
@@ -32,14 +32,25 @@ export default class InterfaceApp {
 		}
 		this.#savePreferences(preferencesForm);
 		preferencesForm.addEventListener('change', () => this.#savePreferences(preferencesForm));
-		swClient.addEventListener('update',        () => this.#updateState = 'available');
+		this.#registerServiceWorker().catch(reportError);
+	}
+
+	async #registerServiceWorker() {
+		if (!navigator.serviceWorker) return;
+		const hadController = Boolean(navigator.serviceWorker.controller);
+		navigator.serviceWorker.addEventListener('controllerchange', () => {
+			if (hadController || this.#updateRequested) location.reload();
+		});
+		this.#registration = await navigator.serviceWorker.register('./sw.js', { type: 'module', updateViaCache: 'none' });
+	}
+
+	get #hasUpdate() {
+		return Boolean(this.#registration?.waiting && this.#registration.active);
 	}
 
 	async #findUpdate() {
-		if (this.#updateState === 'available') return;
-		if (!navigator.onLine) {
-			this.#updateState = null;
-			this.#updateState = await this.#requestUpdate() ? 'available' : null;
+		if (this.#hasUpdate || !navigator.onLine) {
+			this.#updateState = this.#hasUpdate ? 'available' : null;
 			return;
 		}
 		this.#updateState = 'search';
@@ -48,8 +59,25 @@ export default class InterfaceApp {
 		this.#updateState = found ? 'available' : found === false ? 'none' : null;
 	}
 
-	#requestUpdate() {
-		return this.#swClient.findUpdate().catch(() => null);
+	async #requestUpdate() {
+		if (!this.#registration) return false;
+		try {
+			await this.#registration.update();
+			const { installing } = this.#registration;
+			if (installing) await new Promise(resolve => installing.addEventListener('statechange', resolve, { once: true }));
+			return this.#hasUpdate;
+		}
+		catch {
+			return null;
+		}
+	}
+
+	#installUpdate() {
+		this.#updateRequested = true;
+		document.body.inert   = true;
+		const waiting = this.#registration?.waiting;
+		if (waiting) waiting.postMessage({ action: 'skipWaiting' });
+		else location.reload();
 	}
 
 	get #updateState() {
@@ -64,10 +92,7 @@ export default class InterfaceApp {
 	#aboutCommands(event) {
 		const commands = {
 			'show-modal': () => this.#findUpdate(),
-			'update':     () => {
-				document.body.inert = true;
-				this.#swClient.install();
-			},
+			'update':     () => this.#installUpdate(),
 		};
 		commands[event.source?.value || event.command]?.();
 	}

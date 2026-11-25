@@ -13,7 +13,7 @@ let workerSyncDelta = 0;
 self.onmessage = ({ data: { action, payload } }) => {
 	switch (action) {
 		case 'config':  config = payload; break;
-		case 'song':    { tracks, tempo, sheet } = payload; break;
+		case 'song':    ({ tracks, tempo, sheet } = payload); break;
 		case 'start':   start(payload); break;
 		case 'stop':    stop(); break;
 		case 'restart': restart(); break;

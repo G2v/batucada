@@ -142,69 +142,62 @@ export default class InterfaceAria {
 
 		event.preventDefault();
 
-		const currentTrack     = this.#ui.getTrack(active);
-		const currentStepIndex = this.#ui.getStepIndex(active) - this.#ui.getTrackIndex(currentTrack) * this.#resolution.track;
-		const next             = this.#nextPosition(key, currentTrack, currentStepIndex);
-
+		const { track: trackSize } = this.#resolution;
+		const index = this.#ui.getStepIndex(active);
+		const id    = index / trackSize | 0;
+		const next  = this.#nextPosition(key, id, index % trackSize);
 		if (!next) return;
 
-		const { nextTrack, nextStepIndex, verticalIndex } = next;
-		const nextTrackIndex = this.#ui.getTrackIndex(nextTrack);
-		const nextStep       = this.#ui.steps[nextTrackIndex * this.#resolution.track + nextStepIndex];
-
-		this.#updateTabIndex(nextTrack === currentTrack ? active : null, nextStep, nextTrackIndex);
+		const nextStep = this.#ui.steps[next.id * trackSize + next.local];
+		this.#updateTabIndex(next.id === id ? active : null, nextStep, next.id);
 		nextStep.focus();
-		this.#verticalRoving = verticalIndex ?? null;
+		this.#verticalRoving = next.verticalIndex ?? null;
 	}
 
-	#nextPosition(key, currentTrack, currentStepIndex) {
+	#nextPosition(key, id, local) {
+		const { tracks, activeTracks } = this.#song;
 		switch (key) {
 			case 'ArrowUp':
 			case 'ArrowDown': {
-				const isDown    = key === 'ArrowDown';
-				const nextTrack = isDown ? currentTrack.nextElementSibling : currentTrack.previousElementSibling;
-				if (!nextTrack || (isDown && this.#song.isEmpty(this.#ui.getTrackIndex(currentTrack)))) return null;
-				const verticalIndex = this.#verticalRoving ?? currentStepIndex;
-				return { nextTrack, nextStepIndex: this.#clampPosition(verticalIndex, nextTrack.dataset), verticalIndex };
+				const nextId = activeTracks[activeTracks.indexOf(id) + (key === 'ArrowDown' ? 1 : -1)];
+				if (nextId === undefined) return null;
+				const verticalIndex = this.#verticalRoving ?? local;
+				return { id: nextId, local: this.#clampPosition(verticalIndex, tracks[nextId]), verticalIndex };
 			}
 			case 'Home':
-				return { nextTrack: currentTrack, nextStepIndex: 0 };
+				return { id, local: 0 };
 			case 'End':
-				return { nextTrack: currentTrack, nextStepIndex: this.#clampPosition(this.#resolution.track - 1, currentTrack.dataset) };
+				return { id, local: this.#clampPosition(this.#resolution.track - 1, tracks[id]) };
 			default:
-				return {
-					nextTrack: currentTrack,
-					nextStepIndex: this.#adjacentPosition(currentStepIndex, currentTrack.dataset, key === 'ArrowRight' ? 1 : -1),
-				};
+				return { id, local: this.#adjacentPosition(local, tracks[id], key === 'ArrowRight' ? 1 : -1) };
 		}
 	}
 
 	#clampPosition(local, { bars, beats, steps }) {
 		const { bar: barSize, beat: beatSize } = this.#resolution;
-		const bar  = Math.min(local / barSize | 0,              (bars  | 0) - 1);
-		const beat = Math.min((local % barSize) / beatSize | 0, (beats | 0) - 1);
-		const step = Math.min(local % beatSize,                 (steps | 0) - 1);
+		const bar  = Math.min(local / barSize | 0,              bars  - 1);
+		const beat = Math.min((local % barSize) / beatSize | 0, beats - 1);
+		const step = Math.min(local % beatSize,                 steps - 1);
 		return bar * barSize + beat * beatSize + step;
 	}
 
 	#adjacentPosition(local, { bars, beats, steps }, direction) {
 		const { bar: barSize, beat: beatSize } = this.#resolution;
-		const perStep = steps | 0;
-		const perBar  = (beats | 0) * perStep;
-		const total   = (bars  | 0) * perBar;
-		const index   = ((local / barSize | 0) * perBar) +
-			(((local % barSize) / beatSize | 0) * perStep) +
+		const perBar = beats * steps;
+		const total  = bars * perBar;
+		const index  = ((local / barSize | 0) * perBar) +
+			(((local % barSize) / beatSize | 0) * steps) +
 			(local % beatSize);
 		const next = (index + direction + total) % total;
 		return ((next / perBar | 0) * barSize) +
-			(((next % perBar) / perStep | 0) * beatSize) +
-			(next % perStep);
+			(((next % perBar) / steps | 0) * beatSize) +
+			(next % steps);
 	}
 
 	#syncTabIndex({ target }) {
 		this.#verticalRoving = null;
 		if (target.name !== this.#names.step || target.tabIndex === 0) return;
-		this.#updateTabIndex(null, target, this.#ui.getTrackIndex(this.#ui.getTrack(target)));
+		this.#updateTabIndex(null, target, this.#ui.getStepIndex(target) / this.#resolution.track | 0);
 	}
 
 	#resetAllRoving() {

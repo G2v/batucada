@@ -10,7 +10,7 @@ export class Song extends EventTarget {
 	#state;
 	#strokes = {};
 
-	constructor(config, initial = null) {
+	constructor(config, initial) {
 		super();
 		this.#trackKeys    = Object.keys(config.defaultTrack);
 		this.#resolution   = config.resolution;
@@ -21,7 +21,7 @@ export class Song extends EventTarget {
 		this.#defaultTrack = config.defaultTrack;
 
 		const order = Array.from({ length: config.tracksLength }, (_, id) => id);
-		this.#state = { ...(initial ?? this.#emptySong()), order };
+		this.#state = { ...initial, order };
 
 		config.instrumentsLibraryReady.then(({ instruments }) => this.#setLibrary(instruments), () => {});
 	}

@@ -29,7 +29,6 @@ const assets = [
 	'./modules/song.js',
 	'./modules/song-url.js',
 	'./modules/utils.js',
-	'./modules/sw-client.js',
 	'./icons/icon.svg',
 	'./icons/icon_512x512.png',
 	'./icons/icon_white-bg_512x512.png',

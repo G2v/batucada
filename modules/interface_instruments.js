@@ -7,7 +7,6 @@ export default class InterfaceInstruments {
 	static #maxInstruments = 60;
 
 	#ui;
-	#swClient;
 	#instrumentsDialog;
 	#instrumentsLibraryName;
 	#instrumentsRestoreButton;
@@ -15,8 +14,7 @@ export default class InterfaceInstruments {
 	#instrumentsLibraryReady;
 	#pendingImport = null;
 
-	constructor({ parent, config, swClient }) {
-		this.#swClient                = swClient;
+	constructor({ parent, config }) {
 		this.#ui                      = parent;
 		this.#instrumentsLibraryReady = config.instrumentsLibraryReady;
 
@@ -161,7 +159,7 @@ export default class InterfaceInstruments {
 			return;
 		}
 		document.body.inert = true;
-		this.#swClient.install();
+		location.reload();
 	}
 
 	static async #validateAudio(dataUrl, audioContext) {
