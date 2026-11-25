@@ -59,11 +59,9 @@
 	--color-background-base:     light-dark(oklch(from var(--color-primary) 1 0 h),          oklch(from var(--color-primary) .26 .019 h));
 	--color-background-light:    light-dark(oklch(from var(--color-primary) .94 .007 h),     oklch(from var(--color-primary) .34 .028 h));
 	--color-background-strong:   light-dark(oklch(from var(--color-primary) .86 .016 h),     oklch(from var(--color-primary) .4 .034 h));
-	--color-background-contrast: light-dark(oklch(from var(--color-primary) .31 .024 h),     oklch(from var(--color-primary) .92 .009 h));
 	--color-text-main:           light-dark(oklch(from var(--color-primary) 0 0 h),          oklch(from var(--color-primary) .92 .009 h));
 	--color-text-faded:          light-dark(oklch(from var(--color-primary) .31 .024 h),     oklch(from var(--color-primary) .75 .029 h));
 	--color-text-muted:          light-dark(oklch(from var(--color-primary) .75 .029 h),     oklch(from var(--color-primary) .71 .035 h));
-	--color-text-contrast:       light-dark(oklch(from var(--color-primary) 1 0 h),          oklch(from var(--color-primary) 0 0 h));
 	--color-stroke-set:          light-dark(oklch(from var(--color-primary) .51 c h),        oklch(from var(--color-primary) .64 c h));
 	--color-stroke-played:       oklch(from var(--color-primary) 1 0 h / .4);
 	--color-stroke-current:      light-dark(hsl(from var(--color-secondary) h 100% 25%),     hsl(from var(--color-secondary) h 100% 40%));
@@ -259,11 +257,14 @@ a { color: var(--color-stroke-set); }
 	position: absolute;
 	align-items: center;
 	border-radius: .4em;
+	color-scheme: dark;
 	justify-content: center;
 	inset: auto .5em calc(100% + 2em);
-	color: var(--color-text-contrast);
-	background: var(--color-background-contrast);
-	box-shadow: 0 0 .5em var(--color-shadow-strong);
+	color: var(--color-text-main);
+	background: var(--color-background-light);
+	box-shadow: 0 0 .5em var(--color-shadow-light);
+
+	:root.dark & { color-scheme: light; }
 
 	&:focus { top: .5em; }
 }
@@ -1090,16 +1091,17 @@ dialog {
 
 #toast {
 	border: none;
-	height: 3.3em;
 	padding: 0 1em;
 	font-size: .8em;
+	min-height: 3.3em;
+	color-scheme: dark;
 	border-radius: .4em;
-	backdrop-filter: blur(2px);
 	position-anchor: --sequencer;
-	color: var(--color-text-contrast);
-	box-shadow: 0 0 .5em var(--color-shadow-medium);
-	background: color-mix(in srgb, var(--color-background-contrast), transparent 20%);
+	color: var(--color-text-main);
+	background: var(--color-background-light);
+	box-shadow: 0 0 .5em var(--color-shadow-light);
 	inset: auto 1em max(.8em, calc(100svh - anchor-size(height) - 5.2em - var(--body-margin)));
+	:root.dark & { color-scheme: light; }
 
 	&:popover-open {
 		gap: 1em;
@@ -1113,14 +1115,32 @@ dialog {
 		line-height: 1.2;
 	}
 
-	button {
+	[name="cancel"] {
 		border: none;
 		padding: .2em .5em;
+		color-scheme: light;
 		color: var(--color-text-main);
 		background-color: var(--color-background-light);
+		:root.dark & { color-scheme: dark; }
 	}
 
-	&:not([data-cancel]) button { display: none; }
+	[command="hide-popover"] {
+		padding: 0;
+		border: none;
+		width: .6em;
+		height: .6em;
+		overflow: visible;
+		border-radius: 50%;
+		outline-offset: .45em;
+		color: var(--color-text-faded);
+
+		&::before {
+			inset: -.9em;
+			mask-image: var(--icon-close);
+		}
+	}
+
+	&:not([data-cancel]) [name="cancel"] { display: none; }
 
 	&:not([data-cancel]):popover-open { animation: fade-out 1s forwards 5s; }
 
@@ -1193,7 +1213,8 @@ body > footer {
 	select:enabled,
 	input:is([type="checkbox"], [type="range"]):enabled { cursor: pointer; }
 
-	dialog .icon:hover { color: var(--color-text-main); }
+	.icon:hover,
+	#toast .icon:hover { color: var(--color-text-main); }
 
 	th:hover .handle {
 		cursor: grab;
@@ -1327,7 +1348,8 @@ body > footer {
 	</template>
 	<div id="toast" popover="manual" role="alert">
 		<p></p>
-		<button aria-label="Annuler cette action">Annuler</button>
+		<button name="cancel" aria-label="Annuler cette action">Annuler</button>
+		<button class="icon" commandfor="toast" command="hide-popover" aria-label="Fermer la notification">Fermer</button>
 	</div>
 	<dialog id="track-settings" aria-labelledby="track-settings-title" closedby="any" autofocus>
 		<div>
@@ -1563,17 +1585,18 @@ body > footer {
 	</dialog>
 	<script type="module">
 		import { config }      from './modules/build-config.js';
-		import { Song }        from './modules/song.js';
 		import { decodeSong }  from './modules/song-url.js';
-		import { Interface }   from './modules/interface.js';
-		import { SavedSongs }  from './modules/saved-songs.js';
+		import { Song }        from './modules/song.js';
 		import { Audio }       from './modules/audio.js';
+		import { SavedSongs }  from './modules/saved-songs.js';
 		import { Navigation }  from './modules/navigation.js';
+		import { Interface }   from './modules/interface.js';
 
 		const song       = new Song(config, decodeSong(config, new URLSearchParams(location.search)));
 		const audio      = new Audio({ config, song });
 		const savedSongs = new SavedSongs({ config, song });
 		const navigation = new Navigation({ config, song, savedSongs, audio });
+
 		new Interface({ config, song, audio, savedSongs, navigation });
 	</script>
 </body>

@@ -1,8 +1,9 @@
 export default class InterfaceDialogs {
 	#toast;
 	#toastMessage;
-	#modals = [];
-	#cancel = null;
+	#modals      = [];
+	#cancel      = null;
+	#returnFocus = null;
 
 	constructor({ config }) {
 		const { selectors } = config;
@@ -16,6 +17,7 @@ export default class InterfaceDialogs {
 		toastCancelButton.addEventListener('click',    () => this.#cancelToast());
 		this.#toast.addEventListener('animationend',   () => this.#toast.hidePopover());
 		this.#toast.addEventListener('toggle',         (event) => this.#clearCancel(event));
+		this.#toast.addEventListener('beforetoggle',   (event) => this.#restoreFocus(event));
 		window.navigation.addEventListener('navigate', ({ navigationType }) => navigationType === 'traverse' && this.#closeAll());
 	}
 
@@ -57,10 +59,15 @@ export default class InterfaceDialogs {
 		if (newState === 'closed') this.#cancel = null;
 	}
 
+	#restoreFocus({ newState }) {
+		if (newState === 'closed' && this.#toast.matches(':focus-within')) this.#returnFocus.focus();
+	}
+
 	showToast(message, cancel = null) {
 		this.#cancel = cancel;
 		this.#toast.toggleAttribute('data-cancel', !!cancel);
 		this.#toast.hidePopover();
+		this.#returnFocus = document.activeElement;
 		this.#toast.getAnimations();
 		this.#toast.showPopover(cancel?.invoker && { source: cancel.invoker });
 		requestAnimationFrame(() => this.#toastMessage.textContent = message);

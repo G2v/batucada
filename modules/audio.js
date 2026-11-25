@@ -19,14 +19,6 @@ const toMono = (buffer) => {
 	return mono;
 };
 
-const defer = (task, timeout = 3000) => {
-	if (globalThis.scheduler?.postTask) {
-		scheduler.postTask(task, { priority: 'background' }).catch(reportError);
-	}
-	else if ('requestIdleCallback' in globalThis) requestIdleCallback(task, { timeout });
-	else setTimeout(task, 500);
-}
-
 export class Audio extends EventTarget {
 	static #detuneRange = 10;
 
@@ -71,8 +63,6 @@ export class Audio extends EventTarget {
 
 		this.#loadInstrumentsLibrary(config.instrumentsLibraryReady).catch(() => {});
 		this.#sounds = this.#fetchInstrumentSounds();
-
-		defer(() => this.#ensureAudio());
 	}
 
 	restart() {
@@ -82,6 +72,12 @@ export class Audio extends EventTarget {
 
 	unlock() {
 		this.#startAudio();
+	}
+
+	prepare() {
+		const task = () => this.#ensureAudio();
+		if (globalThis.scheduler?.postTask) scheduler.postTask(task, { priority: 'background' }).catch(reportError);
+		else setTimeout(task);
 	}
 
 	async preview(index, stroke) {
@@ -101,7 +97,6 @@ export class Audio extends EventTarget {
 		if (this.#preferences.audio !== oldPreferences.audio) this.#updatePans();
 		if (!this.#preferences.hiddenPlayDuration) this.#releaseAudioStream();
 		else if (this.#playing) this.#ensureAudioStream().play().catch(() => {});
-		else defer(() => this.#preferences.hiddenPlayDuration && this.#ensureAudioStream());
 	}
 
 	#songChanged({ tempo, tracks, steps, volumes, reset }) {
@@ -178,6 +173,7 @@ export class Audio extends EventTarget {
 		const buffer     = new ArrayBuffer(44 + length * 2);
 		const view       = new DataView(buffer);
 		const samples    = new Int16Array(buffer, 44);
+		const period     = sampleRate / 20;
 		for (const [offset, tag] of [[0, 'RIFF'], [8, 'WAVE'], [12, 'fmt '], [36, 'data']]) {
 			for (let i = 0; i < 4; i++) view.setUint8(offset + i, tag.charCodeAt(i));
 		}
@@ -190,7 +186,8 @@ export class Audio extends EventTarget {
 		view.setUint16(32, 2, true);
 		view.setUint16(34, 16, true);
 		view.setUint32(40, length * 2, true);
-		for (let i = 0; i < length; i++) samples[i] = Math.sin(2 * Math.PI * 20 * i / sampleRate) * 1000;
+		for (let i = 0; i < period; i++) samples[i] = Math.sin(2 * Math.PI * i / period) * 1000;
+		for (let i = period; i < length; i += period) samples.copyWithin(i, 0, period);
 		const url = URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
 		return Object.assign(new window.Audio(url), { loop: true, volume: 0.001 });
 	}

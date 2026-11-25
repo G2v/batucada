@@ -15,11 +15,11 @@ const selectors = Object.freeze({
 	instrumentSelect: `[name="${names.instrument}"]`,
 
 	appTitle:        '#app-title',
+	songTitle:       '#titled',
 	container:       'main',
 	trackList:       'tbody',
 	trashZone:       '#trash',
 	endDropZone:     'tfoot .dropzone',
-	sequenceTitle:   '#titled',
 	untitledLabel:   '#untitled',
 	trackTemplate:   'template',
 	controlsSection: '#controls',
@@ -59,15 +59,16 @@ const selectors = Object.freeze({
 	importConfirmDialog:      '#instruments-import',
 	restoreConfirmDialog:     '#instruments-restore',
 
+	songEditForm:           '#song-edit form',
+	songEditDialog:         '#song-edit',
+
 	savedSongsDialog:       '#saved-songs',
 	savedSongsDate:         '#saved-songs time',
-	songEditDialog:         '#song-edit',
-	songEditForm:           '#song-edit form',
 	savedSongsDeleteDialog: '#saved-songs-delete',
 
 	toast:             '#toast',
 	toastMessage:      '#toast p',
-	toastCancelButton: '#toast button',
+	toastCancelButton: '#toast [name=cancel]',
 });
 
 const emptyStroke  = 0;

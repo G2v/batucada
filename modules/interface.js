@@ -16,22 +16,22 @@ export class Interface {
 	#song;
 	#untitled;
 	#selectors;
-	#resolution;
 	#trackKeys;
+	#resolution;
 	#emptyStroke;
 
-	#tracksReady     = Promise.withResolvers();
-	#nodes           = {};
-	#instances       = {};
-	#headTitlePrefix = `${document.title} - `;
+	#appName     = document.title;
+	#nodes       = {};
+	#instances   = {};
+	#tracksReady = Promise.withResolvers();
 
 	constructor(params) {
 		const { config, song, savedSongs } = params;
-		this.#song              = song;
-		this.#selectors         = config.selectors;
-		this.#resolution        = config.resolution;
-		this.#trackKeys         = Object.keys(config.defaultTrack);
-		this.#emptyStroke       = config.emptyStroke;
+		this.#song        = song;
+		this.#selectors   = config.selectors;
+		this.#resolution  = config.resolution;
+		this.#trackKeys   = Object.keys(config.defaultTrack);
+		this.#emptyStroke = config.emptyStroke;
 
 		song.addEventListener('change',       ({ detail }) => this.#render(detail));
 		savedSongs.addEventListener('change', ({ detail }) => this.#savedSongsUpdated(detail));
@@ -40,7 +40,7 @@ export class Interface {
 		this.#loadModules(params);
 	}
 
-	#build({ config }) {
+	#build({ config, audio }) {
 		const addTracks = (start, end) => {
 			const { nodes, fragment } = buildTracks(config, this.trackTemplate, start, end);
 			for (const [key, list] of Object.entries(nodes)) (this.#nodes[key] ??= []).push(...list);
@@ -74,6 +74,7 @@ export class Interface {
 			this.trackList.appendChild(addTracks(firstCount));
 			document.documentElement.style.removeProperty('--tracks-count');
 			this.#tracksReady.resolve();
+			audio.prepare();
 		};
 		requestAnimationFrame(() => globalThis.scheduler?.postTask
 			? scheduler.postTask(addOtherTracks, { priority: 'background' })
@@ -125,8 +126,8 @@ export class Interface {
 	}
 
 	set #title(value) {
-		this.#sequenceTitle.textContent = value;
-		document.title = this.#headTitlePrefix + (value || this.untitled);
+		this.#songTitle.textContent = value;
+		document.title = `${value || this.untitled} - ${this.#appName}`;
 	}
 
 	set #tempo(value) {
@@ -134,8 +135,8 @@ export class Interface {
 		this.#tempoValue.textContent = value;
 	}
 
-	get #sequenceTitle() { return this.#nodes.sequenceTitle ??= document.querySelector(this.#selectors.sequenceTitle); }
-	get #tempoValue()    { return this.#nodes.tempoValue    ??= document.querySelector(this.#selectors.tempoValue); }
+	get #songTitle()  { return this.#nodes.songTitle ??= document.querySelector(this.#selectors.songTitle); }
+	get #tempoValue() { return this.#nodes.tempoValue    ??= document.querySelector(this.#selectors.tempoValue); }
 
 	#savedSongsUpdated({ savedSongs, index }) {
 		if (savedSongs !== undefined) {
